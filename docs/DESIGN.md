@@ -65,11 +65,41 @@ The engine knows nothing about wands, spells, or any other game concept. Everyth
 
 Cells that are thrown, splashed, or blasted leave the grid and become free particles with fixed-point position and velocity. Particles are stored per chunk, updated in spawn-id order, and turned back into cells when they land. This is how the engine handles movement faster than 32 cells per tick, and it keeps explosions from breaking the checkerboard rule.
 
-## Rigid bodies
+## Rigid and destructible bodies
 
-A rigid body is a connected group of cells that moves as one piece, such as a falling slab of rock or a wooden crate. When terrain breaks free, a flood fill finds the connected component, marching squares traces its outline, Douglas-Peucker simplifies the outline, and the shape is split into convex pieces to make Rapier colliders. While a body moves, its cells are removed from the grid. At the end of each tick they are stamped back at the body's new position so that sand and water collide with them. When cells in a body are destroyed, the body re-runs the flood fill and splits if it is no longer connected.
+A rigid body is a connected group of cells that moves as one piece, such as a falling slab of rock, a wooden crate, or a ship. Bodies come from three places: authored shapes placed by a scene or a game (crates, vehicles, doors), terrain that loses its support, and debris from a body that breaks apart. All three end up as the same thing in the engine, so every body can be damaged and split.
 
-Rapier uses floats. Cross-platform determinism holds only if Rapier's guarantees hold on every target, and this is the largest technical risk in the project (see Risks).
+### Building a body
+
+A flood fill finds the connected cells, marching squares traces their outline, Douglas-Peucker simplifies the outline, and the shape is split into convex pieces to make Rapier colliders. While a body moves, its cells are removed from the grid. At the end of each tick they are stamped back at the body's new position so that sand, water, and other bodies collide with them.
+
+### Structural support
+
+Solid materials are either anchored (bedrock, and anything a scene marks as fixed) or structural (brick, stone, wood, metal, glass). Structural cells stay static as long as they connect to an anchor through other solid cells. When structural cells are destroyed in a tick, the engine runs a connectivity check over the affected area, and any component that no longer reaches an anchor becomes a rigid body and falls. Undermine a cliff and it drops. Knock out the base of a tower and the tower comes down.
+
+The check is bounded so that one explosion cannot stall a tick. It searches up to 65,536 cells per component, and a component that hits the limit is treated as supported for that tick and checked again on the next. The first version uses connectivity only. A stress model, where a long beam of weak material can snap under its own weight, comes later if a game needs it.
+
+### Damage and fracture
+
+Every solid cell has hit points, stored in its 8-bit material value. Explosions, impacts, heat, and acid reduce them. A cell at zero becomes the debris its material defines: brick turns to rubble, wood to splinters, glass to shards, and metal to scrap. Depending on the material, debris becomes powder or free particles.
+
+When a body is destroyed in pieces, it re-runs the flood fill and splits into one body per connected part. When an impact on a body is stronger than its material's fracture threshold, the body shatters along a Voronoi pattern whose seed points come from the deterministic hash, so the same hit cracks the same way on every machine. Glass has a low threshold and shatters readily. Steel bends nothing and only loses cells.
+
+### Bodies in liquids
+
+Bodies and liquids push on each other. When a body is stamped into the grid, liquid and powder cells in its way are moved to the nearest free cell by a fixed search order. Each tick, the engine counts the liquid cells a body displaces and applies buoyancy from the density difference, plus drag from the liquid's viscosity. Wood floats, stone sinks, and a hull fills and goes down once enough water gets inside.
+
+### Joints
+
+Authored bodies can be connected with Rapier joints: hinges for doors, fixed joints for multi-part structures, and chains of small bodies for ropes and bridges. Each joint has a break force, so a bridge snaps when it is overloaded or its supports are blown off.
+
+### Keeping body counts bounded
+
+Destruction produces debris fast, and every body costs physics time. Pieces smaller than 16 cells never become bodies and go straight to particles or powder. A small body that has been at rest for 5 seconds merges back into static terrain. These limits keep a large explosion from producing thousands of tiny bodies.
+
+### Determinism
+
+Rapier uses floats. Cross-platform determinism holds only if Rapier's guarantees hold on every target, and this is the largest technical risk in the project (see Risks). Everything around Rapier, including the connectivity check, the fracture pattern, the displacement search, and the order in which bodies are created and removed, uses integer math and fixed ordering.
 
 ## Rendering
 
@@ -142,6 +172,8 @@ These numbers are starting targets, not measurements. Published per-cell numbers
 | Free particles | 100,000 at 1 ms or less per tick |
 | Rigid bodies | 1,000 dynamic bodies stepped in 3 ms or less |
 | Building a body from a 64x64 cell region | 0.2 ms or less |
+| Support check after an explosion, 65,536-cell component | 1 ms or less |
+| Shattering a 64x64 cell body | 0.5 ms or less |
 | Frame rate | 60 fps or higher at 2560x1440 |
 | Chunk texture upload | 1 ms or less per frame with 256 dirty chunks |
 | Upload per player | 1 KB/s or less average |
@@ -225,7 +257,7 @@ Each phase ends with a demo that has to run before the next phase starts.
 2. Phase 1, deterministic core. Single-threaded simulation of powder, liquid, gas, fire, temperature, and reactions; the control API and MCP server; a plain windowed viewer with no lighting. Exit: scene tests for every material, the cross-platform hash test, and an agent driving the engine end to end through MCP.
 3. Phase 2, parallel and large worlds. The checkerboard scheduler, dirty rects, sleeping chunks, chunk streaming, world generation, and benchmarks. Exit: the thread-count test passes, the per-cell targets are measured and the table above is updated, and Dam break runs at target.
 4. Phase 3, rendering. Texture streaming, emissive lighting, bloom, heat haze, smoke scattering, and headless video capture. Exit: Glowcave and Firestorm render to video.
-5. Phase 4, bodies and particles. Free particles, pixel rigid bodies, splitting, and the cross-platform Rapier test. Exit: Demolition and Foundry run, and their hashes match on all platforms.
+5. Phase 4, bodies and particles. Free particles, pixel rigid bodies, structural support, damage and fracture, buoyancy, joints, and the cross-platform Rapier test. Exit: Demolition and Foundry run, and their hashes match on all platforms.
 6. Phase 5, multiplayer. Lockstep protocol, character prediction, desync detection and repair, late join. Exit: all four multiplayer demos, with Chaos soak at zero desyncs.
 7. Phase 6, scripting. Game logic and mods in WebAssembly with NaN canonicalization on so that float results stay deterministic, plus mod hashes in the join handshake. Exit: a playable prototype of one game idea, likely Siege builder because it uses every system.
 
