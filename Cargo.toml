@@ -1,0 +1,81 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/kaileh57/falling-engine"
+
+[workspace.dependencies]
+fe-core = { path = "crates/fe-core" }
+fe-materials = { path = "crates/fe-materials" }
+fe-sim = { path = "crates/fe-sim" }
+fe-physics = { path = "crates/fe-physics" }
+fe-engine = { path = "crates/fe-engine" }
+fe-scene = { path = "crates/fe-scene" }
+fe-render = { path = "crates/fe-render" }
+fe-control = { path = "crates/fe-control" }
+fe-net = { path = "crates/fe-net" }
+fe-script = { path = "crates/fe-script" }
+
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+toml = "0.9"
+postcard = { version = "1.1", features = ["use-std"] }
+zstd = "0.13"
+rayon = "1.11"
+png = "0.18"
+rapier2d = { version = "0.36", features = ["enhanced-determinism", "serde-serialize"] }
+wasmi = "2.0"
+wat = "1"
+winit = "0.30"
+wgpu = "30"
+pollster = "0.4"
+proptest = "1.7"
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+undocumented_unsafe_blocks = "warn"
+dbg_macro = "warn"
+todo = "warn"
+print_stdout = "warn"
+allow_attributes_without_reason = "warn"
+# Pedantic lints that fight the domain: cell math converts between integer widths constantly.
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_lossless = "allow"
+cast_precision_loss = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+many_single_char_names = "allow"
+too_many_lines = "allow"
+missing_panics_doc = "allow"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+struct_excessive_bools = "allow"
+fn_params_excessive_bools = "allow"
+
+[profile.release]
+debug = 1
+codegen-units = 4
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.bench]
+debug = 1
