@@ -1,0 +1,16 @@
+[package]
+name = "fe-core"
+description = "Core types for falling-engine: cells, coordinates, fixed-point math, deterministic hashing and randomness."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true
