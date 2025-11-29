@@ -1,0 +1,568 @@
+# Built-in material set for falling-engine.
+#
+# Temperatures are in degrees C. Chances are per tick, written as "5%" or "1/20".
+# "air" (id 0) and "boundary" (id 1) are added automatically and cannot be redefined.
+# Materials are listed in id order: appending keeps existing ids stable, inserting does not.
+
+# ---------------------------------------------------------------- terrain
+
+[[material]]
+name = "bedrock"
+state = "static"
+anchored = true
+indestructible = true
+colors = ["#2a2730", "#25222b", "#2f2b35"]
+
+[[material]]
+name = "stone"
+state = "static"
+hp = 60
+debris = "rubble"
+fracture = 400
+conductivity = 30
+melt = { at = 1200, into = "lava" }
+colors = ["#6b6870", "#646169", "#726f77", "#5d5a62"]
+
+[[material]]
+name = "soil"
+state = "static"
+hp = 14
+debris = "dirt"
+fracture = 150
+colors = ["#5a3d27", "#553923", "#61432b", "#4f3520"]
+
+[[material]]
+name = "dirt"
+state = "powder"
+density = 140
+slide = "30%"
+colors = ["#6b4a30", "#64452c", "#714f34"]
+
+[[material]]
+name = "mud"
+state = "powder"
+density = 150
+slide = "8%"
+colors = ["#4a3522", "#45311f", "#4f3925"]
+
+[[material]]
+name = "sand"
+state = "powder"
+density = 150
+melt = { at = 1700, into = "molten_glass" }
+colors = ["#e0c58a", "#d8bb7c", "#e6cd96", "#cfb172"]
+
+[[material]]
+name = "gravel"
+state = "powder"
+density = 170
+slide = "60%"
+colors = ["#807a74", "#77716b", "#89837d"]
+
+[[material]]
+name = "rubble"
+state = "powder"
+density = 170
+slide = "45%"
+colors = ["#77737b", "#6c6870", "#827e86", "#8a5a4a"]
+
+# ---------------------------------------------------------------- liquids
+
+[[material]]
+name = "water"
+state = "liquid"
+density = 100
+spread = 10
+conductivity = 60
+opacity = 50
+viscosity = 20
+freeze = { at = -10, into = "ice" }
+melt = { at = 100, into = "steam" }
+colors = ["#2f6fcf", "#2c69c6", "#3374d6"]
+
+[[material]]
+name = "oil"
+state = "liquid"
+density = 80
+spread = 7
+opacity = 140
+viscosity = 60
+ignite = { at = 200, chance = "15%", into = "fire" }
+colors = ["#3b2a17", "#362614", "#402e1a"]
+
+[[material]]
+name = "lava"
+state = "liquid"
+density = 250
+spread = 3
+temp = 1200
+cooling = 2
+conductivity = 40
+viscosity = 160
+opacity = 255
+light = "#ff6a1f"
+freeze = { at = 700, into = "basalt" }
+colors = ["#ff5a10", "#f04a08", "#ff7a20"]
+
+[[material]]
+name = "molten_metal"
+state = "liquid"
+density = 300
+spread = 4
+temp = 1600
+cooling = 2
+conductivity = 120
+viscosity = 90
+opacity = 255
+light = "#ffb060"
+freeze = { at = 1350, into = "metal" }
+colors = ["#ffd080", "#ffc060", "#ffe0a0"]
+
+[[material]]
+name = "molten_glass"
+state = "liquid"
+density = 160
+spread = 2
+temp = 1700
+cooling = 2
+viscosity = 200
+opacity = 200
+light = "#ff9040"
+freeze = { at = 1400, into = "glass" }
+colors = ["#ffb070", "#ffa060"]
+
+[[material]]
+name = "acid"
+state = "liquid"
+density = 110
+spread = 8
+opacity = 40
+light = "#2a8a20"
+colors = ["#5ce040", "#52d638", "#66ea4a"]
+
+# ---------------------------------------------------------------- gases and fire
+
+[[material]]
+name = "steam"
+state = "gas"
+density = -10
+spread = 3
+temp = 120
+cooling = 5
+opacity = 30
+freeze = { at = 90, into = "water" }
+colors = ["#c8d4e0", "#bfcbd8", "#d2dde8"]
+
+[[material]]
+name = "smoke"
+state = "gas"
+density = -5
+spread = 2
+lifetime = [40, 140]
+opacity = 70
+colors = ["#3a3634", "#33302e", "#423d3a"]
+
+[[material]]
+name = "acid_gas"
+state = "gas"
+density = -3
+spread = 2
+lifetime = [40, 120]
+opacity = 20
+colors = ["#7ad060", "#6cc454"]
+
+[[material]]
+name = "fire"
+state = "fire"
+lifetime = [10, 28]
+decay = "smoke"
+light = "#ff7a20"
+colors = ["#ff9a2a", "#ffc040", "#ff6a1a", "#ffe070"]
+
+# ---------------------------------------------------------------- flammables
+
+[[material]]
+name = "wood"
+state = "static"
+hp = 30
+debris = "splinters"
+fracture = 260
+conductivity = 20
+ignite = { at = 280, chance = "3%", into = "burning_wood" }
+colors = ["#7a5230", "#714b2b", "#835935", "#6b4628"]
+
+[[material]]
+name = "burning_wood"
+state = "static"
+hp = 10
+debris = "ash"
+conductivity = 30
+lifetime = [140, 250]
+decay = "ash"
+hold_temp = 650
+light = "#ff5a14"
+spawn = { into = "fire", chance = "22%", dir = "any" }
+colors = ["#b0401a", "#8a3010", "#d05020"]
+
+[[material]]
+name = "splinters"
+state = "powder"
+density = 60
+slide = "40%"
+ignite = { at = 250, chance = "8%", into = "fire" }
+colors = ["#8a6038", "#7d5632"]
+
+[[material]]
+name = "leaves"
+state = "static"
+structural = false
+hp = 4
+conductivity = 10
+ignite = { at = 200, chance = "25%", into = "fire" }
+colors = ["#3f7a2e", "#356b27", "#4a8a35", "#2f6022"]
+
+[[material]]
+name = "ash"
+state = "powder"
+density = 30
+slide = "50%"
+colors = ["#8a8580", "#7e7974", "#96918c"]
+
+[[material]]
+name = "coal"
+state = "static"
+hp = 40
+debris = "gravel"
+ignite = { at = 400, chance = "2%", into = "burning_coal" }
+colors = ["#1e1c1c", "#252222", "#181616"]
+
+[[material]]
+name = "burning_coal"
+state = "static"
+hp = 20
+debris = "ash"
+lifetime = [250, 255]
+decay = "ash"
+hold_temp = 1100
+light = "#ff4a10"
+spawn = { into = "fire", chance = "8%", dir = "up" }
+colors = ["#c03a10", "#a02c0a", "#e05018"]
+
+# ---------------------------------------------------------------- volcanic
+
+[[material]]
+name = "basalt"
+state = "static"
+hp = 50
+debris = "rubble"
+melt = { at = 1100, into = "lava" }
+colors = ["#3a3436", "#332e30", "#423b3d"]
+
+[[material]]
+name = "obsidian"
+state = "static"
+hp = 80
+debris = "gravel"
+melt = { at = 1300, into = "lava" }
+colors = ["#1c1424", "#22192c", "#170f1e"]
+
+# ---------------------------------------------------------------- building
+
+[[material]]
+name = "metal"
+state = "static"
+hp = 120
+debris = "scrap"
+conductivity = 120
+melt = { at = 1400, into = "molten_metal" }
+colors = ["#7f8a96", "#76818d", "#88939f"]
+
+[[material]]
+name = "scrap"
+state = "powder"
+density = 250
+slide = "30%"
+melt = { at = 1400, into = "molten_metal" }
+colors = ["#6f7a86", "#66717d"]
+
+[[material]]
+name = "brick"
+state = "static"
+hp = 60
+debris = "rubble"
+fracture = 320
+colors = ["#9a4a32", "#8e432d", "#a55238", "#7f3b28"]
+
+[[material]]
+name = "concrete"
+state = "static"
+hp = 90
+debris = "rubble"
+fracture = 520
+colors = ["#9a9893", "#92908b", "#a2a09b"]
+
+[[material]]
+name = "glass"
+state = "static"
+hp = 8
+debris = "shards"
+fracture = 60
+opacity = 20
+melt = { at = 1500, into = "molten_glass" }
+colors = ["#a8d8e8", "#b4e0ee"]
+
+[[material]]
+name = "shards"
+state = "powder"
+density = 120
+slide = "70%"
+opacity = 30
+colors = ["#c0e6f2", "#9fd0e0"]
+
+[[material]]
+name = "ice"
+state = "static"
+hp = 20
+debris = "snow"
+fracture = 120
+conductivity = 50
+temp = -20
+opacity = 60
+melt = { at = 10, into = "water" }
+colors = ["#a9d6f0", "#9fcde8", "#b3def5"]
+
+[[material]]
+name = "snow"
+state = "powder"
+density = 40
+slide = "20%"
+temp = -10
+melt = { at = 10, into = "water" }
+colors = ["#eef4fa", "#e4ecf4"]
+
+# ---------------------------------------------------------------- explosives
+
+[[material]]
+name = "gunpowder"
+state = "powder"
+density = 110
+slide = "50%"
+explode = { at = 200, radius = 9, power = 110 }
+colors = ["#3a3a3e", "#323236", "#424246"]
+
+[[material]]
+name = "tnt"
+state = "static"
+hp = 10
+structural = false
+explode = { at = 150, radius = 18, power = 210 }
+colors = ["#c02a2a", "#b02424", "#d03030"]
+
+# ---------------------------------------------------------------- living and glowing
+
+[[material]]
+name = "moss"
+state = "static"
+structural = false
+hp = 2
+light = "#0f4a3c"
+ignite = { at = 220, chance = "10%", into = "fire" }
+colors = ["#2a5e3c", "#245434", "#306844"]
+
+[[material]]
+name = "glowshroom"
+state = "static"
+structural = false
+hp = 3
+light = "#2c8cff"
+ignite = { at = 250, chance = "10%", into = "fire" }
+colors = ["#5ab8ff", "#4aa8f0", "#78c8ff"]
+
+[[material]]
+name = "crystal"
+state = "static"
+hp = 30
+debris = "shards"
+fracture = 80
+opacity = 40
+light = "#9a50ff"
+colors = ["#b080ff", "#a070f0", "#c090ff"]
+
+[[material]]
+name = "vine"
+state = "static"
+structural = false
+hp = 3
+ignite = { at = 220, chance = "15%", into = "fire" }
+spawn = { into = "vine", chance = "1/600", dir = "down" }
+colors = ["#2e6a2a", "#357530"]
+
+# ---------------------------------------------------------------- emitters
+
+[[material]]
+name = "rain_cloud"
+state = "static"
+structural = false
+indestructible = true
+opacity = 0
+spawn = { into = "water", chance = "3%", dir = "down" }
+colors = ["#20242c"]
+
+[[material]]
+name = "water_source"
+state = "static"
+structural = false
+indestructible = true
+spawn = { into = "water", chance = "60%", dir = "down" }
+colors = ["#2a5fb0"]
+
+[[material]]
+name = "lava_source"
+state = "static"
+structural = false
+indestructible = true
+hold_temp = 1200
+light = "#ff6a1f"
+spawn = { into = "lava", chance = "40%", dir = "down" }
+colors = ["#ff5a10"]
+
+[[material]]
+name = "metal_source"
+state = "static"
+structural = false
+indestructible = true
+hold_temp = 1600
+light = "#ffb060"
+spawn = { into = "molten_metal", chance = "50%", dir = "down" }
+colors = ["#ffd080"]
+
+[[material]]
+name = "heater"
+state = "static"
+indestructible = true
+hold_temp = 1500
+conductivity = 200
+light = "#a02008"
+colors = ["#702010", "#802818"]
+
+[[material]]
+name = "torch"
+state = "static"
+structural = false
+hp = 5
+light = "#ffb050"
+colors = ["#ffd080", "#ffc060"]
+
+# ---------------------------------------------------------------- reactions
+
+[[reaction]]
+a = "water"
+b = "lava"
+into_a = "steam"
+into_b = "obsidian"
+chance = "30%"
+
+[[reaction]]
+a = "water"
+b = "molten_metal"
+into_a = "steam"
+into_b = "metal"
+chance = "25%"
+
+[[reaction]]
+a = "water"
+b = "molten_glass"
+into_a = "steam"
+into_b = "glass"
+chance = "25%"
+
+[[reaction]]
+a = "water"
+b = "fire"
+into_a = "steam"
+into_b = "air"
+chance = "60%"
+
+[[reaction]]
+a = "water"
+b = "burning_wood"
+into_a = "steam"
+into_b = "wood"
+chance = "15%"
+
+[[reaction]]
+a = "water"
+b = "burning_coal"
+into_a = "steam"
+into_b = "coal"
+chance = "15%"
+
+[[reaction]]
+a = "water"
+b = "dirt"
+into_a = "water"
+into_b = "mud"
+chance = "1%"
+
+[[reaction]]
+a = "water"
+b = "acid"
+into_a = "water"
+into_b = "water"
+chance = "0.5%"
+
+[[reaction]]
+a = "acid"
+b = "stone"
+into_a = "air"
+into_b = "acid_gas"
+chance = "4%"
+
+[[reaction]]
+a = "acid"
+b = "soil"
+into_a = "air"
+into_b = "acid_gas"
+chance = "6%"
+
+[[reaction]]
+a = "acid"
+b = "dirt"
+into_a = "air"
+into_b = "acid_gas"
+chance = "6%"
+
+[[reaction]]
+a = "acid"
+b = "brick"
+into_a = "air"
+into_b = "acid_gas"
+chance = "4%"
+
+[[reaction]]
+a = "acid"
+b = "metal"
+into_a = "air"
+into_b = "acid_gas"
+chance = "2%"
+
+[[reaction]]
+a = "acid"
+b = "wood"
+into_a = "air"
+into_b = "acid_gas"
+chance = "6%"
+
+[[reaction]]
+a = "acid"
+b = "basalt"
+into_a = "air"
+into_b = "acid_gas"
+chance = "3%"
+
+[[reaction]]
+a = "acid"
+b = "concrete"
+into_a = "air"
+into_b = "acid_gas"
+chance = "2%"
