@@ -1,0 +1,19 @@
+[package]
+name = "fe-sim"
+description = "Deterministic cell simulation for falling-engine: chunks, checkerboard scheduler, cell rules, particles, explosions, structural support, characters."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+serde.workspace = true
+rayon.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true
