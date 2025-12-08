@@ -1,6 +1,19 @@
 [package]
 name = "fe-engine"
-version = "0.1.0"
-edition = "2024"
+description = "The full falling-engine tick: cells, explosions, particles, bodies, support, characters, commands, hashing and snapshots."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+fe-physics.workspace = true
+serde.workspace = true
+postcard.workspace = true
+zstd.workspace = true
+
+[lints]
+workspace = true
