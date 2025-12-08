@@ -1,0 +1,11 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-print-in-tests = true
+# Simulation crates must be deterministic. These types and calls produce
+# results that depend on the machine, the run, or the order threads finish in.
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is random; use BTreeMap or fe_core::PosSet" },
+  { path = "std::collections::HashSet", reason = "iteration order is random; use BTreeSet or fe_core::PosSet" },
+  { path = "std::time::Instant", reason = "wall-clock time breaks determinism" },
+  { path = "std::time::SystemTime", reason = "wall-clock time breaks determinism" },
+]
