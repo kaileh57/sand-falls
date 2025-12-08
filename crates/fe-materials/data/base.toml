@@ -9,6 +9,7 @@
 [[material]]
 name = "bedrock"
 state = "static"
+density = 300
 anchored = true
 indestructible = true
 colors = ["#2a2730", "#25222b", "#2f2b35"]
@@ -16,6 +17,7 @@ colors = ["#2a2730", "#25222b", "#2f2b35"]
 [[material]]
 name = "stone"
 state = "static"
+density = 250
 hp = 60
 debris = "rubble"
 fracture = 400
@@ -26,6 +28,7 @@ colors = ["#6b6870", "#646169", "#726f77", "#5d5a62"]
 [[material]]
 name = "soil"
 state = "static"
+density = 160
 hp = 14
 debris = "dirt"
 fracture = 150
@@ -184,6 +187,7 @@ colors = ["#ff9a2a", "#ffc040", "#ff6a1a", "#ffe070"]
 [[material]]
 name = "wood"
 state = "static"
+density = 60
 hp = 30
 debris = "splinters"
 fracture = 260
@@ -194,6 +198,7 @@ colors = ["#7a5230", "#714b2b", "#835935", "#6b4628"]
 [[material]]
 name = "burning_wood"
 state = "static"
+density = 55
 hp = 10
 debris = "ash"
 conductivity = 30
@@ -215,6 +220,7 @@ colors = ["#8a6038", "#7d5632"]
 [[material]]
 name = "leaves"
 state = "static"
+density = 30
 structural = false
 hp = 4
 conductivity = 10
@@ -231,6 +237,7 @@ colors = ["#8a8580", "#7e7974", "#96918c"]
 [[material]]
 name = "coal"
 state = "static"
+density = 140
 hp = 40
 debris = "gravel"
 ignite = { at = 400, chance = "2%", into = "burning_coal" }
@@ -239,6 +246,7 @@ colors = ["#1e1c1c", "#252222", "#181616"]
 [[material]]
 name = "burning_coal"
 state = "static"
+density = 130
 hp = 20
 debris = "ash"
 lifetime = [250, 255]
@@ -253,6 +261,7 @@ colors = ["#c03a10", "#a02c0a", "#e05018"]
 [[material]]
 name = "basalt"
 state = "static"
+density = 280
 hp = 50
 debris = "rubble"
 melt = { at = 1100, into = "lava" }
@@ -261,6 +270,7 @@ colors = ["#3a3436", "#332e30", "#423b3d"]
 [[material]]
 name = "obsidian"
 state = "static"
+density = 260
 hp = 80
 debris = "gravel"
 melt = { at = 1300, into = "lava" }
@@ -271,6 +281,7 @@ colors = ["#1c1424", "#22192c", "#170f1e"]
 [[material]]
 name = "metal"
 state = "static"
+density = 780
 hp = 120
 debris = "scrap"
 conductivity = 120
@@ -288,6 +299,7 @@ colors = ["#6f7a86", "#66717d"]
 [[material]]
 name = "brick"
 state = "static"
+density = 200
 hp = 60
 debris = "rubble"
 fracture = 320
@@ -296,6 +308,7 @@ colors = ["#9a4a32", "#8e432d", "#a55238", "#7f3b28"]
 [[material]]
 name = "concrete"
 state = "static"
+density = 240
 hp = 90
 debris = "rubble"
 fracture = 520
@@ -304,6 +317,7 @@ colors = ["#9a9893", "#92908b", "#a2a09b"]
 [[material]]
 name = "glass"
 state = "static"
+density = 250
 hp = 8
 debris = "shards"
 fracture = 60
@@ -322,6 +336,7 @@ colors = ["#c0e6f2", "#9fd0e0"]
 [[material]]
 name = "ice"
 state = "static"
+density = 90
 hp = 20
 debris = "snow"
 fracture = 120
@@ -353,6 +368,7 @@ colors = ["#3a3a3e", "#323236", "#424246"]
 [[material]]
 name = "tnt"
 state = "static"
+density = 160
 hp = 10
 structural = false
 explode = { at = 150, radius = 18, power = 210 }
@@ -363,6 +379,7 @@ colors = ["#c02a2a", "#b02424", "#d03030"]
 [[material]]
 name = "moss"
 state = "static"
+density = 40
 structural = false
 hp = 2
 light = "#0f4a3c"
@@ -372,6 +389,7 @@ colors = ["#2a5e3c", "#245434", "#306844"]
 [[material]]
 name = "glowshroom"
 state = "static"
+density = 40
 structural = false
 hp = 3
 light = "#2c8cff"
@@ -381,6 +399,7 @@ colors = ["#5ab8ff", "#4aa8f0", "#78c8ff"]
 [[material]]
 name = "crystal"
 state = "static"
+density = 260
 hp = 30
 debris = "shards"
 fracture = 80
@@ -391,6 +410,7 @@ colors = ["#b080ff", "#a070f0", "#c090ff"]
 [[material]]
 name = "vine"
 state = "static"
+density = 30
 structural = false
 hp = 3
 ignite = { at = 220, chance = "15%", into = "fire" }
@@ -439,6 +459,7 @@ colors = ["#ffd080"]
 [[material]]
 name = "heater"
 state = "static"
+density = 500
 indestructible = true
 hold_temp = 1500
 conductivity = 200
@@ -448,6 +469,7 @@ colors = ["#702010", "#802818"]
 [[material]]
 name = "torch"
 state = "static"
+density = 80
 structural = false
 hp = 5
 light = "#ffb050"

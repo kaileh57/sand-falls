@@ -1,6 +1,17 @@
 [package]
 name = "fe-physics"
-version = "0.1.0"
-edition = "2024"
+description = "Pixel rigid bodies for falling-engine: Rapier bridge, stamping, splitting, fracture, buoyancy, joints."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+rapier2d.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true
