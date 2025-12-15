@@ -169,6 +169,16 @@ impl Chunk {
         self.solid_changed.store(true, Ordering::Relaxed);
     }
 
+    /// Reads the solid-changed flag without clearing it.
+    pub fn solid_changed(&self) -> bool {
+        self.solid_changed.load(Ordering::Relaxed)
+    }
+
+    /// Sets the solid-changed flag, used when loading a snapshot.
+    pub fn set_solid_changed(&mut self, v: bool) {
+        *self.solid_changed.get_mut() = v;
+    }
+
     /// Returns and clears the solid-changed flag.
     pub fn take_solid_changed(&mut self) -> bool {
         std::mem::replace(self.solid_changed.get_mut(), false)
