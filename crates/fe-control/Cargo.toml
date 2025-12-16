@@ -1,6 +1,20 @@
 [package]
 name = "fe-control"
-version = "0.1.0"
-edition = "2024"
+description = "JSON-RPC 2.0 control API for falling-engine: load scenes, step, edit, inspect, screenshot, snapshot."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+fe-engine.workspace = true
+fe-scene.workspace = true
+fe-render.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
