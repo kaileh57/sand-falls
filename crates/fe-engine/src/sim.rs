@@ -126,6 +126,22 @@ pub struct Simulation {
     report: TickReport,
 }
 
+/// Adds an explosion to this tick's list, merging it into an earlier one that is
+/// close enough. A block of explosive cells then makes one large blast instead of
+/// many overlapping small ones.
+fn merge_blast(list: &mut Vec<(CellPos, u8, u8)>, pos: CellPos, radius: u8, power: u8) {
+    for b in list.iter_mut() {
+        let (dx, dy) = (i64::from(b.0.x - pos.x), i64::from(b.0.y - pos.y));
+        let reach = i64::from(b.1.max(radius)) / 2;
+        if dx * dx + dy * dy <= reach * reach {
+            b.1 = b.1.max(radius).saturating_add(1).min(48);
+            b.2 = b.2.max(power).saturating_add(6);
+            return;
+        }
+    }
+    list.push((pos, radius, power));
+}
+
 fn us(t: Instant) -> u64 {
     t.elapsed().as_micros() as u64
 }
@@ -293,6 +309,26 @@ impl Simulation {
         }
     }
 
+    /// Removes the listed cells from the world and makes them one rigid body.
+    /// Returns the body id, or `None` if too few cells can be part of a body.
+    pub fn carve_cells(&mut self, cells: &[CellPos]) -> Option<u32> {
+        let picked: Vec<(CellPos, Cell)> = cells
+            .iter()
+            .map(|&p| (p, self.world.get(p)))
+            .filter(|&(_, c)| fe_physics::is_body_material(&self.world, c))
+            .collect();
+        if picked.len() < fe_physics::MIN_BODY_CELLS {
+            return None;
+        }
+        for &(p, _) in &picked {
+            self.world.grid.set(p, Cell::AIR);
+            if let Some(ch) = self.world.grid.chunk(p.chunk()) {
+                ch.flag_solid_changed();
+            }
+        }
+        self.physics.create_body(&self.world, &picked, (0.0, 0.0), 0.0)
+    }
+
     fn disc(&mut self, x: i32, y: i32, radius: i32, mut f: impl FnMut(&mut Self, CellPos)) {
         let r = radius.max(0);
         for dy in -r..=r {
@@ -393,15 +429,18 @@ impl Simulation {
 
         let t = Instant::now();
         let mut blasts = Vec::new();
-        let mut explosions = 0u32;
+        let mut pending: Vec<(CellPos, u8, u8)> = Vec::new();
         for e in &events {
             match *e {
                 Event::Explosion { pos, radius, power } => {
-                    self.run_explosion(pos, radius, power, &mut blasts);
-                    explosions += 1;
+                    merge_blast(&mut pending, pos, radius, power)
                 }
                 Event::SupportLost(p) => self.seed_support(p),
             }
+        }
+        let explosions = pending.len() as u32;
+        for (pos, radius, power) in pending {
+            self.run_explosion(pos, radius, power, &mut blasts);
         }
         times.explosions = us(t);
 
