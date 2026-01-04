@@ -1,6 +1,18 @@
 [package]
 name = "fe-render"
-version = "0.1.0"
-edition = "2024"
+description = "Renderer for falling-engine: lit frames with emissive light, bloom, heat haze and smoke scattering, PNG and video output."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+fe-engine.workspace = true
+rayon.workspace = true
+png.workspace = true
+
+[lints]
+workspace = true
