@@ -85,7 +85,8 @@ pub fn explode(
                     let mut debris = world.make_cell(m.debris, p);
                     debris.temp = c.temp.saturating_add((dmg / 4) as u8);
                     let dm = world.materials().get(m.debris);
-                    if dm.state.falls() && roll.is_multiple_of(2) {
+                    // The inner part of the blast throws its debris; the rim crumbles in place.
+                    if dm.state.falls() && (d * 3 < r * 2 || roll.is_multiple_of(3)) {
                         events.extend(world.set(p, Cell::AIR));
                         fling(particles, pos, p, falloff, power, debris, &mut rng);
                     } else {
@@ -126,7 +127,10 @@ fn fling(
     let speed = (i32::from(power) * falloff / 96).clamp(1, 24);
     let jitter = |rng: &mut SeqRng| Fx(rng.range_i32(-(1 << 15), 1 << 15));
     let vx = Fx::from_ratio(dx * speed, len) + jitter(rng);
-    let vy = Fx::from_ratio(dy * speed, len) - Fx::from_int(1) + jitter(rng);
+    // Debris below the center bounces back up out of the crater instead of
+    // burying itself, so most of it flies up and outward.
+    let up = if dy > 0 { -dy * speed * 3 / 10 } else { dy * speed };
+    let vy = Fx::from_ratio(up, len) - Fx::from_int(speed / 3 + 1) + jitter(rng);
     particles.spawn(Fx::from_int(p.x) + Fx(1 << 15), Fx::from_int(p.y) + Fx(1 << 15), vx, vy, cell);
 }
 

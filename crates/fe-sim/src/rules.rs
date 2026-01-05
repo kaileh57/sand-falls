@@ -385,6 +385,19 @@ fn can_enter(ctx: &RuleCtx<'_>, m: &Material, target: Cell, sinking: bool, r: u3
     ok && (tm.state != State::Liquid || r & 1 == 0)
 }
 
+/// True if `t` is air or a free fluid lighter than `m`: space a liquid can flow into sideways.
+#[inline]
+fn lighter(ctx: &RuleCtx<'_>, m: &Material, t: Cell) -> bool {
+    if t.is_air() {
+        return true;
+    }
+    if t.has(Cell::FLAG_IN_BODY) {
+        return false;
+    }
+    let tm = ctx.mats.get(t.material());
+    tm.state.is_fluid() && tm.density < m.density
+}
+
 /// Moves `cell` from `(lx, ly)` to `(tx, ty)`, putting the displaced cell back where it came from.
 #[inline]
 fn swap_to(
@@ -516,10 +529,7 @@ fn move_liquid_inner(
         for k in 1..=spread {
             let tx = lx + dx * k;
             let t = nb.get(tx, ly);
-            let open = t.is_air()
-                || (!t.has(Cell::FLAG_IN_BODY)
-                    && matches!(ctx.mats.get(t.material()).state, State::Gas | State::Fire));
-            if !open {
+            if !lighter(ctx, m, t) {
                 break;
             }
             if can_enter(ctx, m, nb.get(tx, ly + 1), true, 0) {
@@ -545,8 +555,8 @@ fn move_liquid_inner(
     if below.is_air() || ctx.mats.get(below.material()).state != State::Liquid {
         return LiquidMove::None;
     }
-    let left = nb.get(lx - 1, ly).is_air();
-    let right = nb.get(lx + 1, ly).is_air();
+    let left = lighter(ctx, m, nb.get(lx - 1, ly));
+    let right = lighter(ctx, m, nb.get(lx + 1, ly));
     if !(left || right) || (r >> 26) == 0 {
         return LiquidMove::None;
     }
@@ -558,8 +568,8 @@ fn move_liquid_inner(
     };
     'scan: for dx in [d, -d] {
         let mut k = 1;
-        while k <= SURFACE_SCAN && nb.get(lx + dx * k, ly).is_air() {
-            if nb.get(lx + dx * k, ly + 1).is_air() {
+        while k <= SURFACE_SCAN && lighter(ctx, m, nb.get(lx + dx * k, ly)) {
+            if lighter(ctx, m, nb.get(lx + dx * k, ly + 1)) {
                 target_dir = dx;
                 break 'scan;
             }
@@ -567,9 +577,9 @@ fn move_liquid_inner(
         }
     }
     let mut tx = lx;
-    while tx - lx != target_dir * spread && nb.get(tx + target_dir, ly).is_air() {
+    while tx - lx != target_dir * spread && lighter(ctx, m, nb.get(tx + target_dir, ly)) {
         tx += target_dir;
-        if nb.get(tx, ly + 1).is_air() {
+        if lighter(ctx, m, nb.get(tx, ly + 1)) {
             break;
         }
     }
