@@ -1,0 +1,19 @@
+// A character walks right, climbs a two-cell step, and stops at a wall.
+[scene]
+name = character walks
+size = 256 128
+seed = 11
+
+[build]
+fill 0 100 256 128 bedrock
+fill 150 98 256 100 stone
+fill 200 60 210 98 stone
+player 0 100 60
+
+[events]
+at 60..300: input 0 move=1
+
+[expect]
+after 300: avatar 0 y == 98
+after 300: avatar 0 x >= 190
+after 300: avatar 0 x < 200

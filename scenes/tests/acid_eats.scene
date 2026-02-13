@@ -1,0 +1,14 @@
+// Acid dissolves stone below it and turns into fumes.
+[scene]
+name = acid eats stone
+size = 96 96
+seed = 8
+
+[build]
+fill 0 50 96 96 stone
+fill 30 30 66 50 acid
+
+[expect]
+// Each acid cell dissolves at most one cell before it is used up.
+after 900: count stone in 0 50 96 96 < 4100
+after 900: count acid in 0 0 96 96 < 400
