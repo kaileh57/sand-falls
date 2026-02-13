@@ -1,0 +1,17 @@
+// Cutting a brick pillar drops the tower above it as a rigid body.
+[scene]
+name = tower collapse
+size = 256 192
+seed = 9
+
+[build]
+fill 0 180 256 192 bedrock
+fill 120 80 128 180 brick
+fill 100 72 148 80 brick
+
+[events]
+at 5: dig 124 150 6
+
+[expect]
+after 6: bodies >= 1
+after 200: count brick in 90 60 160 120 < 300

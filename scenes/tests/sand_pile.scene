@@ -1,0 +1,15 @@
+// Sand poured onto a floor piles up and the world goes to sleep.
+[scene]
+name = sand pile
+size = 192 128
+seed = 1
+
+[build]
+fill 0 120 192 128 bedrock
+fill 80 10 112 40 sand
+
+[expect]
+after 400: count sand in 0 0 192 128 == 960
+after 400: count sand in 0 0 192 90 == 0
+after 400: count sand in 60 100 132 120 >= 800
+after 600: asleep

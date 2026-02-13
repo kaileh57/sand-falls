@@ -1,0 +1,21 @@
+// Oil floats on water; sand sinks through both.
+[scene]
+name = liquids layer
+size = 128 128
+seed = 3
+
+[build]
+fill 0 120 128 128 bedrock
+fill 0 40 4 120 bedrock
+fill 124 40 128 120 bedrock
+fill 4 60 124 80 oil
+fill 4 82 124 100 water
+fill 40 20 60 30 sand
+
+[expect]
+// Sand (200 cells) settles under the water (2160), which sits under the oil (2400).
+// Together sand and water fill rows 100 to 120, so row 100 is the interface.
+after 1200: count oil in 4 101 124 120 == 0
+after 1200: count water in 4 0 124 95 == 0
+after 1200: count sand in 4 100 124 120 == 200
+after 1200: count oil in 0 0 128 128 == 2400
