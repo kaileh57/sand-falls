@@ -1,6 +1,21 @@
 [package]
 name = "fe"
-version = "0.1.0"
-edition = "2024"
+description = "falling-engine command-line tool: run, test, bench, render, replay, diff, and serve scenes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+fe-engine.workspace = true
+fe-scene.workspace = true
+fe-render.workspace = true
+fe-control.workspace = true
+fe-mcp = { path = "../fe-mcp" }
+serde_json.workspace = true
+
+[lints]
+workspace = true
