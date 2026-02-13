@@ -1,0 +1,17 @@
+// TNT heated by a torch-hot cell blows a crater and throws debris.
+[scene]
+name = explosion crater
+size = 192 128
+seed = 7
+
+[build]
+fill 0 60 192 128 stone
+fill 94 56 98 60 tnt
+
+[events]
+at 10: heat 96 58 3 60
+
+[expect]
+after 12: particles > 50
+after 400: count stone in 70 40 122 80 < 1700
+after 600: particles == 0

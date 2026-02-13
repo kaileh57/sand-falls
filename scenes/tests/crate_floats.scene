@@ -1,0 +1,17 @@
+// A wooden crate floats in water; a stone block sinks.
+[scene]
+name = crate floats
+size = 320 256
+seed = 10
+
+[build]
+fill 0 230 320 256 bedrock
+fill 0 100 10 230 bedrock
+fill 310 100 320 230 bedrock
+fill 10 150 310 230 water
+body 60 120 80 130 wood
+body 200 120 212 130 stone
+
+[expect]
+after 400: count water in 0 0 320 145 == 0
+after 400: bodies >= 1

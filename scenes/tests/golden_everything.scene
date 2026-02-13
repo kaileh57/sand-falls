@@ -1,0 +1,51 @@
+// Touches every system, with stored hashes. CI runs this on Linux, Windows and
+// macOS; all three must match these values bit for bit. If a change to the
+// rules is intended, rerun with `fe test --bless` and commit the new hashes.
+[scene]
+name = golden everything
+size = 384 256
+seed = 0xfa11
+
+[legend]
+# bedrock
+w wood body
+. air
+
+[grid 300 60]
+wwwwwwwwwwww
+wwwwwwwwwwww
+wwwwwwwwwwww
+wwwwwwwwwwww
+
+[build]
+fill 0 240 384 256 bedrock
+fill 0 140 6 240 bedrock
+fill 140 140 146 240 bedrock
+fill 6 170 140 240 water
+fill 20 120 40 140 sand
+fill 60 150 80 160 oil
+fill 180 140 188 240 brick
+fill 160 132 210 140 brick
+fill 230 200 290 240 wood
+fill 258 196 262 200 burning_wood
+fill 320 200 340 240 ice
+fill 340 200 344 240 heater
+fill 100 60 120 70 lava
+fill 200 230 210 240 tnt
+body 40 80 60 92 wood
+player 0 160 230
+player 1 250 190
+
+[events]
+at 0..400: input 0 move=1
+every 40 from 20 to 300: input 1 jump move=-1
+at 30: dig 184 210 6
+at 60: heat 205 235 4 60
+at 120: explode 300 150 12 160
+every 30 from 0 to 300: paint 340 40 2 sand
+
+[expect]
+after 100: hash == 0xa7e4c9f0e1666ce8
+after 300: hash == 0x35da759553aca82b
+after 500: hash == 0x93043dc904c73c89
+after 500: bodies >= 1
