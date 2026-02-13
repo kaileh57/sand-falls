@@ -1,0 +1,18 @@
+// Lava poured into water hardens into obsidian and boils water into steam.
+[scene]
+name = lava meets water
+size = 128 128
+seed = 4
+
+[build]
+fill 0 120 128 128 bedrock
+fill 0 60 4 120 bedrock
+fill 124 60 128 120 bedrock
+fill 4 95 124 120 water
+fill 50 20 78 40 lava
+
+[expect]
+// Water cools most lava into basalt before the two react into obsidian.
+after 600: count lava in 0 0 128 128 < 100
+after 600: count basalt in 0 0 128 128 >= 200
+after 600: count water in 0 0 128 128 < 3000

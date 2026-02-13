@@ -1,0 +1,25 @@
+// Bodies drawn in a grid fall onto a floor and stay whole.
+[scene]
+name = grid bodies
+size = 128 96
+seed = 12
+
+[legend]
+# bedrock
+w wood body
+b brick body
+. air
+
+[grid 0 10]
+..........................................
+....wwwwwwww..............bbbbbb..........
+....wwwwwwww..............bbbbbb..........
+....wwwwwwww..............bbbbbb..........
+..........................................
+
+[build]
+fill 0 88 128 96 bedrock
+
+[expect]
+after 1: bodies == 2
+after 300: count wood in 0 0 128 60 == 0

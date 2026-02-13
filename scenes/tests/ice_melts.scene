@@ -1,0 +1,14 @@
+// Ice next to a heater melts, and the water spreads.
+[scene]
+name = ice melts
+size = 128 96
+seed = 6
+
+[build]
+fill 0 88 128 96 bedrock
+fill 30 60 70 88 ice
+fill 70 60 74 88 heater
+
+[expect]
+after 1500: count ice in 0 0 128 96 < 1000
+after 1500: count water in 0 0 128 96 > 100
