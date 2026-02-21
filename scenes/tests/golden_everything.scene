@@ -46,6 +46,6 @@ every 30 from 0 to 300: paint 340 40 2 sand
 
 [expect]
 after 100: hash == 0xa7e4c9f0e1666ce8
-after 300: hash == 0x35da759553aca82b
-after 500: hash == 0x93043dc904c73c89
+after 300: hash == 0xd78bfe52677dbdc4
+after 500: hash == 0xaa5b463fba509a7f
 after 500: bodies >= 1

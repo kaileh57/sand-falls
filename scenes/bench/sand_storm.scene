@@ -1,0 +1,16 @@
+// Fully active powder: a 1024x512 slab of sand falls into a 1024x1024 world.
+// Every cell in the slab moves every tick until it lands.
+[scene]
+name = sand storm
+size = 1024 1024
+seed = 21
+ticks = 120
+
+[build]
+fill 0 1000 1024 1024 bedrock
+scatter 0 0 1024 512 sand 70
+
+[camera]
+view 512 512
+scale 1
+at 0: 512 512 zoom=0.5
