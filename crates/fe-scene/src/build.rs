@@ -239,7 +239,7 @@ pub fn build(
     for step in &scene.setup {
         match step {
             Setup::Grid { x, y, rows, line } => {
-                place_grid(&mut sim, scene, mats, (*x, *y, rows, *line))?
+                place_grid(&mut sim, scene, mats, (*x, *y, rows, *line))?;
             }
             Setup::Op(op, line) => {
                 let r = resolve(op, mats, *line)?;

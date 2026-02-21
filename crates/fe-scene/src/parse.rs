@@ -747,7 +747,7 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
                 let w: Vec<&str> = body.split_whitespace().collect();
                 match w.as_slice() {
                     ["view", vw, vh] => {
-                        scene.camera.view = (num(line, vw, "width")?, num(line, vh, "height")?)
+                        scene.camera.view = (num(line, vw, "width")?, num(line, vh, "height")?);
                     }
                     ["scale", s] => scene.camera.scale = num::<u32>(line, s, "scale")?.clamp(1, 16),
                     ["sky", s] => {

@@ -4,7 +4,7 @@ use crate::args::Args;
 use fe_core::IRect;
 use fe_materials::MaterialSet;
 use fe_render::{Renderer, View};
-use fe_scene::{Check, Replay, Runner, Scene};
+use fe_scene::{Replay, Runner, Scene};
 use serde_json::json;
 use std::io::Write;
 use std::path::{Path, PathBuf};
