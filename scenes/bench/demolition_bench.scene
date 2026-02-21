@@ -1,0 +1,27 @@
+// Bodies and particles under load: rows of brick towers cut at the base.
+[scene]
+name = demolition bench
+size = 1024 512
+seed = 23
+ticks = 300
+
+[build]
+fill 0 480 1024 512 bedrock
+fill 40 300 60 480 brick
+fill 140 300 160 480 brick
+fill 240 300 260 480 brick
+fill 340 300 360 480 brick
+fill 440 300 460 480 brick
+fill 540 300 560 480 brick
+fill 640 300 660 480 brick
+fill 740 300 760 480 brick
+fill 840 300 860 480 brick
+fill 940 300 960 480 brick
+fill 20 290 980 300 brick
+
+[events]
+at 5: explode 50 470 14 230
+at 5: explode 250 470 14 230
+at 5: explode 450 470 14 230
+at 5: explode 650 470 14 230
+at 5: explode 850 470 14 230
