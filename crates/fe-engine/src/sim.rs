@@ -433,7 +433,7 @@ impl Simulation {
         for e in &events {
             match *e {
                 Event::Explosion { pos, radius, power } => {
-                    merge_blast(&mut pending, pos, radius, power)
+                    merge_blast(&mut pending, pos, radius, power);
                 }
                 Event::SupportLost(p) => self.seed_support(p),
             }
