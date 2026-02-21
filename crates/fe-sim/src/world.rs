@@ -19,7 +19,7 @@ pub struct CellStats {
 /// The cell world: material set, chunks, seed, tick, and the thread pool.
 pub struct World {
     mats: Arc<MaterialSet>,
-    reactive: Vec<bool>,
+    fast: Vec<rules::Fast>,
     /// Loaded chunks.
     pub grid: Grid,
     seed: u64,
@@ -32,10 +32,10 @@ pub struct World {
 impl World {
     /// Creates an empty world. `threads` of 0 or 1 runs passes on the calling thread.
     pub fn new(mats: Arc<MaterialSet>, seed: u64, threads: usize) -> Self {
-        let reactive = rules::reactive_table(&mats);
+        let fast = rules::fast_table(&mats);
         let mut w = Self {
             mats,
-            reactive,
+            fast,
             grid: Grid::default(),
             seed,
             tick: 0,
@@ -171,7 +171,7 @@ impl World {
                 active += 1;
             }
         }
-        let ctx = RuleCtx::new(&self.mats, &self.reactive, self.seed, self.tick);
+        let ctx = RuleCtx::new(&self.mats, &self.fast, self.seed, self.tick);
         let mut events = Vec::new();
         let mut visited = 0u64;
         let offset = (self.tick % 4) as usize;
