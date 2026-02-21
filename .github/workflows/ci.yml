@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  lint:
+    name: Format and clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux x86_64, Windows x86_64, macOS ARM64. Every one must produce the
+        # golden hashes stored in scenes/tests/golden_everything.scene.
+        os: [ubuntu-latest, windows-latest, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --release
+      - run: cargo build --release -p fe
+      - name: Scene tests, golden hashes, and thread-count determinism
+        run: cargo run --release -p fe -- test scenes/tests --determinism --threads 4
+      - name: Multiplayer soak (simulated latency and loss)
+        run: cargo run --release -p fe-server -- soak --ticks 6000 --players 4 --latency 150 --loss 2
+
+  miri:
+    name: Miri (scheduler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - run: cargo miri test -p fe-sim sched::
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  fuzz:
+    name: Fuzz (60 s per target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo install cargo-fuzz --locked
+      - run: |
+          cd fuzz
+          for t in scene_parser net_messages material_file; do
+            cargo fuzz run "$t" -- -max_total_time=60
+          done
+
+  bench:
+    name: Benchmark regression gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compare this branch against its base on the same runner
+        run: ci/bench_compare.sh "origin/${{ github.base_ref }}" HEAD
+        env:
+          # A slowdown above this percentage fails the job unless the commit
+          # message contains "perf-regression-ok:" with a reason.
+          FE_BENCH_TOLERANCE: "5"
+          FE_COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
