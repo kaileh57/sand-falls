@@ -1,0 +1,35 @@
+[package]
+name = "fe-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fe-scene = { path = "../crates/fe-scene" }
+fe-materials = { path = "../crates/fe-materials" }
+fe-net = { path = "../crates/fe-net" }
+
+[[bin]]
+name = "scene_parser"
+path = "fuzz_targets/scene_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "material_file"
+path = "fuzz_targets/material_file.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "net_messages"
+path = "fuzz_targets/net_messages.rs"
+test = false
+doc = false
+bench = false
