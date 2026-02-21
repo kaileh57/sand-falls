@@ -1,0 +1,17 @@
+// A column of water in a tank spreads out to a level surface.
+[scene]
+name = water levels
+size = 256 128
+seed = 2
+
+[build]
+fill 0 120 256 128 bedrock
+fill 0 60 4 120 bedrock
+fill 252 60 256 120 bedrock
+fill 10 10 50 110 water
+
+[expect]
+// 4000 cells over a 248-wide floor: about 16 rows.
+after 2500: count water in 0 0 256 128 == 4000
+after 2500: count water in 0 0 256 100 == 0
+after 2500: count water in 4 108 252 120 == 2976

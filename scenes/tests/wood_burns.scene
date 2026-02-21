@@ -1,0 +1,14 @@
+// A burning plank spreads fire through a wooden block, leaving ash.
+[scene]
+name = wood burns
+size = 128 128
+seed = 5
+
+[build]
+fill 0 120 128 128 bedrock
+fill 40 90 90 120 wood
+fill 62 88 66 90 burning_wood
+
+[expect]
+after 2400: count wood in 0 0 128 128 < 1200
+after 2400: count ash in 0 0 128 128 > 200
