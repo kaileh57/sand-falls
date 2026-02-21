@@ -6,7 +6,7 @@
 
 use crate::sched::{Neighborhood, REACH};
 use fe_core::{AMBIENT_TEMP, Cell, CellPos, LocalRect, MaterialId, mix64};
-use fe_materials::{Material, MaterialSet, SpawnDir, State};
+use fe_materials::{MaterialSet, SpawnDir, State};
 
 /// Fall-speed units per cell: the value byte stores speed in 1/16 cells per tick.
 pub const SPEED_UNITS: u32 = 16;
@@ -45,12 +45,61 @@ pub struct JobOut {
     pub visited: u64,
 }
 
+/// The material fields the inner loop reads, packed into 12 bytes.
+#[derive(Clone, Copy, Debug)]
+pub struct Fast {
+    state: State,
+    flags: u8,
+    density: i16,
+    conductivity: u8,
+    cooling: u8,
+    hold_temp: u8,
+    spread: u8,
+    slide: u32,
+}
+
+const F_LIFETIME: u8 = 1;
+const F_TRANSITIONS: u8 = 2;
+const F_SPAWN: u8 = 4;
+const F_REACTIVE: u8 = 8;
+
+/// Builds the packed per-material table used by [`RuleCtx`].
+pub fn fast_table(mats: &MaterialSet) -> Vec<Fast> {
+    mats.iter()
+        .map(|(id, m)| {
+            let mut flags = 0;
+            if m.lifetime.is_some() {
+                flags |= F_LIFETIME;
+            }
+            if m.melt.is_some() || m.freeze.is_some() || m.explode.is_some() || m.ignite.is_some() {
+                flags |= F_TRANSITIONS;
+            }
+            if m.spawn.is_some() {
+                flags |= F_SPAWN;
+            }
+            if mats.has_reactions(id) {
+                flags |= F_REACTIVE;
+            }
+            Fast {
+                state: m.state,
+                flags,
+                density: m.density,
+                conductivity: m.conductivity,
+                cooling: m.cooling,
+                hold_temp: m.hold_temp,
+                spread: m.spread,
+                slide: m.slide,
+            }
+        })
+        .collect()
+}
+
 /// Read-only state shared by every job in a tick.
 pub struct RuleCtx<'a> {
     /// Material tables.
     pub mats: &'a MaterialSet,
-    /// Per-material flag: true if the material has any reaction.
-    pub reactive: &'a [bool],
+    /// Packed per-material fields.
+    pub fast: &'a [Fast],
     /// Current tick.
     pub tick: u64,
     base: u64,
@@ -58,8 +107,17 @@ pub struct RuleCtx<'a> {
 
 impl<'a> RuleCtx<'a> {
     /// Creates the context for one tick.
-    pub fn new(mats: &'a MaterialSet, reactive: &'a [bool], seed: u64, tick: u64) -> Self {
-        Self { mats, reactive, tick, base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))) }
+    pub fn new(mats: &'a MaterialSet, fast: &'a [Fast], seed: u64, tick: u64) -> Self {
+        Self { mats, fast, tick, base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))) }
+    }
+
+    /// Packed fields for a cell's material. Unknown ids read as the boundary.
+    #[inline]
+    pub fn f(&self, c: Cell) -> Fast {
+        match self.fast.get(c.material().index()) {
+            Some(f) => *f,
+            None => self.fast[1],
+        }
     }
 
     /// Random bits for one decision at one world cell on this tick.
@@ -84,11 +142,6 @@ pub fn new_cell(mats: &MaterialSet, id: MaterialId, temp: Option<u8>, rnd: u32) 
         _ => 0,
     };
     Cell::new(id, temp.unwrap_or(m.temp), value)
-}
-
-/// Builds the per-material reaction flags used by [`RuleCtx`].
-pub fn reactive_table(mats: &MaterialSet) -> Vec<bool> {
-    mats.iter().map(|(id, _)| mats.has_reactions(id)).collect()
 }
 
 /// Updates every cell in a chunk's dirty rect, bottom row first.
@@ -139,15 +192,15 @@ fn update_cell(
         nb.keep(lx, ly);
         return;
     }
-    let m = ctx.mats.get(id);
+    let f = ctx.f(c);
     let r = ctx.rand(wx, wy, 0);
     let mut cell = c.with_parity(ctx.tick);
     let mut changed = false;
     let mut awake = false;
 
-    if m.lifetime.is_some() {
+    if f.flags & F_LIFETIME != 0 {
         if cell.value <= 1 {
-            let nc = new_cell(ctx.mats, m.decay, Some(cell.temp), r);
+            let nc = new_cell(ctx.mats, ctx.mats.get(id).decay, Some(cell.temp), r);
             transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
             return;
         }
@@ -155,56 +208,61 @@ fn update_cell(
         changed = true;
     }
 
-    if m.conductivity > 0 && exchange_heat(nb, ctx, lx, ly, &mut cell, m, r) {
+    if f.conductivity > 0 && exchange_heat(nb, ctx, lx, ly, &mut cell, f, r) {
         changed = true;
     }
-    if m.hold_temp > cell.temp {
-        cell.temp = m.hold_temp;
+    if f.hold_temp > cell.temp {
+        cell.temp = f.hold_temp;
         changed = true;
     }
-    if m.cooling > 0 && cell.temp != AMBIENT_TEMP && ((r >> 24) as u8) < m.cooling {
+    if f.cooling > 0 && cell.temp != AMBIENT_TEMP && ((r >> 24) as u8) < f.cooling {
         cell.temp = if cell.temp > AMBIENT_TEMP { cell.temp - 1 } else { cell.temp + 1 };
         changed = true;
     }
 
-    if let Some(t) = m.melt
-        && cell.temp >= t.at
-    {
-        let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
-        transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-        return;
-    }
-    if let Some(t) = m.freeze
-        && cell.temp <= t.at
-    {
-        let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
-        transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-        return;
-    }
-    if let Some(e) = m.explode
-        && cell.temp >= e.at
-    {
-        out.events.push(Event::Explosion {
-            pos: CellPos::new(wx, wy),
-            radius: e.radius,
-            power: e.power,
-        });
-        let nc = Cell::new(MaterialId::AIR, cell.temp, 0);
-        transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-        return;
-    }
-    if let Some(ig) = m.ignite
-        && cell.temp >= ig.at
-    {
-        if (r & 0xffff) < ig.chance {
-            let nc = new_cell(ctx.mats, ig.into, Some(cell.temp), r);
+    if f.flags & F_TRANSITIONS != 0 {
+        let m = ctx.mats.get(id);
+        if let Some(t) = m.melt
+            && cell.temp >= t.at
+        {
+            let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
             transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
             return;
         }
-        awake = true;
+        if let Some(t) = m.freeze
+            && cell.temp <= t.at
+        {
+            let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
+            transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+            return;
+        }
+        if let Some(e) = m.explode
+            && cell.temp >= e.at
+        {
+            out.events.push(Event::Explosion {
+                pos: CellPos::new(wx, wy),
+                radius: e.radius,
+                power: e.power,
+            });
+            let nc = Cell::new(MaterialId::AIR, cell.temp, 0);
+            transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+            return;
+        }
+        if let Some(ig) = m.ignite
+            && cell.temp >= ig.at
+        {
+            if (r & 0xffff) < ig.chance {
+                let nc = new_cell(ctx.mats, ig.into, Some(cell.temp), r);
+                transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+                return;
+            }
+            awake = true;
+        }
     }
 
-    if let Some(s) = m.spawn {
+    if f.flags & F_SPAWN != 0
+        && let Some(s) = ctx.mats.get(id).spawn
+    {
         awake = true;
         let r1 = ctx.rand(wx, wy, 1);
         if (r1 & 0xffff) < s.chance {
@@ -224,7 +282,7 @@ fn update_cell(
         }
     }
 
-    if ctx.reactive[id.index()] {
+    if f.flags & F_REACTIVE != 0 {
         let r2 = ctx.rand(wx, wy, 2);
         let (dx, dy) = DIRS4[(r2 >> 16) as usize & 3];
         let n = nb.get(lx + dx, ly + dy);
@@ -241,10 +299,10 @@ fn update_cell(
     }
 
     if !cell.has(Cell::FLAG_IN_BODY) {
-        let moved = match m.state {
-            State::Powder => move_powder(nb, ctx, lx, ly, wx, wy, &mut cell, m, r, &mut changed),
+        let moved = match f.state {
+            State::Powder => move_powder(nb, ctx, lx, ly, wx, wy, &mut cell, f, r, &mut changed),
             State::Liquid => {
-                match move_liquid_inner(nb, ctx, lx, ly, &mut cell, m, r, &mut changed) {
+                match move_liquid_inner(nb, ctx, lx, ly, &mut cell, f, r, &mut changed) {
                     LiquidMove::None => false,
                     LiquidMove::Side => true,
                     LiquidMove::Down => {
@@ -255,7 +313,7 @@ fn update_cell(
                     }
                 }
             }
-            State::Gas => move_gas(nb, ctx, lx, ly, wx, wy, cell, m),
+            State::Gas => move_gas(nb, ctx, lx, ly, wx, wy, cell, f),
             State::Fire => move_fire(nb, ctx, lx, ly, wx, wy, cell),
             State::Static | State::Empty => false,
         };
@@ -281,11 +339,11 @@ fn update_air(
     wx: i32,
     wy: i32,
 ) {
-    let m = ctx.mats.get(MaterialId::AIR);
+    let f = ctx.fast[0];
     let r = ctx.rand(wx, wy, 0);
     let mut cell = c;
-    exchange_heat(nb, ctx, lx, ly, &mut cell, m, r);
-    if ((r >> 24) as u8) < m.cooling && cell.temp != AMBIENT_TEMP {
+    exchange_heat(nb, ctx, lx, ly, &mut cell, f, r);
+    if ((r >> 24) as u8) < f.cooling && cell.temp != AMBIENT_TEMP {
         cell.temp = if cell.temp > AMBIENT_TEMP { cell.temp - 1 } else { cell.temp + 1 };
     }
     nb.set(lx, ly, cell);
@@ -334,7 +392,7 @@ fn exchange_heat(
     lx: i32,
     ly: i32,
     cell: &mut Cell,
-    m: &Material,
+    f: Fast,
     r: u32,
 ) -> bool {
     let (dx, dy) = DIRS4[(r >> 16) as usize & 3];
@@ -346,7 +404,7 @@ fn exchange_heat(
     if diff.abs() < 2 {
         return false;
     }
-    let k = i32::from(m.conductivity.min(ctx.mats.get(n.material()).conductivity));
+    let k = i32::from(f.conductivity.min(ctx.f(n).conductivity));
     if k == 0 {
         return false;
     }
@@ -369,14 +427,14 @@ fn exchange_heat(
 /// Can a moving cell enter `target`? `sinking` is true when moving down or sideways
 /// into lighter material, false when rising into heavier material.
 #[inline]
-fn can_enter(ctx: &RuleCtx<'_>, m: &Material, target: Cell, sinking: bool, r: u32) -> bool {
+fn can_enter(ctx: &RuleCtx<'_>, m: Fast, target: Cell, sinking: bool, r: u32) -> bool {
     if target.is_air() {
         return true;
     }
     if target.has(Cell::FLAG_IN_BODY) {
         return false;
     }
-    let tm = ctx.mats.get(target.material());
+    let tm = ctx.f(target);
     if !tm.state.is_fluid() {
         return false;
     }
@@ -387,14 +445,14 @@ fn can_enter(ctx: &RuleCtx<'_>, m: &Material, target: Cell, sinking: bool, r: u3
 
 /// True if `t` is air or a free fluid lighter than `m`: space a liquid can flow into sideways.
 #[inline]
-fn lighter(ctx: &RuleCtx<'_>, m: &Material, t: Cell) -> bool {
+fn lighter(ctx: &RuleCtx<'_>, m: Fast, t: Cell) -> bool {
     if t.is_air() {
         return true;
     }
     if t.has(Cell::FLAG_IN_BODY) {
         return false;
     }
-    let tm = ctx.mats.get(t.material());
+    let tm = ctx.f(t);
     tm.state.is_fluid() && tm.density < m.density
 }
 
@@ -412,8 +470,7 @@ fn swap_to(
     let displaced = nb.get(tx, ty);
     nb.set(tx, ty, cell);
     nb.set(lx, ly, if displaced.is_air() { displaced } else { displaced.with_parity(ctx.tick) });
-    nb.mark(lx, ly);
-    nb.mark(tx, ty);
+    nb.mark_rect(lx.min(tx) - 1, ly.min(ty) - 1, lx.max(tx) + 1, ly.max(ty) + 1);
 }
 
 /// Falls straight down with acceleration. Returns true if the cell moved.
@@ -424,11 +481,11 @@ fn fall(
     lx: i32,
     ly: i32,
     cell: &mut Cell,
-    m: &Material,
+    m: Fast,
     r: u32,
     changed: &mut bool,
 ) -> bool {
-    let has_speed = !m.has_lifetime();
+    let has_speed = m.flags & F_LIFETIME == 0;
     if !can_enter(ctx, m, nb.get(lx, ly + 1), true, r) {
         if has_speed && cell.value != 0 {
             cell.value = 0;
@@ -445,21 +502,36 @@ fn fall(
     let steps = steps.max(1) as i32;
     let mut y = ly;
     let mut blocked = false;
-    for i in 0..steps {
+    // `stored` is what (lx, y) holds right now. Each step moves the displaced cell
+    // up into (lx, y); when that is the value already there (air falling through
+    // air), the write is skipped, so a long fall costs two writes, not one per cell.
+    let mut stored = nb.get(lx, ly);
+    // Fast path: plain ambient air shifts up unchanged, so skip over it at once.
+    let run = nb.run_below(lx, ly, steps, Cell::AIR);
+    if run > 0 {
+        nb.set(lx, ly, Cell::AIR);
+        stored = Cell::AIR;
+        y += run;
+    }
+    for i in run..steps {
         let t = nb.get(lx, y + 1);
         if !can_enter(ctx, m, t, true, r >> (8 + i as u32 % 16)) {
             blocked = true;
             break;
         }
-        nb.set(lx, y, if t.is_air() { t } else { t.with_parity(ctx.tick) });
-        nb.mark(lx, y);
+        let up = if t.is_air() { t } else { t.with_parity(ctx.tick) };
+        if up != stored {
+            nb.set(lx, y, up);
+        }
+        stored = t;
         y += 1;
     }
     if has_speed {
         cell.value = if blocked { (v / 2) as u8 } else { v as u8 };
     }
     nb.set(lx, y, *cell);
-    nb.mark(lx, y);
+    // One mark covers the whole column the cell passed through.
+    nb.mark_rect(lx - 1, ly - 1, lx + 1, y + 1);
     true
 }
 
@@ -472,7 +544,7 @@ fn move_powder(
     _wx: i32,
     _wy: i32,
     cell: &mut Cell,
-    m: &Material,
+    m: Fast,
     r: u32,
     changed: &mut bool,
 ) -> bool {
@@ -507,7 +579,7 @@ fn move_liquid_inner(
     lx: i32,
     ly: i32,
     cell: &mut Cell,
-    m: &Material,
+    m: Fast,
     r: u32,
     changed: &mut bool,
 ) -> LiquidMove {
@@ -522,7 +594,7 @@ fn move_liquid_inner(
         }
     }
     let above = nb.get(lx, ly - 1);
-    let pressured = !above.is_air() && ctx.mats.get(above.material()).state == State::Liquid;
+    let pressured = !above.is_air() && ctx.f(above).state == State::Liquid;
     let spread = i32::from(m.spread.max(1));
     for dx in [d, -d] {
         let mut best = None;
@@ -552,7 +624,7 @@ fn move_liquid_inner(
     // the surface levels no matter how wide the steps are. On a level surface the
     // walk ends with a small chance each tick and the cell sleeps.
     let below = nb.get(lx, ly + 1);
-    if below.is_air() || ctx.mats.get(below.material()).state != State::Liquid {
+    if below.is_air() || ctx.f(below).state != State::Liquid {
         return LiquidMove::None;
     }
     let left = lighter(ctx, m, nb.get(lx - 1, ly));
@@ -599,7 +671,7 @@ fn move_gas(
     wx: i32,
     wy: i32,
     cell: Cell,
-    m: &Material,
+    m: Fast,
 ) -> bool {
     let r = ctx.rand(wx, wy, 3);
     let side = if r & 1 == 0 { 1 } else { -1 };

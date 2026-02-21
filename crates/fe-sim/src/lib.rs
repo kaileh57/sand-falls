@@ -19,7 +19,7 @@ pub use avatar::{AVATAR_H, AVATAR_W, Avatar, PlayerInput};
 pub use explode::{Blast, explode};
 pub use grid::Grid;
 pub use particles::{PARTICLE_GRAVITY, Particle, Particles};
-pub use rules::{Event, GRAVITY, MAX_SPEED, RuleCtx, SPEED_UNITS, new_cell};
+pub use rules::{Event, Fast, GRAVITY, MAX_SPEED, RuleCtx, SPEED_UNITS, fast_table, new_cell};
 pub use sched::{Chunk, Neighborhood, REACH};
 pub use support::{Detached, SUPPORT_RETRIES, SUPPORT_SEARCH_LIMIT, SupportSeed, check_support};
 pub use world::{CellStats, World};

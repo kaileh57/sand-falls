@@ -200,9 +200,15 @@ impl Chunk {
 ///
 /// Coordinates are local to the center chunk: `(0, 0)` is its top-left cell,
 /// and valid coordinates run from `-REACH` to `CHUNK_SIZE + REACH - 1`.
+///
+/// Dirty marks are collected in the job's own buffers and merged into the
+/// chunks' atomic rects once, when the job finishes. That keeps atomic
+/// operations off the per-cell path.
 pub struct Neighborhood<'a> {
     chunks: [Option<&'a Chunk>; 9],
     pos: ChunkPos,
+    marks: [std::cell::Cell<LocalRect>; 9],
+    solid: [std::cell::Cell<bool>; 9],
 }
 
 impl<'a> Neighborhood<'a> {
@@ -214,7 +220,22 @@ impl<'a> Neighborhood<'a> {
                 chunks[i] = grid.chunk(ChunkPos::new(pos.x + dx, pos.y + dy));
             }
         }
-        Self { chunks, pos }
+        Self { chunks, pos, marks: Default::default(), solid: Default::default() }
+    }
+
+    /// Merges the job's marks into the chunks' shared rects.
+    fn flush(&self) {
+        for (i, chunk) in self.chunks.iter().enumerate() {
+            let Some(c) = chunk else { continue };
+            let r = self.marks[i].get();
+            if !r.is_empty() {
+                c.mark(r.x0, r.y0);
+                c.mark(r.x1, r.y1);
+            }
+            if self.solid[i].get() {
+                c.flag_solid_changed();
+            }
+        }
     }
 
     /// The center chunk's position.
@@ -224,6 +245,10 @@ impl<'a> Neighborhood<'a> {
 
     #[inline]
     fn locate(&self, lx: i32, ly: i32, reach: i32) -> Option<(&'a Chunk, usize)> {
+        if (lx as u32) < CHUNK_SIZE as u32 && (ly as u32) < CHUNK_SIZE as u32 {
+            let chunk = self.chunks[4]?;
+            return Some((chunk, (ly * CHUNK_SIZE + lx) as usize));
+        }
         if lx < -reach || ly < -reach || lx >= CHUNK_SIZE + reach || ly >= CHUNK_SIZE + reach {
             debug_assert!(reach > REACH, "cell rule reached ({lx}, {ly}) outside its neighborhood");
             return None;
@@ -246,6 +271,35 @@ impl<'a> Neighborhood<'a> {
         }
     }
 
+    /// Counts cells directly below `(lx, ly)` that are exactly `value`, up to `max`.
+    ///
+    /// Walks the chunk's memory with a stride of one row, so a long fall through
+    /// empty air costs a compare per cell instead of a full lookup.
+    #[inline]
+    pub fn run_below(&self, lx: i32, ly: i32, max: i32, value: Cell) -> i32 {
+        let mut n = 0;
+        let mut y = ly + 1;
+        while n < max {
+            let Some((c, mut i)) = self.locate(lx, y, REACH) else { break };
+            let in_chunk = (CHUNK_SIZE - (y & (CHUNK_SIZE - 1))).min(max - n);
+            for _ in 0..in_chunk {
+                // SAFETY: rows below `y` within this chunk stay within REACH because
+                // `max` never exceeds the fall distance a rule may move, and `locate`
+                // already checked the first one; the loop stops at the chunk edge.
+                if unsafe { *c.cells[i].0.get() } != value {
+                    return n;
+                }
+                n += 1;
+                i += CHUNK_SIZE as usize;
+            }
+            y += in_chunk;
+            if y >= CHUNK_SIZE + REACH {
+                break;
+            }
+        }
+        n
+    }
+
     /// Writes a cell. Writes to missing chunks or out-of-reach cells are dropped.
     #[inline]
     pub fn set(&self, lx: i32, ly: i32, cell: Cell) {
@@ -255,54 +309,62 @@ impl<'a> Neighborhood<'a> {
         }
     }
 
-    /// Marks a cell and its eight neighbors for a visit on the next tick.
+    /// Marks the local rectangle `x0..=x1, y0..=y1` (center-chunk coordinates) for the next tick.
     #[inline]
-    pub fn mark(&self, lx: i32, ly: i32) {
-        for y in ly - 1..=ly + 1 {
-            for x in lx - 1..=lx + 1 {
-                if let Some((c, i)) = self.locate(x, y, REACH + 1) {
-                    c.mark((i as i32 & (CHUNK_SIZE - 1)) as u8, (i as i32 >> 6) as u8);
-                }
+    pub fn mark_rect(&self, x0: i32, y0: i32, x1: i32, y1: i32) {
+        let lim_lo = -REACH - 1;
+        let lim_hi = CHUNK_SIZE + REACH;
+        let (x0, y0) = (x0.max(lim_lo), y0.max(lim_lo));
+        let (x1, y1) = (x1.min(lim_hi), y1.min(lim_hi));
+        if x0 > x1 || y0 > y1 {
+            return;
+        }
+        let shift = fe_core::CHUNK_SHIFT;
+        let mask = CHUNK_SIZE - 1;
+        for cy in (y0 >> shift)..=(y1 >> shift) {
+            for cx in (x0 >> shift)..=(x1 >> shift) {
+                let idx = ((cy + 1) * 3 + (cx + 1)) as usize;
+                let base_x = cx << shift;
+                let base_y = cy << shift;
+                let ax = (x0.max(base_x) & mask) as u8;
+                let bx = (x1.min(base_x + mask) & mask) as u8;
+                let ay = (y0.max(base_y) & mask) as u8;
+                let by = (y1.min(base_y + mask) & mask) as u8;
+                let m = &self.marks[idx];
+                let mut r = m.get();
+                r.include(ax, ay);
+                r.include(bx, by);
+                m.set(r);
             }
         }
     }
 
-    /// Marks a horizontal band of rows `ly - 1 ..= ly + 1` from `x0` to `x1` for the next tick.
-    ///
-    /// The band is clamped to the reach limit. Cost is two rect updates per chunk touched.
+    /// Marks a cell and its eight neighbors for a visit on the next tick.
+    #[inline]
+    pub fn mark(&self, lx: i32, ly: i32) {
+        self.mark_rect(lx - 1, ly - 1, lx + 1, ly + 1);
+    }
+
+    /// Marks rows `ly - 1 ..= ly + 1` from `x0` to `x1` for the next tick.
     pub fn mark_band(&self, x0: i32, x1: i32, ly: i32) {
-        let x0 = x0.max(-REACH);
-        let x1 = x1.min(CHUNK_SIZE + REACH - 1);
-        for y in [ly - 1, ly + 1] {
-            let mut x = x0;
-            while x <= x1 {
-                // End of the current chunk column, or x1.
-                let chunk_end = ((x >> fe_core::CHUNK_SHIFT) + 1) * CHUNK_SIZE - 1;
-                let end = chunk_end.min(x1);
-                for xx in [x, end] {
-                    if let Some((c, i)) = self.locate(xx, y, REACH + 1) {
-                        c.mark((i as i32 & (CHUNK_SIZE - 1)) as u8, (i as i32 >> 6) as u8);
-                    }
-                }
-                x = end + 1;
-            }
-        }
+        self.mark_rect(x0, ly - 1, x1, ly + 1);
     }
 
     /// Marks only the cell itself for a visit on the next tick.
     #[inline]
     pub fn keep(&self, lx: i32, ly: i32) {
-        if let Some((c, i)) = self.locate(lx, ly, REACH) {
-            c.mark((i as i32 & (CHUNK_SIZE - 1)) as u8, (i as i32 >> 6) as u8);
-        }
+        self.mark_rect(lx, ly, lx, ly);
     }
 
     /// Records that a static cell at this position changed.
     #[inline]
     pub fn solid_changed(&self, lx: i32, ly: i32) {
-        if let Some((c, _)) = self.locate(lx, ly, REACH) {
-            c.flag_solid_changed();
+        if lx < -REACH || ly < -REACH || lx >= CHUNK_SIZE + REACH || ly >= CHUNK_SIZE + REACH {
+            return;
         }
+        let idx =
+            (((ly >> fe_core::CHUNK_SHIFT) + 1) * 3 + (lx >> fe_core::CHUNK_SHIFT) + 1) as usize;
+        self.solid[idx].set(true);
     }
 }
 
@@ -325,6 +387,7 @@ pub(crate) fn run_pass<T, F>(
     let work = |(&(pos, rect), out): (&(ChunkPos, LocalRect), &mut T)| {
         let nb = Neighborhood::new(grid, pos);
         f(&nb, rect, out);
+        nb.flush();
     };
     match pool {
         Some(pool) if jobs.len() > 1 => {
