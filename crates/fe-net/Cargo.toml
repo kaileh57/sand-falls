@@ -1,6 +1,22 @@
 [package]
 name = "fe-net"
-version = "0.1.0"
-edition = "2024"
+description = "Lockstep multiplayer for falling-engine: protocol, UDP and simulated transports, server and client cores."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-engine.workspace = true
+fe-scene.workspace = true
+fe-materials.workspace = true
+fe-sim.workspace = true
+serde.workspace = true
+postcard.workspace = true
+zstd.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
