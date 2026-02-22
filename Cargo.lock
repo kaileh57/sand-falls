@@ -354,6 +354,17 @@ dependencies = [
 [[package]]
 name = "fe-net"
 version = "0.1.0"
+dependencies = [
+ "fe-core",
+ "fe-engine",
+ "fe-materials",
+ "fe-scene",
+ "fe-sim",
+ "postcard",
+ "serde",
+ "serde_json",
+ "zstd",
+]
 
 [[package]]
 name = "fe-physics"
@@ -398,6 +409,12 @@ version = "0.1.0"
 [[package]]
 name = "fe-server"
 version = "0.1.0"
+dependencies = [
+ "fe-engine",
+ "fe-net",
+ "fe-scene",
+ "serde_json",
+]
 
 [[package]]
 name = "fe-sim"

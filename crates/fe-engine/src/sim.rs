@@ -108,6 +108,21 @@ pub struct TickReport {
     pub times: PhaseTimes,
 }
 
+/// A state hash split by subsystem.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HashParts {
+    /// Cells, seed, tick and materials.
+    pub cells: u64,
+    /// Particles in flight.
+    pub particles: u64,
+    /// Rigid bodies and joints.
+    pub bodies: u64,
+    /// Characters.
+    pub avatars: u64,
+    /// The full [`Simulation::hash`].
+    pub total: u64,
+}
+
 /// The whole deterministic simulation.
 pub struct Simulation {
     /// Cells and chunks.
@@ -557,6 +572,44 @@ impl Simulation {
         }
         h.write_u64(self.stored.len() as u64);
         h.finish()
+    }
+
+    /// The state hash split by subsystem, so a mismatch says what diverged.
+    pub fn hash_parts(&self) -> HashParts {
+        let mut p = StableHasher::new();
+        self.particles.hash_into(&mut p);
+        let mut b = StableHasher::new();
+        self.physics.hash_into(&mut b);
+        let mut a = StableHasher::new();
+        for av in &self.avatars {
+            av.hash_into(&mut a);
+        }
+        HashParts {
+            cells: self.world.hash(),
+            particles: p.finish(),
+            bodies: b.finish(),
+            avatars: a.finish(),
+            total: self.hash(),
+        }
+    }
+
+    /// Replaces the cells of loaded chunks, used by network repair. Each entry is
+    /// a chunk position and its 4,096 cells as packed bits.
+    pub fn replace_chunks(&mut self, chunks: &[(ChunkPos, Vec<u32>)]) {
+        for (pos, bits) in chunks {
+            if bits.len() != fe_core::CHUNK_AREA {
+                continue;
+            }
+            let cells: Vec<Cell> = bits.iter().copied().map(Cell::from_bits).collect();
+            let mut chunk = fe_sim::Chunk::new(*pos, Cell::AIR);
+            chunk.load_cells(&cells);
+            self.world.grid.insert(chunk);
+        }
+    }
+
+    /// Packed cells of a loaded chunk.
+    pub fn chunk_bits(&self, pos: ChunkPos) -> Option<Vec<u32>> {
+        self.world.grid.chunk(pos).map(|c| c.to_vec().into_iter().map(Cell::to_bits).collect())
     }
 
     /// Per-chunk hashes in canonical order, for finding where two runs differ.
