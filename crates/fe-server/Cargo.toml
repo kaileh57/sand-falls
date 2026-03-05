@@ -1,6 +1,17 @@
 [package]
 name = "fe-server"
-version = "0.1.0"
-edition = "2024"
+description = "falling-engine dedicated server: host a scene over UDP, or run a simulated-network soak."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
 
 [dependencies]
+fe-scene.workspace = true
+fe-net.workspace = true
+fe-engine.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

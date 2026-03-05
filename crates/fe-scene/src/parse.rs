@@ -332,6 +332,8 @@ pub struct Scene {
     pub stream: Option<(i32, i32)>,
     /// Ticks to run; 0 means up to the last timeline entry or expectation.
     pub ticks: u64,
+    /// Where networked players appear, if the scene sets it.
+    pub spawn: Option<(i32, i32)>,
     /// Legend characters.
     pub legend: BTreeMap<char, LegendEntry>,
     /// Setup steps in order.
@@ -619,6 +621,7 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
         worldgen: fe_engine::WorldGen::Empty,
         stream: None,
         ticks: 0,
+        spawn: None,
         legend: BTreeMap::new(),
         setup: Vec::new(),
         timeline: Vec::new(),
@@ -686,6 +689,10 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
                             IRect::new(0, 0, num(line, w[0], "width")?, num(line, w[1], "height")?);
                     }
                     "bounds" => scene.bounds = rect(line, &w)?,
+                    "spawn" => {
+                        need(line, &w, 2, "spawn = X Y")?;
+                        scene.spawn = Some((num(line, w[0], "x")?, num(line, w[1], "y")?));
+                    }
                     "worldgen" => {
                         scene.worldgen = match w.as_slice() {
                             ["empty"] => fe_engine::WorldGen::Empty,
