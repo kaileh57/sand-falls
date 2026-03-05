@@ -1,0 +1,27 @@
+// Chaos soak: bots dig, paint and blow things up under bad network conditions
+// while a player joins mid-explosion. The desync counter has to stay at zero.
+[scene]
+name = chaos soak
+description = Bots wreck an arena over a lossy, laggy network while the desync counter stays at zero.
+size = 512 288
+seed = 0xc4a05
+spawn = 120 150
+
+[build]
+fill 0 230 512 288 soil
+fill 0 270 512 288 bedrock
+terrain 0 512 220 10 48 soil 270
+fill 300 160 340 230 brick
+fill 290 150 350 160 brick
+fill 380 190 470 230 water
+fill 30 180 90 230 wood
+fill 200 240 230 255 gunpowder
+fill 420 250 470 268 lava
+fill 0 0 4 270 bedrock
+fill 508 0 512 270 bedrock
+
+[camera]
+view 512 288
+scale 2
+sky dusk
+at 0: 256 144

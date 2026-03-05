@@ -1,0 +1,35 @@
+// Flood rescue, co-op: water pours into a cave system from above. Players dig
+// channels to steer it away from the villagers' chamber at the bottom.
+[scene]
+name = flood rescue
+description = Co-op: steer a flood through a cave system away from the villagers.
+size = 640 480
+seed = 0xf100d
+spawn = 300 120
+
+[build]
+fill 0 0 640 480 stone
+fill 0 470 640 480 bedrock
+fill 0 0 6 480 bedrock
+fill 634 0 640 480 bedrock
+// Caves.
+fill 40 60 600 140 air
+fill 80 140 140 260 air
+fill 260 140 330 300 air
+fill 480 140 560 240 air
+fill 80 260 560 320 air
+fill 200 320 460 400 air
+// The villagers' chamber, lit by torches.
+fill 260 400 400 450 air
+fill 270 440 274 444 torch
+fill 386 440 390 444 torch
+fill 300 446 360 450 wood
+// The flood source.
+fill 60 62 120 64 water_source
+
+[camera]
+view 640 480
+scale 2
+sky cave
+ambient 0.04 0.045 0.06
+at 0: 320 240
