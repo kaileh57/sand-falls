@@ -1,0 +1,39 @@
+// Siege, 2 v 2: two forts face each other across a valley. Each team bombards
+// the other until the forts collapse into rigid bodies. Shows that rigid body
+// physics stays in sync across machines.
+[scene]
+name = siege
+description = Two forts bombard each other until they collapse; physics stays in sync on every machine.
+size = 960 400
+seed = 0x5e9e
+spawn = 120 250
+
+[build]
+fill 0 340 960 400 bedrock
+terrain 0 960 300 12 80 soil 340
+// Left fort: brick walls, wooden floors, glass windows.
+fill 60 180 70 300 brick
+fill 190 180 200 300 brick
+fill 60 170 200 180 brick
+fill 70 240 190 246 wood
+fill 100 200 110 220 glass
+fill 150 200 160 220 glass
+fill 110 140 150 170 brick
+fill 125 120 135 140 wood
+// Right fort, mirrored.
+fill 760 180 770 300 brick
+fill 890 180 900 300 brick
+fill 760 170 900 180 brick
+fill 770 240 890 246 wood
+fill 800 200 810 220 glass
+fill 850 200 860 220 glass
+fill 810 140 850 170 brick
+fill 825 120 835 140 wood
+// A river in the valley.
+fill 420 290 540 310 water
+
+[camera]
+view 960 400
+scale 1
+sky dusk
+at 0: 480 220

@@ -1,0 +1,25 @@
+// Shared sandbox: up to 8 players paint, dig and blow things up in one world.
+// The bandwidth graph should stay flat while the screen fills with chaos.
+[scene]
+name = shared sandbox
+description = Eight players in one world; bandwidth stays flat however chaotic it gets.
+size = 768 432
+seed = 0x5a4d
+spawn = 200 220
+
+[build]
+fill 0 380 768 432 bedrock
+terrain 0 768 300 40 64 soil 380
+terrain 0 768 340 20 40 stone 380
+fill 520 200 600 300 sand
+fill 80 250 160 300 water
+fill 640 250 700 330 wood
+fill 400 330 440 360 gunpowder
+fill 0 0 4 380 bedrock
+fill 764 0 768 380 bedrock
+
+[camera]
+view 768 432
+scale 2
+sky day
+at 0: 384 216
