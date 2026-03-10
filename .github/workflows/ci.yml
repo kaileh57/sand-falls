@@ -52,7 +52,9 @@ jobs:
           components: miri
       - run: cargo miri test -p fe-sim sched::
         env:
-          MIRIFLAGS: -Zmiri-strict-provenance
+          # Tree Borrows: crossbeam-epoch (under rayon) trips a known Stacked Borrows
+          # report that is not in this crate. Leaks are rayon's global pool.
+          MIRIFLAGS: -Zmiri-tree-borrows -Zmiri-ignore-leaks
 
   deny:
     name: cargo-deny
