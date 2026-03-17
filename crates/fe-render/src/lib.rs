@@ -12,6 +12,7 @@
 //! 4. bloom bright areas, tone map, and scale up with heat haze over hot air
 #![forbid(unsafe_code)]
 
+mod font;
 mod image;
 mod light;
 
@@ -213,6 +214,19 @@ impl Renderer {
 
     /// Renders one frame. `frame` animates haze and liquid shimmer.
     pub fn render(&self, sim: &Simulation, view: View, s: &RenderSettings, frame: u64) -> Image {
+        self.render_with(sim, view, s, frame, &sim.avatars)
+    }
+
+    /// Renders one frame, drawing `avatars` instead of the simulation's own
+    /// characters. Networked clients pass their predicted character here.
+    pub fn render_with(
+        &self,
+        sim: &Simulation,
+        view: View,
+        s: &RenderSettings,
+        frame: u64,
+        avatars: &[fe_sim::Avatar],
+    ) -> Image {
         let zoom = view.zoom.max(0.05);
         let vis_w = s.view_w as f32 / zoom;
         let vis_h = s.view_h as f32 / zoom;
@@ -228,7 +242,7 @@ impl Renderer {
 
         let cells = sample_cells(sim, bx, by, bw, bh);
         let mut buf = Buffers::new(bw, bh);
-        self.fill_buffers(sim, &cells, &mut buf, bx, by, frame, s);
+        self.fill_buffers(sim, avatars, &cells, &mut buf, bx, by, frame, s);
         if s.lighting {
             light::propagate(&mut buf.light, &buf.trans, bw, bh);
         }
@@ -277,6 +291,7 @@ impl Renderer {
     fn fill_buffers(
         &self,
         sim: &Simulation,
+        avatars: &[fe_sim::Avatar],
         cells: &[Cell],
         buf: &mut Buffers,
         bx: i32,
@@ -360,7 +375,7 @@ impl Renderer {
                 buf.solid_override[i] = true;
             }
         }
-        for a in &sim.avatars {
+        for a in avatars {
             let feet = CellPos::new(a.x.floor(), a.y.floor());
             let body = player_color(a.id);
             for dy in 0..fe_sim::AVATAR_H {
