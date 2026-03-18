@@ -111,14 +111,14 @@ colors = ["#ff5a10", "#f04a08", "#ff7a20"]
 name = "molten_metal"
 state = "liquid"
 density = 300
-spread = 4
-temp = 1600
-cooling = 2
-conductivity = 120
+spread = 5
+temp = 1900
+cooling = 1
+conductivity = 45
 viscosity = 90
 opacity = 255
 light = "#ffb060"
-freeze = { at = 1350, into = "metal" }
+freeze = { at = 1300, into = "metal" }
 colors = ["#ffd080", "#ffc060", "#ffe0a0"]
 
 [[material]]
@@ -223,8 +223,8 @@ state = "static"
 density = 30
 structural = false
 hp = 4
-conductivity = 10
-ignite = { at = 200, chance = "25%", into = "fire" }
+conductivity = 40
+ignite = { at = 160, chance = "30%", into = "burning_leaves" }
 colors = ["#3f7a2e", "#356b27", "#4a8a35", "#2f6022"]
 
 [[material]]
@@ -404,7 +404,7 @@ hp = 30
 debris = "shards"
 fracture = 80
 opacity = 40
-light = "#9a50ff"
+light = "#5e30a8"
 colors = ["#b080ff", "#a070f0", "#c090ff"]
 
 [[material]]
@@ -433,6 +433,7 @@ name = "water_source"
 state = "static"
 structural = false
 indestructible = true
+opacity = 0
 spawn = { into = "water", chance = "60%", dir = "down" }
 colors = ["#2a5fb0"]
 
@@ -451,7 +452,8 @@ name = "metal_source"
 state = "static"
 structural = false
 indestructible = true
-hold_temp = 1600
+opacity = 0
+hold_temp = 1900
 light = "#ffb060"
 spawn = { into = "molten_metal", chance = "50%", dir = "down" }
 colors = ["#ffd080"]
@@ -461,7 +463,7 @@ name = "heater"
 state = "static"
 density = 500
 indestructible = true
-hold_temp = 1500
+hold_temp = 2000
 conductivity = 200
 light = "#a02008"
 colors = ["#702010", "#802818"]
@@ -474,6 +476,51 @@ structural = false
 hp = 5
 light = "#ffb050"
 colors = ["#ffd080", "#ffc060"]
+
+# ---------------------------------------------------------------- atmosphere
+# Appended after the original set so existing material ids stay the same.
+
+[[material]]
+name = "mist"
+state = "gas"
+density = -1
+spread = 2
+lifetime = [120, 220]
+opacity = 10
+colors = ["#b8c8d8", "#c4d2e0", "#aebfcf"]
+
+[[material]]
+name = "mist_source"
+state = "static"
+structural = false
+indestructible = true
+opacity = 0
+spawn = { into = "mist", chance = "5%", dir = "up" }
+colors = ["#5a5e66"]
+
+[[material]]
+name = "ember"
+state = "fire"
+temp = 700
+lifetime = [70, 160]
+decay = "ash"
+hold_temp = 650
+light = "#ff6010"
+colors = ["#ffa040", "#ff7020", "#ffc060"]
+
+[[material]]
+name = "burning_leaves"
+state = "static"
+density = 25
+structural = false
+hp = 2
+conductivity = 60
+lifetime = [40, 90]
+decay = "ember"
+hold_temp = 600
+light = "#ff7018"
+spawn = { into = "fire", chance = "35%", dir = "any" }
+colors = ["#ff8a20", "#e05a10", "#ffb040", "#c04008"]
 
 # ---------------------------------------------------------------- reactions
 

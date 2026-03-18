@@ -9,7 +9,7 @@ use fe_sim::{Avatar, Particles, PlayerInput, SupportSeed};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-const FORMAT_VERSION: u32 = 1;
+const FORMAT_VERSION: u32 = 2;
 
 #[derive(Serialize, Deserialize)]
 struct ChunkData {
@@ -26,6 +26,7 @@ struct SnapshotData {
     materials_hash: u64,
     seed: u64,
     tick: u64,
+    wind: i8,
     chunks: Vec<ChunkData>,
     particles: Particles,
     physics: Physics,
@@ -91,6 +92,7 @@ impl Simulation {
             materials_hash: self.materials().hash(),
             seed: self.world.seed(),
             tick: self.world.tick(),
+            wind: self.world.wind(),
             chunks,
             particles: &self.particles,
             physics: &self.physics,
@@ -126,6 +128,7 @@ impl Simulation {
         let cfg = SimConfig { seed: d.seed, threads, worldgen: d.worldgen, stream: d.stream };
         let mut sim = Simulation::new(mats, cfg);
         sim.world.set_tick(d.tick);
+        sim.world.set_wind(d.wind);
         for c in d.chunks {
             if c.cells.len() != fe_core::CHUNK_AREA {
                 return Err(SnapshotError::Corrupt(format!(
@@ -158,6 +161,7 @@ struct SnapshotDataRef<'a> {
     materials_hash: u64,
     seed: u64,
     tick: u64,
+    wind: i8,
     chunks: Vec<ChunkData>,
     particles: &'a Particles,
     physics: &'a Physics,
