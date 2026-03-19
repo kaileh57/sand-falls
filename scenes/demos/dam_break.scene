@@ -1,0 +1,27 @@
+// The stress test: a reservoir of 4 million water cells released into a valley.
+// The world is 4096x2048 (8.4 million cells loaded).
+[scene]
+name = dam break
+description = A 2048x2048-equivalent reservoir of water released at once.
+size = 4096 2048
+seed = 22
+ticks = 600
+
+[build]
+fill 0 2000 4096 2048 bedrock
+terrain 2200 4096 1700 120 96 stone 2000
+fill 0 0 8 2000 bedrock
+fill 4088 0 4096 2000 bedrock
+fill 2048 0 2056 2000 concrete
+fill 8 46 2048 2000 water
+
+[events]
+at 1: dig 2052 1000 1100
+
+[camera]
+view 960 540
+scale 2
+sky day
+ambient 0.25 0.25 0.28
+at 0: 2048 1200 zoom=0.24
+at 240: 2600 1500 zoom=0.3
