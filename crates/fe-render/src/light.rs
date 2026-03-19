@@ -101,6 +101,12 @@ fn box_blur(src: &[[f32; 3]], w: usize, h: usize, r: usize) -> Vec<[f32; 3]> {
     out
 }
 
+/// Blurs the light field slightly, which hides the diamond shapes that
+/// max-based propagation leaves around point lights.
+pub(crate) fn soften(light: &[[f32; 3]], w: usize, h: usize) -> Vec<[f32; 3]> {
+    box_blur(&box_blur(light, w, h, 2), w, h, 2)
+}
+
 /// Adds a soft glow around bright areas.
 pub(crate) fn bloom(hdr: &mut [[f32; 3]], w: usize, h: usize) {
     let bright: Vec<[f32; 3]> = hdr

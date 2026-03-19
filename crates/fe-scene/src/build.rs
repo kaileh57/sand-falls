@@ -32,6 +32,7 @@ pub(crate) enum Resolved {
     Run(u64),
     Terrain(Op),
     Scatter(IRect, MaterialId, u32),
+    Decorate(IRect, MaterialId, u32, crate::parse::Surface),
     Temp(IRect, u8),
     Carve(IRect),
     Body(IRect, MaterialId),
@@ -65,6 +66,7 @@ pub(crate) fn resolve(op: &Op, mats: &MaterialSet, line: usize) -> Result<Resolv
             return Ok(Resolved::Terrain(op.clone()));
         }
         Op::Scatter(r, m, p) => return Ok(Resolved::Scatter(*r, mat(mats, m, line)?, *p)),
+        Op::Decorate(r, m, p, s) => return Ok(Resolved::Decorate(*r, mat(mats, m, line)?, *p, *s)),
         Op::Temp(r, c) => return Ok(Resolved::Temp(*r, celsius_to_temp(*c))),
         Op::Player(id, x, y) => vec![Command::AddPlayer { id: *id, x: *x, y: *y }],
         Op::RemovePlayer(id) => vec![Command::RemovePlayer { id: *id }],
@@ -140,6 +142,41 @@ pub(crate) fn apply_now(sim: &mut Simulation, r: Resolved, seed: u64) {
                         let _ = sim.world.set(p, c);
                     }
                 }
+            }
+        }
+        Resolved::Decorate(rect, id, pct, surface) => {
+            use crate::parse::Surface;
+            let mut rng = SeqRng::new(seed ^ 0xdec0);
+            let solid = |sim: &Simulation, x: i32, y: i32| {
+                let c = sim.world.get(CellPos::new(x, y));
+                !c.is_air()
+                    && sim.materials().get(c.material()).state == fe_materials::State::Static
+            };
+            let mut picks = Vec::new();
+            for y in rect.min.y..rect.max.y {
+                for x in rect.min.x..rect.max.x {
+                    if !sim.world.get(CellPos::new(x, y)).is_air() {
+                        continue;
+                    }
+                    let ok = match surface {
+                        Surface::Floor => solid(sim, x, y + 1),
+                        Surface::Ceiling => solid(sim, x, y - 1),
+                        Surface::Walls => solid(sim, x - 1, y) || solid(sim, x + 1, y),
+                        Surface::Any => {
+                            solid(sim, x, y + 1)
+                                || solid(sim, x, y - 1)
+                                || solid(sim, x - 1, y)
+                                || solid(sim, x + 1, y)
+                        }
+                    };
+                    if ok && rng.below(100) < pct {
+                        picks.push(CellPos::new(x, y));
+                    }
+                }
+            }
+            for p in picks {
+                let c = sim.world.make_cell(id, p);
+                let _ = sim.world.set(p, c);
             }
         }
         Resolved::Temp(rect, t) => {
@@ -235,6 +272,7 @@ pub fn build(
         stream: scene.stream.map(|(radius, margin)| StreamConfig { radius, margin }),
     };
     let mut sim = Simulation::new(mats.clone(), cfg);
+    sim.world.set_wind(scene.wind);
     sim.load_rect(scene.bounds);
     for step in &scene.setup {
         match step {

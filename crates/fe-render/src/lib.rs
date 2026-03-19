@@ -128,6 +128,7 @@ struct MatLook {
     opacity: f32,
     state: State,
     glow: bool,
+    structural: bool,
 }
 
 /// Cached per-material render data.
@@ -203,6 +204,7 @@ impl Renderer {
                 opacity: f32::from(m.opacity) / 255.0,
                 state: m.state,
                 glow: m.glow,
+                structural: m.structural || m.anchored,
             })
             .collect();
         Self { looks }
@@ -245,8 +247,17 @@ impl Renderer {
         self.fill_buffers(sim, avatars, &cells, &mut buf, bx, by, frame, s);
         if s.lighting {
             light::propagate(&mut buf.light, &buf.trans, bw, bh);
+            buf.light = light::soften(&buf.light, bw, bh);
+            buf.shaft = light::soften(&buf.shaft, bw, bh);
         }
-        let mut hdr = self.compose(&cells, &buf, bw, bh, by, s);
+        // How open each cell's surroundings are: 1 deep in air, 0 deep in rock.
+        let open_mask: Vec<[f32; 3]> =
+            buf.trans.iter().map(|&t| if t > 0.9 { [1.0, 0.0, 0.0] } else { [0.0; 3] }).collect();
+        buf.open = light::soften(&light::soften(&open_mask, bw, bh), bw, bh)
+            .into_iter()
+            .map(|v| v[0])
+            .collect();
+        let mut hdr = self.compose(&cells, &buf, bw, bh, bx, by, s);
         if s.bloom {
             light::bloom(&mut hdr, bw, bh);
         }
@@ -338,22 +349,41 @@ impl Renderer {
                     alb[x] = a;
                     em[x] = e;
                     lig[x] = e;
-                    tr[x] = 0.955 - look.opacity * 0.42;
+                    // Open air carries light far; anything denser absorbs more, and solids
+                    // let it reach only a few cells in, which lights their surfaces.
+                    tr[x] = if c.is_air() { 0.982 } else { 0.95 - look.opacity * 0.45 };
                 }
             });
-        // Sky light falls down each column until it meets something opaque.
+        // Sky light falls down each column until it meets something opaque. Air
+        // above that point shows the sky; air below it is underground.
         if s.sky != Sky::Cave {
             for x in 0..bw {
                 let mut k = 1.0f32;
+                let mut open = true;
                 for y in 0..bh {
                     let i = y * bw + x;
+                    let t = buf.trans[i];
+                    // Only ground and structures end the sky; foliage, rain, mist and
+                    // smoke only dim it.
+                    if t < 0.7 && self.look(cells[i].material()).structural {
+                        open = false;
+                    }
+                    buf.sky[i] = open;
                     if k < 0.02 {
-                        break;
+                        continue;
                     }
                     let l = &mut buf.light[i];
                     *l = [l[0] + sky[0] * k, l[1] + sky[1] * k, l[2] + sky[2] * k];
-                    let t = buf.trans[i];
-                    k *= if t > 0.9 { 1.0 } else { t * 0.6 };
+                    if !open {
+                        buf.shaft[i] = [sky[0] * k, sky[1] * k, sky[2] * k];
+                    }
+                    k *= if t > 0.9 {
+                        1.0
+                    } else if t > 0.7 {
+                        t
+                    } else {
+                        t * 0.5
+                    };
                 }
             }
         }
@@ -408,12 +438,14 @@ impl Renderer {
         }
     }
 
+    #[expect(clippy::too_many_arguments, reason = "internal helper over shared buffers")]
     fn compose(
         &self,
         cells: &[Cell],
         buf: &Buffers,
         bw: usize,
         bh: usize,
+        bx: i32,
         by: i32,
         s: &RenderSettings,
     ) -> Vec<[f32; 3]> {
@@ -421,8 +453,10 @@ impl Renderer {
         let mut out = vec![[0.0f32; 3]; bw * bh];
         out.par_chunks_mut(bw).enumerate().for_each(|(y, row)| {
             let t = ((y as i32 + by) as f32 / 400.0).clamp(0.0, 1.0);
-            let bg = s.sky.background(t);
+            let sky_bg = s.sky.background(t);
+            let cave_bg = [0.004, 0.0045, 0.006];
             for x in 0..bw {
+                let bg = if buf.sky[y * bw + x] { sky_bg } else { cave_bg };
                 let i = y * bw + x;
                 let c = cells[i];
                 let l = buf.light[i];
@@ -439,13 +473,31 @@ impl Renderer {
                 row[x] = if buf.solid_override[i] {
                     let v = lit(1.0);
                     [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
-                } else if c.is_air() {
-                    // Air shows the sky and a faint glow where light passes through it.
-                    [bg[0] + l[0] * 0.035, bg[1] + l[1] * 0.035, bg[2] + l[2] * 0.035]
+                } else if c.is_air() || (look.state == State::Static && look.opacity < 0.02) {
+                    let sh = buf.shaft[i];
+                    if buf.sky[i] {
+                        // Open sky, plus dust lit by light passing through.
+                        [
+                            bg[0] + l[0] * 0.012 + sh[0] * 0.09,
+                            bg[1] + l[1] * 0.012 + sh[1] * 0.09,
+                            bg[2] + l[2] * 0.012 + sh[2] * 0.09,
+                        ]
+                    } else {
+                        // Underground: a dim rock back wall that catches nearby light,
+                        // plus dust lit by shafts of sky light.
+                        let h = hash2(bx + x as i32, by + y as i32);
+                        let n = 0.75 + (h % 64) as f32 / 160.0;
+                        let wall = [0.055 * n, 0.05 * n, 0.058 * n];
+                        [
+                            wall[0] * (amb[0] + l[0] * 0.35) + l[0] * 0.01 + sh[0] * 0.09,
+                            wall[1] * (amb[1] + l[1] * 0.35) + l[1] * 0.01 + sh[1] * 0.09,
+                            wall[2] * (amb[2] + l[2] * 0.35) + l[2] * 0.01 + sh[2] * 0.09,
+                        ]
+                    }
                 } else {
                     match look.state {
                         State::Gas => {
-                            let alpha = (look.opacity * 2.2).clamp(0.18, 0.85);
+                            let alpha = (look.opacity * 2.2).clamp(0.04, 0.85);
                             let v = lit(1.3);
                             let back =
                                 [bg[0] + l[0] * 0.035, bg[1] + l[1] * 0.035, bg[2] + l[2] * 0.035];
@@ -465,8 +517,10 @@ impl Renderer {
                             ]
                         }
                         _ => {
+                            // Rock far from open space sinks into shadow; edges stay lit.
+                            let ao = (0.12 + buf.open[i] * 2.2).min(1.0);
                             let v = lit(1.0);
-                            [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
+                            [v[0] * ao + e[0], v[1] * ao + e[1], v[2] * ao + e[2]]
                         }
                     }
                 };
@@ -484,6 +538,11 @@ struct Buffers {
     light: Vec<[f32; 3]>,
     trans: Vec<f32>,
     solid_override: Vec<bool>,
+    sky: Vec<bool>,
+    /// Direct sky light below the first solid in each column: light shafts.
+    shaft: Vec<[f32; 3]>,
+    /// Openness of the neighborhood, for ambient occlusion.
+    open: Vec<f32>,
 }
 
 impl Buffers {
@@ -497,6 +556,9 @@ impl Buffers {
             light: vec![[0.0; 3]; n],
             trans: vec![0.0; n],
             solid_override: vec![false; n],
+            sky: vec![false; n],
+            shaft: vec![[0.0; 3]; n],
+            open: vec![1.0; n],
         }
     }
 }
