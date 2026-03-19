@@ -223,7 +223,8 @@ fn air_def() -> Material {
         slide: 0,
         spread: 0,
         temp: fe_core::AMBIENT_TEMP,
-        conductivity: 6,
+        // Air holds little heat, so it should barely cool what it touches.
+        conductivity: 2,
         cooling: 48,
         hp: 0,
         debris: MaterialId::AIR,

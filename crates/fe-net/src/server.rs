@@ -90,7 +90,7 @@ pub struct ServerCore {
     pending: Vec<Command>,
     materials: u64,
     scene: u64,
-    spawn: (i32, i32),
+    spawns: Vec<(i32, i32)>,
     max_players: u8,
     next_snapshot: u32,
     snapshot_rate: usize,
@@ -102,7 +102,10 @@ impl ServerCore {
     /// Creates a server for a running scene. `scene_hash` is [`crate::scene_hash`] of its text.
     pub fn new(runner: Runner, scene_hash: u64, max_players: u8) -> Self {
         let b = runner.scene.bounds;
-        let spawn = runner.scene.spawn.unwrap_or((i32::midpoint(b.min.x, b.max.x), b.min.y + 16));
+        let mut spawns = runner.scene.spawns.clone();
+        if spawns.is_empty() {
+            spawns.push((i32::midpoint(b.min.x, b.max.x), b.min.y + 16));
+        }
         let materials = runner.sim.materials().hash();
         Self {
             runner,
@@ -112,7 +115,7 @@ impl ServerCore {
             pending: Vec::new(),
             materials,
             scene: scene_hash,
-            spawn,
+            spawns,
             max_players: max_players.clamp(1, 64),
             next_snapshot: 1,
             snapshot_rate: 96,
@@ -206,12 +209,10 @@ impl ServerCore {
                     },
                 );
                 self.stats.joins += 1;
-                let (sx, sy) = self.spawn;
-                self.pending.push(Command::AddPlayer {
-                    id: player,
-                    x: sx + i32::from(player % 8) * 14,
-                    y: sy,
-                });
+                let n = self.spawns.len();
+                let (sx, sy) = self.spawns[player as usize % n];
+                let x = sx + (player as usize / n) as i32 * 14;
+                self.pending.push(Command::AddPlayer { id: player, x, y: sy });
                 self.send(net, from, &Msg::Welcome { player });
             }
             Msg::Inputs { upto: _, runs, ack } => {

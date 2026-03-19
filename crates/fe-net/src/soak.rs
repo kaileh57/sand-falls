@@ -39,6 +39,44 @@ pub struct SoakConfig {
     pub threads: usize,
     /// Test hook: at this tick, corrupt a cell in the first bot's world to force a desync.
     pub corrupt_at: Option<u64>,
+    /// How the bots play.
+    pub style: BotStyle,
+}
+
+/// Bot behavior.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BotStyle {
+    /// Walk, jump, dig, paint, and blow things up at random.
+    #[default]
+    Chaos,
+    /// Even players bombard toward the right, odd players toward the left.
+    Siege,
+    /// Dig channels and drop crates.
+    Flood,
+}
+
+impl BotStyle {
+    /// Parses `chaos`, `siege`, or `flood`.
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "chaos" | "sandbox" => Self::Chaos,
+            "siege" => Self::Siege,
+            "flood" => Self::Flood,
+            _ => return None,
+        })
+    }
+}
+
+/// What the soak loop shows an observer after each step.
+pub struct SoakFrame<'a> {
+    /// Step number (server tick while the server runs).
+    pub step: u64,
+    /// The server.
+    pub server: &'a ServerCore,
+    /// Per bot: player id, traffic, round trip in microseconds, lead ticks.
+    pub bots: Vec<(Option<u8>, crate::Traffic, u64, u64)>,
+    /// Simulated network packets dropped so far.
+    pub dropped: u64,
 }
 
 /// One bot's results.
@@ -98,7 +136,49 @@ struct Bot {
     joined: bool,
 }
 
-fn bot_input(rng: &mut SeqRng, tick: u64, prev: PlayerInput, materials: &[u16]) -> PlayerInput {
+fn bot_input(
+    style: BotStyle,
+    player: u8,
+    rng: &mut SeqRng,
+    tick: u64,
+    prev: PlayerInput,
+    materials: &[u16],
+) -> PlayerInput {
+    match style {
+        BotStyle::Chaos => chaos_input(rng, tick, prev, materials),
+        BotStyle::Siege => {
+            if !tick.is_multiple_of(45) {
+                return PlayerInput { use_tool: false, ..prev };
+            }
+            let dir = if player.is_multiple_of(2) { 1 } else { -1 };
+            PlayerInput {
+                move_x: rng.range_i32(-1, 1) as i8,
+                jump: rng.below(6) == 0,
+                aim_x: (dir * rng.range_i32(520, 700)) as i16,
+                aim_y: rng.range_i32(-90, 10) as i16,
+                tool: tools::EXPLODE,
+                param: rng.range_i32(10, 16) as u16,
+                use_tool: true,
+            }
+        }
+        BotStyle::Flood => {
+            if !tick.is_multiple_of(15) {
+                return prev;
+            }
+            PlayerInput {
+                move_x: rng.range_i32(-1, 1) as i8,
+                jump: rng.below(5) == 0,
+                aim_x: rng.range_i32(-25, 25) as i16,
+                aim_y: rng.range_i32(-5, 30) as i16,
+                tool: if rng.below(10) == 0 { tools::EXPLODE } else { tools::DIG },
+                param: 6,
+                use_tool: true,
+            }
+        }
+    }
+}
+
+fn chaos_input(rng: &mut SeqRng, tick: u64, prev: PlayerInput, materials: &[u16]) -> PlayerInput {
     if !tick.is_multiple_of(20) {
         // Keep held keys, but tools fire on a single tick.
         return PlayerInput {
@@ -128,6 +208,14 @@ fn bot_input(rng: &mut SeqRng, tick: u64, prev: PlayerInput, materials: &[u16]) 
 
 /// Runs a soak and reports.
 pub fn run_soak(cfg: &SoakConfig) -> Result<SoakReport, String> {
+    run_soak_observed(cfg, &mut |_| {})
+}
+
+/// Runs a soak, calling `observe` after every step, and reports.
+pub fn run_soak_observed(
+    cfg: &SoakConfig,
+    observe: &mut dyn FnMut(&SoakFrame<'_>),
+) -> Result<SoakReport, String> {
     let scene = fe_scene::parse(&cfg.scene_text).map_err(|e| e.to_string())?;
     let mats =
         Arc::new(fe_scene::load_materials(&scene, &cfg.scene_dir).map_err(|e| e.to_string())?);
@@ -198,13 +286,30 @@ pub fn run_soak(cfg: &SoakConfig) -> Result<SoakReport, String> {
                 r.sim.world.grid.set(p, c.with_material(fe_core::MaterialId::AIR));
             }
             if step < cfg.ticks {
-                b.input = bot_input(&mut b.rng, step, b.input, &materials);
+                let player = b.client.player.unwrap_or(0);
+                b.input = bot_input(cfg.style, player, &mut b.rng, step, b.input, &materials);
             } else {
                 b.input = PlayerInput::default();
             }
             b.client.set_input(b.input);
             b.client.tick(now, &mut net.endpoint(b.peer));
         }
+        observe(&SoakFrame {
+            step,
+            server: &server,
+            bots: bots
+                .iter()
+                .map(|b| {
+                    (
+                        b.client.player,
+                        b.client.stats.traffic,
+                        b.client.stats.rtt_us,
+                        b.client.stats.lead_ticks,
+                    )
+                })
+                .collect(),
+            dropped: net.dropped,
+        });
         if step >= cfg.ticks
             && bots.iter().all(|b| b.client.sim().is_some_and(|s| s.tick() >= server.tick_count()))
         {
@@ -281,6 +386,7 @@ mod tests {
             seed: 7,
             threads: 1,
             corrupt_at: None,
+            style: BotStyle::Chaos,
         }
     }
 
