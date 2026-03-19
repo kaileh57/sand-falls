@@ -1,0 +1,68 @@
+// Glowcave: a huge cavern under a rainstorm. Rain falls through cracks in the
+// ceiling as waterfalls that fill pools, mist drifts through shafts of daylight,
+// and blue fungus and violet crystals glow along the walls.
+[scene]
+name = glowcave
+description = Rain pours through cracks into a cavern lit by shafts of daylight and glowing fungus.
+size = 960 576
+seed = 0x91c4
+ticks = 1500
+
+[build]
+fill 0 0 960 540 stone
+fill 0 0 960 60 air
+terrain 0 960 64 6 70 soil 120
+// The cavern: overlapping chambers.
+circle 480 340 220 air
+circle 230 380 150 air
+circle 740 360 170 air
+circle 360 230 100 air
+circle 620 220 110 air
+circle 120 300 80 air
+// Rock pillars and a floor with dips for pools.
+circle 480 610 150 stone
+circle 250 560 90 stone
+circle 760 580 110 stone
+fill 405 300 420 470 stone
+circle 412 300 18 stone
+circle 412 470 22 stone
+circle 860 470 60 stone
+// Cracks in the ceiling.
+fill 352 60 356 140 air
+fill 352 140 358 160 air
+fill 618 60 621 120 air
+fill 760 60 765 205 air
+// Rain over the cracks feeds waterfalls into the cavern.
+fill 340 30 370 32 rain_cloud
+fill 610 30 630 32 rain_cloud
+fill 750 30 775 32 rain_cloud
+fill 353 118 355 120 water_source
+fill 762 150 764 152 water_source
+// Water already pooled in the low spots.
+fill 330 470 400 500 water
+fill 470 450 620 470 water
+fill 640 480 720 500 water
+// Mist rising from the pools.
+fill 356 494 360 496 mist_source
+fill 520 462 524 464 mist_source
+fill 580 462 584 464 mist_source
+fill 676 494 680 496 mist_source
+// Glowing life on the cave surfaces.
+decorate 20 120 940 540 moss 9 floor
+decorate 20 120 940 540 glowshroom 6 floor
+decorate 20 120 940 540 glowshroom 4 walls
+decorate 20 120 940 540 crystal 3 ceiling
+decorate 20 120 940 540 crystal 2 walls
+decorate 20 120 940 540 vine 1 ceiling
+decorate 20 120 940 540 moss 6 ceiling
+run 240
+
+[camera]
+view 960 540
+scale 2
+sky day
+ambient 0.05 0.06 0.085
+exposure 2.4
+at 0: 480 300
+at 900: 470 320 zoom=1.15
+at 1500: 520 330 zoom=1.3

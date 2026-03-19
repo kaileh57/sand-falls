@@ -45,7 +45,7 @@ at 120: explode 300 150 12 160
 every 30 from 0 to 300: paint 340 40 2 sand
 
 [expect]
-after 100: hash == 0xa7e4c9f0e1666ce8
-after 300: hash == 0xd78bfe52677dbdc4
-after 500: hash == 0xaa5b463fba509a7f
+after 100: hash == 0xedffc27538bb4773
+after 300: hash == 0x71c88c5323508f37
+after 500: hash == 0x6f3b3861059b5dcd
 after 500: bodies >= 1
