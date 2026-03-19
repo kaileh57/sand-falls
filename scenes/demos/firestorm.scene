@@ -1,0 +1,160 @@
+// Firestorm: a forest on a hillside catches fire in a crosswind. Leaves flash
+// first, trunks burn slowly, smoke rises lit orange from below, and hot smoke
+// carried on the wind sets the forest across the river alight.
+[scene]
+name = firestorm
+description = A wind-driven fire sweeps a hillside forest and jumps a river on hot smoke.
+size = 960 576
+seed = 0xf12e
+wind = 4
+ticks = 2700
+
+[build]
+fill 0 540 960 576 bedrock
+terrain 0 960 430 26 90 soil 540
+terrain 0 960 470 14 60 stone 540
+// The river.
+fill 430 400 470 470 air
+fill 430 440 470 470 water
+
+fill 30 361 34 445 wood
+circle 32 361 21 leaves
+circle 22 371 14 leaves
+circle 42 368 14 leaves
+fill 63 367 67 445 wood
+circle 65 367 16 leaves
+circle 57 375 10 leaves
+circle 73 372 10 leaves
+fill 89 364 93 445 wood
+circle 91 364 20 leaves
+circle 81 374 13 leaves
+circle 101 370 13 leaves
+fill 118 367 122 445 wood
+circle 120 367 18 leaves
+circle 111 376 12 leaves
+circle 129 373 12 leaves
+fill 137 365 141 445 wood
+circle 139 365 21 leaves
+circle 129 375 14 leaves
+circle 149 372 14 leaves
+fill 171 366 175 445 wood
+circle 173 366 18 leaves
+circle 164 375 12 leaves
+circle 182 372 12 leaves
+fill 194 335 198 445 wood
+circle 196 335 21 leaves
+circle 186 345 14 leaves
+circle 206 342 14 leaves
+fill 221 334 225 445 wood
+circle 223 334 16 leaves
+circle 215 342 10 leaves
+circle 231 339 10 leaves
+fill 252 330 256 445 wood
+circle 254 330 15 leaves
+circle 247 337 10 leaves
+circle 261 335 10 leaves
+fill 286 333 290 445 wood
+circle 288 333 21 leaves
+circle 278 343 14 leaves
+circle 298 340 14 leaves
+fill 305 356 309 445 wood
+circle 307 356 15 leaves
+circle 300 363 10 leaves
+circle 314 361 10 leaves
+fill 341 362 345 445 wood
+circle 343 362 19 leaves
+circle 334 371 12 leaves
+circle 352 368 12 leaves
+fill 367 361 371 445 wood
+circle 369 361 16 leaves
+circle 361 369 10 leaves
+circle 377 366 10 leaves
+fill 398 351 402 445 wood
+circle 400 351 17 leaves
+circle 392 359 11 leaves
+circle 408 356 11 leaves
+fill 476 333 480 445 wood
+circle 478 333 18 leaves
+circle 469 342 12 leaves
+circle 487 339 12 leaves
+fill 508 364 512 445 wood
+circle 510 364 16 leaves
+circle 502 372 10 leaves
+circle 518 369 10 leaves
+fill 540 367 544 445 wood
+circle 542 367 18 leaves
+circle 533 376 12 leaves
+circle 551 373 12 leaves
+fill 566 336 570 445 wood
+circle 568 336 21 leaves
+circle 558 346 14 leaves
+circle 578 343 14 leaves
+fill 592 341 596 445 wood
+circle 594 341 22 leaves
+circle 583 352 14 leaves
+circle 605 348 14 leaves
+fill 620 351 624 445 wood
+circle 622 351 18 leaves
+circle 613 360 12 leaves
+circle 631 357 12 leaves
+fill 645 355 649 445 wood
+circle 647 355 16 leaves
+circle 639 363 10 leaves
+circle 655 360 10 leaves
+fill 680 351 684 445 wood
+circle 682 351 22 leaves
+circle 671 362 14 leaves
+circle 693 358 14 leaves
+fill 704 342 708 445 wood
+circle 706 342 19 leaves
+circle 697 351 12 leaves
+circle 715 348 12 leaves
+fill 736 366 740 445 wood
+circle 738 366 16 leaves
+circle 730 374 10 leaves
+circle 746 371 10 leaves
+fill 763 344 767 445 wood
+circle 765 344 17 leaves
+circle 757 352 11 leaves
+circle 773 349 11 leaves
+fill 788 361 792 445 wood
+circle 790 361 22 leaves
+circle 779 372 14 leaves
+circle 801 368 14 leaves
+fill 817 368 821 445 wood
+circle 819 368 16 leaves
+circle 811 376 10 leaves
+circle 827 373 10 leaves
+fill 847 334 851 445 wood
+circle 849 334 20 leaves
+circle 839 344 13 leaves
+circle 859 340 13 leaves
+fill 872 348 876 445 wood
+circle 874 348 22 leaves
+circle 863 359 14 leaves
+circle 885 355 14 leaves
+fill 904 341 908 445 wood
+circle 906 341 16 leaves
+circle 898 349 10 leaves
+circle 914 346 10 leaves
+fill 924 353 928 445 wood
+circle 926 353 22 leaves
+circle 915 364 14 leaves
+circle 937 360 14 leaves
+// Undergrowth.
+decorate 0 300 960 540 leaves 30 floor
+// The spark: the first canopy is already alight.
+circle 36 340 10 burning_leaves
+fill 20 418 26 424 burning_wood
+
+[camera]
+view 960 540
+scale 2
+sky night
+ambient 0.03 0.03 0.045
+exposure 1.6
+at 0: 200 340 zoom=1.6
+at 1200: 300 335 zoom=1.45
+at 1800: 400 330 zoom=1.35
+at 2300: 500 330 zoom=1.3
+at 2700: 560 320 zoom=1.2

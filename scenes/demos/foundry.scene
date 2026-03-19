@@ -1,0 +1,64 @@
+// Foundry: a white-hot metal pour into firebrick molds. The metal cools
+// through yellow and orange to a dark solid, and where it spills into the
+// quench channel it throws up steam. Nearly all the light comes from the metal.
+[scene]
+name = foundry
+description = Molten metal pours into molds, glows white to orange to dark, and steams in a quench channel.
+size = 768 432
+seed = 0xf0d9
+ticks = 2700
+
+[build]
+fill 0 0 768 432 stone
+// The hall. Bedrock under the floor anchors everything built on it.
+fill 20 40 748 380 air
+fill 0 400 768 432 bedrock
+// Furnace: brick walls, heaters underneath, a crucible of molten metal.
+fill 40 60 200 70 brick
+fill 40 70 50 200 brick
+fill 190 70 200 170 brick
+fill 50 190 200 200 brick
+fill 60 180 190 190 heater
+fill 60 110 190 180 molten_metal
+fill 190 170 200 180 air
+fill 40 200 200 380 stone
+fill 40 200 200 240 brick
+// One long firebrick launder from the furnace mouth to the molds.
+fill 190 180 230 186 brick
+fill 200 186 230 380 stone
+fill 200 186 230 210 brick
+// Three open molds in a firebrick bed, each overflowing into the next.
+fill 230 180 240 222 brick
+fill 240 214 580 222 brick
+fill 230 222 580 380 stone
+fill 320 192 330 214 brick
+fill 420 196 430 214 brick
+fill 510 200 520 214 brick
+// The quench channel, full of water.
+fill 580 222 680 380 stone
+fill 580 206 680 222 water
+fill 680 180 688 380 stone
+// Preheat the launder and molds, as a real foundry does, so the stream stays
+// liquid all the way. The hot brick glows a dull red.
+temp 186 168 242 190 1450
+temp 226 176 244 224 1450
+temp 226 178 580 224 1350
+// A stream from the crucible keeps the pour going.
+fill 120 100 124 104 metal_source
+// Torches near the furnace door, for a little warm fill light.
+fill 210 60 212 64 torch
+fill 30 120 32 124 torch
+
+[events]
+at 1800: fill 120 100 124 104 air
+
+[camera]
+view 768 432
+scale 2
+sky cave
+ambient 0.03 0.026 0.024
+exposure 1.3
+at 0: 250 175 zoom=1.35
+at 800: 330 185 zoom=1.35
+at 1600: 420 195 zoom=1.3
+at 2700: 400 200 zoom=1.15

@@ -1,0 +1,107 @@
+// Demolition: a tall tower of brick, timber and glass. Charges go off floor by
+// floor, the structure breaks into hundreds of rigid bodies that tumble and
+// shatter, dust rolls outward, and the timber catches fire.
+[scene]
+name = demolition
+description = Charges bring down a brick, timber and glass tower floor by floor.
+size = 960 540
+seed = 0xde30
+ticks = 700
+
+[build]
+fill 0 500 960 540 bedrock
+terrain 0 960 470 6 120 soil 500
+fill 300 440 660 500 concrete
+
+fill 400 400 408 440 brick
+fill 552 400 560 440 brick
+fill 452 406 458 440 wood
+fill 502 406 508 440 wood
+fill 400 400 560 404 brick
+fill 408 404 552 406 wood
+fill 400 416 408 426 glass
+fill 552 416 560 426 glass
+fill 400 360 408 400 brick
+fill 552 360 560 400 brick
+fill 452 366 458 400 wood
+fill 502 366 508 400 wood
+fill 400 360 560 364 brick
+fill 408 364 552 366 wood
+fill 400 376 408 386 glass
+fill 552 376 560 386 glass
+fill 400 320 408 360 brick
+fill 552 320 560 360 brick
+fill 452 326 458 360 wood
+fill 502 326 508 360 wood
+fill 400 320 560 324 brick
+fill 408 324 552 326 wood
+fill 400 336 408 346 glass
+fill 552 336 560 346 glass
+fill 400 280 408 320 brick
+fill 552 280 560 320 brick
+fill 452 286 458 320 wood
+fill 502 286 508 320 wood
+fill 400 280 560 284 brick
+fill 408 284 552 286 wood
+fill 400 296 408 306 glass
+fill 552 296 560 306 glass
+fill 400 240 408 280 brick
+fill 552 240 560 280 brick
+fill 452 246 458 280 wood
+fill 502 246 508 280 wood
+fill 400 240 560 244 brick
+fill 408 244 552 246 wood
+fill 400 256 408 266 glass
+fill 552 256 560 266 glass
+fill 400 200 408 240 brick
+fill 552 200 560 240 brick
+fill 452 206 458 240 wood
+fill 502 206 508 240 wood
+fill 400 200 560 204 brick
+fill 408 204 552 206 wood
+fill 400 216 408 226 glass
+fill 552 216 560 226 glass
+fill 400 160 408 200 brick
+fill 552 160 560 200 brick
+fill 452 166 458 200 wood
+fill 502 166 508 200 wood
+fill 400 160 560 164 brick
+fill 408 164 552 166 wood
+fill 400 176 408 186 glass
+fill 552 176 560 186 glass
+fill 400 120 408 160 brick
+fill 552 120 560 160 brick
+fill 452 126 458 160 wood
+fill 502 126 508 160 wood
+fill 400 120 560 124 brick
+fill 408 124 552 126 wood
+fill 400 136 408 146 glass
+fill 552 136 560 146 glass
+fill 420 96 540 120 brick
+fill 460 76 500 96 glass
+// Charges: gunpowder packed at the base of each wall, low floors first.
+
+
+[events]
+// Right side first so the tower tips, then the left side and the core.
+at 120: explode 556 432 16 240
+at 123: explode 505 432 14 220
+at 126: explode 556 392 16 240
+at 129: explode 505 392 14 220
+at 132: explode 556 352 16 240
+at 135: explode 505 352 14 220
+at 200: explode 455 432 14 220
+at 203: explode 404 432 16 240
+at 206: explode 455 392 14 220
+at 209: explode 404 392 16 240
+
+[camera]
+view 960 540
+scale 2
+sky dusk
+ambient 0.12 0.1 0.11
+exposure 1.4
+at 0: 480 300 zoom=1.25
+at 200: 480 320 zoom=1.2
+at 450: 500 380 zoom=1.1
+at 700: 500 380 zoom=1.05
