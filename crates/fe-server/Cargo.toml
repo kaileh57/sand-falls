@@ -12,6 +12,8 @@ fe-scene.workspace = true
 fe-net.workspace = true
 fe-engine.workspace = true
 serde_json.workspace = true
+fe-render.workspace = true
+fe-control.workspace = true
 
 [lints]
 workspace = true

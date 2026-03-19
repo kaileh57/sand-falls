@@ -148,6 +148,8 @@ pub enum Op {
     },
     /// Randomly place a material into air cells.
     Scatter(IRect, String, u32),
+    /// Grow a material on air cells next to solid ones: `floor`, `ceiling`, `walls` or `any`.
+    Decorate(IRect, String, u32, Surface),
     /// Set temperature in a rectangle, in degrees C.
     Temp(IRect, i32),
     /// Add a character.
@@ -170,6 +172,19 @@ pub enum Op {
     Input(InputSpec),
     /// Simulate ticks during setup.
     Run(u64),
+}
+
+/// Which surfaces a decoration grows on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Surface {
+    /// Air with a solid cell below.
+    Floor,
+    /// Air with a solid cell above.
+    Ceiling,
+    /// Air with a solid cell to the left or right.
+    Walls,
+    /// Air next to any solid cell.
+    Any,
 }
 
 /// When a timeline entry fires.
@@ -332,8 +347,13 @@ pub struct Scene {
     pub stream: Option<(i32, i32)>,
     /// Ticks to run; 0 means up to the last timeline entry or expectation.
     pub ticks: u64,
-    /// Where networked players appear, if the scene sets it.
+    /// Where networked players appear, if the scene sets it. Several `spawn` lines
+    /// give several spawn points; players are dealt to them in turn.
     pub spawn: Option<(i32, i32)>,
+    /// Every spawn point, in file order.
+    pub spawns: Vec<(i32, i32)>,
+    /// Wind from -4 to 4.
+    pub wind: i8,
     /// Legend characters.
     pub legend: BTreeMap<char, LegendEntry>,
     /// Setup steps in order.
@@ -493,6 +513,23 @@ pub(crate) fn parse_op(line: usize, text: &str) -> Result<Op, SceneError> {
             let pct: u32 = num(line, a[5].trim_end_matches('%'), "percent")?;
             Op::Scatter(rect(line, a)?, a[4].to_string(), pct.min(100))
         }
+        "decorate" => {
+            need(line, a, 7, "decorate X0 Y0 X1 Y1 MATERIAL PERCENT floor|ceiling|walls|any")?;
+            let pct: u32 = num(line, a[5].trim_end_matches('%'), "percent")?;
+            let surface = match a[6] {
+                "floor" => Surface::Floor,
+                "ceiling" => Surface::Ceiling,
+                "walls" => Surface::Walls,
+                "any" => Surface::Any,
+                other => {
+                    return Err(SceneError::new(
+                        line,
+                        format!("surface '{other}' must be floor, ceiling, walls, or any"),
+                    ));
+                }
+            };
+            Op::Decorate(rect(line, a)?, a[4].to_string(), pct.min(100), surface)
+        }
         "temp" => {
             need(line, a, 5, "temp X0 Y0 X1 Y1 CELSIUS")?;
             Op::Temp(rect(line, a)?, num(line, a[4], "celsius")?)
@@ -622,6 +659,8 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
         stream: None,
         ticks: 0,
         spawn: None,
+        spawns: Vec::new(),
+        wind: 0,
         legend: BTreeMap::new(),
         setup: Vec::new(),
         timeline: Vec::new(),
@@ -689,9 +728,12 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
                             IRect::new(0, 0, num(line, w[0], "width")?, num(line, w[1], "height")?);
                     }
                     "bounds" => scene.bounds = rect(line, &w)?,
+                    "wind" => scene.wind = num::<i8>(line, v, "wind")?.clamp(-4, 4),
                     "spawn" => {
                         need(line, &w, 2, "spawn = X Y")?;
-                        scene.spawn = Some((num(line, w[0], "x")?, num(line, w[1], "y")?));
+                        let p = (num(line, w[0], "x")?, num(line, w[1], "y")?);
+                        scene.spawn.get_or_insert(p);
+                        scene.spawns.push(p);
                     }
                     "worldgen" => {
                         scene.worldgen = match w.as_slice() {
