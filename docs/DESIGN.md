@@ -39,11 +39,15 @@ CI checks the contract directly. The same scenario runs with 1 thread and with 3
 
 ## World model
 
-The world is an unbounded grid of cells split into 64x64 chunks. Each cell is 4 bytes: a 16-bit material id, an 8-bit flags field (including the tick-parity bit that stops a cell from being processed twice in one tick), and an 8-bit material-specific value such as temperature or remaining lifetime. A chunk is 16 KiB of cell data, small enough to stay in a core's L2 cache while it is updated.
+The world is an unbounded grid of cells split into 64x64 chunks. Each cell is 4 bytes: a 12-bit material id, 4 flag bits (including the tick-parity bit that stops a cell from being processed twice in one tick, and the flag that marks a cell as part of a rigid body), an 8-bit temperature in 10-degree steps from -50 C to 2500 C, and an 8-bit material-specific value that holds remaining lifetime, hit points, or fall speed. A chunk is 16 KiB of cell data, small enough to stay in a core's L2 cache while it is updated.
 
 Chunks are stored in a fixed-order map keyed by chunk coordinate. Each chunk tracks a dirty rect, the bounding box of cells that changed last tick, and a chunk whose dirty rect is empty sleeps until a neighbor writes into it. Chunks outside every player's active region are serialized to disk and unloaded, and world generation fills new chunks from the seed so that generation is part of the determinism contract.
 
 Within a chunk, cells update bottom to top. The horizontal direction alternates by tick parity so that liquids do not drift to one side.
+
+Liquids level in two ways. A cell that can find a drop within its spread distance moves toward it. A cell resting on top of liquid with an open side walks along the surface until it drops off an edge; it cannot climb onto a higher step, so the walk always ends lower and staircases flatten however wide their steps are. A level pool sleeps, except for a partly filled top row, whose cells keep shimmering. That keeps only the surface rows of a pool awake.
+
+Every cell has the same heat capacity, which makes air an unlimited heat sink if it conducts well. Air's conductivity is set low so that hot metal and lava cool mainly through what they touch.
 
 ## Parallel scheduling
 
@@ -71,7 +75,7 @@ A rigid body is a connected group of cells that moves as one piece, such as a fa
 
 ### Building a body
 
-A flood fill finds the connected cells, marching squares traces their outline, Douglas-Peucker simplifies the outline, and the shape is split into convex pieces to make Rapier colliders. While a body moves, its cells are removed from the grid. At the end of each tick they are stamped back at the body's new position so that sand, water, and other bodies collide with them.
+A flood fill finds the connected cells, and the cells are merged into rectangles (horizontal runs joined with identical runs below) that become a compound of Rapier cuboids. Terrain near bodies is one voxel collider per chunk. Rapier collides voxel shapes with other shapes but not with each other, which is why bodies use cuboids. While a body moves, its cells are removed from the grid. At the end of each tick they are stamped back at the body's new position so that sand, water, and other bodies collide with them.
 
 ### Structural support
 
@@ -87,7 +91,7 @@ When a body is destroyed in pieces, it re-runs the flood fill and splits into on
 
 ### Bodies in liquids
 
-Bodies and liquids push on each other. When a body is stamped into the grid, liquid and powder cells in its way are moved to the nearest free cell by a fixed search order. Each tick, the engine counts the liquid cells a body displaces and applies buoyancy from the density difference, plus drag from the liquid's viscosity. Wood floats, stone sinks, and a hull fills and goes down once enough water gets inside.
+Bodies and liquids push on each other. When a body is stamped into the grid, liquid and powder cells in its way are moved to the nearest free cell, sideways first. Each tick, the engine walks the body's footprint and its hull cavity column by column; cells below the first one touching a liquid or powder count as submerged. Lift from the medium's density acts at the center of mass, plus drag from its viscosity. Wood floats, stone sinks, and a hull goes down once water fills its cavity. Lift at the center of mass means bodies do not right themselves; applying it at the wet cells' centroid made spinning bodies feed their own spin through the air they leave behind.
 
 ### Joints
 
@@ -103,9 +107,11 @@ Rapier uses floats. Cross-platform determinism holds only if Rapier's guarantees
 
 ## Rendering
 
-The renderer uses `wgpu`. Each loaded chunk maps to a slot in a texture array, and each frame uploads only dirty rects. Cell color comes from the material palette plus a per-cell variant so that sand reads as grains instead of a flat color.
+The renderer works on the CPU at cell resolution and scales up to pixels, so frames can be rendered headless on any machine, including CI runners without a GPU. The windowed client copies each frame into the window's surface texture through `wgpu`. Cell color comes from the material palette plus a per-cell variant so that sand reads as grains instead of a flat color.
 
-Lighting is where the demos get their look. Emissive materials such as lava, fire, and glowing fungus light the scene through 2D global illumination (radiance cascades or a similar screen-space method). Bloom, heat haze over hot cells, and smoke that scatters light go on top. None of this feeds back into the simulation, so it does not need to be deterministic.
+Lighting is where the demos get their look. Emissive materials and hot cells (which glow with their temperature) seed a light field that spreads through open space by repeated sweeps and is then softened with a blur. Sky light falls down each column until it meets a structure, which gives light shafts through cracks; foliage and smoke only dim it. Air underground shows a dim rock back wall that catches nearby light, and rock far from open space sinks into ambient occlusion. Bloom, heat haze over hot air, and smoke that scatters light go on top. None of this feeds back into the simulation, so it does not need to be deterministic.
+
+A 1920x1080 frame (960x540 cells) takes about 0.2 s on four cores. That is enough for recording video and for a playable window at smaller sizes, but not the 60 fps at 1440p the original target asked for; moving the light pass to a GPU compute shader is the obvious next step.
 
 ## Multiplayer
 
@@ -121,7 +127,7 @@ Waiting for confirmed inputs puts each client's world about half a round trip be
 
 ### Desync detection and repair
 
-Every 30 ticks, each client hashes each active chunk and sends a single combined hash to the server. On a mismatch, the server asks for the per-chunk hashes, finds the chunks that differ, and resends them along with any rigid bodies that overlap them. A desync is treated as a bug: every one is logged with the tick, chunk, and replay needed to reproduce it, and CI fails if the soak test records any.
+Every 30 ticks, each client sends the server its state hash split by subsystem: cells, particles, bodies, and characters. When only the cells differ, the server asks for the client's per-chunk hashes at that tick, finds the chunks that differ, and sends its own copies of them and their neighbors, to be applied when the client reaches the server's current tick. When anything else differs, or three reports in a row mismatch, the server sends a full snapshot instead. A desync is treated as a bug: CI runs a soak at 150 ms round trip and 2% loss and fails if the server records any.
 
 ### Joining
 
@@ -160,30 +166,32 @@ These rules are enforced in CI, and a pull request that breaks one does not merg
 
 The reference machine is a desktop with 8 physical cores from 2023 or later and a mid-range discrete GPU. The tick rate is fixed at 60 Hz, so a tick has 16.6 ms in total, of which the cell simulation gets 8 ms.
 
-These numbers are starting targets, not measurements. Published per-cell numbers for falling-sand engines are rough: the Rust engine [sandengine](https://github.com/Ijtihed/sandengine) reports about 5.6 ns per cell on a saturated grid and about 0.56 ns per cell on a settled one, without naming its hardware. Phase 2 measures the real numbers, and this table is updated with them instead of being quietly lowered.
+The targets were set before any code existed, from rough published numbers: the Rust engine [sandengine](https://github.com/Ijtihed/sandengine) reports about 5.6 ns per cell on a saturated grid. The measured column comes from the 4-core cloud container this engine was built in, not the reference machine, so multi-core numbers there understate an 8-core desktop. Several targets are missed, and the table says so rather than moving the targets.
 
-| Area | Target |
-| --- | --- |
-| Cost of one moving cell, single thread | 5 ns or less |
-| Cost of a sleeping chunk | under 0.5 ns per cell, amortized |
-| Fully active cells per tick within the 8 ms sim budget | 4 million (2048x2048); stretch goal 8 million |
-| Parallel speedup on 8 cores, fully active scene | 6x or better |
-| Loaded world in memory | 16 million cells (4096x4096) at 4 bytes per cell, 64 MiB |
-| Free particles | 100,000 at 1 ms or less per tick |
-| Rigid bodies | 1,000 dynamic bodies stepped in 3 ms or less |
-| Building a body from a 64x64 cell region | 0.2 ms or less |
-| Support check after an explosion, 65,536-cell component | 1 ms or less |
-| Shattering a 64x64 cell body | 0.5 ms or less |
-| Frame rate | 60 fps or higher at 2560x1440 |
-| Chunk texture upload | 1 ms or less per frame with 256 dirty chunks |
-| Upload per player | 1 KB/s or less average |
-| Download per client, 8 players | 8 KB/s or less average, excluding joins and repairs |
-| Input delay | 3 ticks (50 ms) on LAN; playable up to 150 ms round trip |
-| Late-join snapshot | 4 MB or less for a 16-million-cell world; joined in under 3 s on a 25 Mbit/s link |
-| Determinism soak | zero hash mismatches over 1,000,000 ticks on all three CI platforms |
-| Headless speed | 1,000 ticks per second or more for a fully active 512x512 scene on 8 cores |
-| Control API overhead | 50 microseconds or less per call, excluding simulation time |
-| Full CI run | 10 minutes or less |
+The worst case for the cell passes is fast-falling sand: a cell falling at up to 16 cells per tick does up to 16 steps of work each tick, so "cost per visited cell" includes that. Profiling shows the cost spread across many small steps (about 450 instructions per visited cell) with no single hot spot left after the fixes in phase 2: buffering dirty marks per job instead of using atomics per cell took it from 253 ns to 25 ns.
+
+| Area | Target | Measured (4-core container) |
+| --- | --- | --- |
+| Cost of one moving cell, single thread | 5 ns or less | 25 ns per visited cell, fully active falling sand. Missed. |
+| Cost of a sleeping chunk | under 0.5 ns per cell, amortized | 219 ns per tick for a settled 512x512 world, about 0.001 ns per cell. Met. |
+| Fully active cells per tick within the 8 ms sim budget | 4 million (2048x2048); stretch goal 8 million | 726,000 visited cells per tick in 6.5 ms on 4 threads. Missed by about 2.5x after scaling to 8 cores. |
+| Parallel speedup on 8 cores, fully active scene | 6x or better | 2.8x on 4 threads (sand storm). Not measured on 8 cores. |
+| Loaded world in memory | 16 million cells (4096x4096) at 4 bytes per cell, 64 MiB | 4 bytes per cell as planned; the 8.4-million-cell dam break loads in about 34 MiB of cells. |
+| Free particles | 100,000 at 1 ms or less per tick | Not measured yet. |
+| Rigid bodies | 1,000 dynamic bodies stepped in 3 ms or less | Not measured yet. |
+| Building a body from a 64x64 cell region | 0.2 ms or less | Not measured yet. |
+| Support check after an explosion, 65,536-cell component | 1 ms or less | Not measured yet. |
+| Shattering a 64x64 cell body | 0.5 ms or less | Not measured yet. |
+| Frame rate | 60 fps or higher at 2560x1440 | About 5 fps at 1920x1080 on the CPU renderer. Missed; see Rendering. |
+| Chunk texture upload | 1 ms or less per frame with 256 dirty chunks | Replaced by a full-frame copy from the CPU renderer. |
+| Upload per player | 1 KB/s or less average | 0.55 to 0.84 KB/s at 150 ms round trip and 2% loss. Met. |
+| Download per client, 8 players | 8 KB/s or less average, excluding joins and repairs | About 2.4 KB/s with 4 players. 8 players not measured yet. |
+| Input delay | 3 ticks (50 ms) on LAN; playable up to 150 ms round trip | 4 ticks on localhost; 14 to 15 ticks at 150 ms round trip, with the local character predicted. |
+| Late-join snapshot | 4 MB or less for a 16-million-cell world; joined in under 3 s on a 25 Mbit/s link | 98 KB for the 8.4-million-cell dam break; joined in about 200 ms at 150 ms round trip. Met, though textured terrain compresses less than that world. |
+| Determinism soak | zero hash mismatches over 1,000,000 ticks on all three CI platforms | Zero mismatches in 3,000-tick soaks at 150 ms and 2% loss, golden hashes and 1-versus-4-thread checks in CI. The 1,000,000-tick soak has not been run. |
+| Headless speed | 1,000 ticks per second or more for a fully active 512x512 scene on 8 cores | Not measured yet. |
+| Control API overhead | 50 microseconds or less per call, excluding simulation time | Not measured yet. |
+| Full CI run | 10 minutes or less | Not measured yet. |
 
 ## Demos
 
@@ -236,18 +244,19 @@ The workspace starts with these crates:
 
 | Crate | Purpose |
 | --- | --- |
-| `fe-core` | Cells, chunks, the world map, fixed-point math, hashing |
+| `fe-core` | Cells, coordinates, fixed-point math, hashing, deterministic randomness |
 | `fe-materials` | Material and reaction file format, compiled lookup tables |
 | `fe-sim` | Cell rules, free particles, the checkerboard scheduler (the only crate with `unsafe`) |
 | `fe-physics` | Bridge between pixel bodies and Rapier |
+| `fe-engine` | The full tick, commands, character tools, streaming, world generation, hashing, snapshots |
 | `fe-scene` | Text scene format and expectations |
 | `fe-net` | Lockstep protocol, snapshots, desync detection |
-| `fe-render` | `wgpu` renderer and lighting |
+| `fe-render` | CPU renderer and lighting, PNG output, overlay font |
 | `fe-control` | JSON-RPC control API |
 | `fe-mcp` | MCP server over the control API |
 | `fe` | Command-line tool: run, test, bench, replay, diff |
 | `fe-client` | Windowed client |
-| `fe-server` | Headless server |
+| `fe-server` | Headless server, soak harness, multiplayer demo recorder |
 
 ## Build order
 
@@ -273,4 +282,16 @@ Lockstep adds input delay to world interaction. Character prediction hides it fo
 
 The 32-cell reach limit per tick is set by the checkerboard pattern. Anything faster has to go through the particle system, and materials that need long-range effects in one tick, such as lightning or lasers, need a separate deterministic pass that runs after the four checkerboard passes.
 
-Headless screenshots in CI need a GPU or a software Vulkan driver such as lavapipe. Rendering is not deterministic across drivers, so screenshots are for people and agents to look at, and world hashes remain the only pass/fail check.
+Rendering ended up on the CPU instead of the GPU, so headless screenshots and videos need no GPU at all. They are still for people and agents to look at; world hashes remain the only pass/fail check.
+
+### Risks that came true
+
+The cell pass costs about 25 ns per visited cell on one thread, against a 5 ns target. Most of the remaining cost is the neighbor lookup across chunk borders and the per-cell rule dispatch. A packed 2x2 cell layout or SIMD scanning of air runs are the next things to try.
+
+The CPU renderer draws a 1080p frame in about 0.2 s, roughly 5 frames per second. That is fine for videos and agents but far from 60 fps at 1440p. Moving light propagation and bloom to a compute shader is the fix, and the renderer's output format already matches a texture upload.
+
+Liquid surfaces with a partly filled top row never fully sleep, because single cells keep walking along the surface. The cost is bounded (a settled lake visits fewer than 3,000 cells per tick) but it is not zero.
+
+Every material has the same heat capacity, so air cooled hot metal as fast as stone did. Air conductivity is set very low to work around it. A per-material heat capacity column is the proper fix and changes every golden hash.
+
+Buoyancy is applied at the center of mass with no righting torque, so a floating body keeps whatever angle it lands at. Strong angular damping hides this in the demos.
