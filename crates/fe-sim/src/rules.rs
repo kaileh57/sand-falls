@@ -103,12 +103,32 @@ pub struct RuleCtx<'a> {
     /// Current tick.
     pub tick: u64,
     base: u64,
+    wind: i32,
 }
 
 impl<'a> RuleCtx<'a> {
     /// Creates the context for one tick.
     pub fn new(mats: &'a MaterialSet, fast: &'a [Fast], seed: u64, tick: u64) -> Self {
-        Self { mats, fast, tick, base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))) }
+        Self { mats, fast, tick, base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))), wind: 0 }
+    }
+
+    /// Sets the wind (-4..=4) gases and fire drift with.
+    #[must_use]
+    pub const fn with_wind(mut self, wind: i8) -> Self {
+        self.wind = wind as i32;
+        self
+    }
+
+    /// Picks a sideways direction, biased by the wind. `r` supplies the randomness.
+    #[inline]
+    fn side(&self, r: u32) -> i32 {
+        if self.wind != 0 && ((r >> 20) & 3) < self.wind.unsigned_abs() {
+            self.wind.signum()
+        } else if r & 1 == 0 {
+            1
+        } else {
+            -1
+        }
     }
 
     /// Packed fields for a cell's material. Unknown ids read as the boundary.
@@ -674,7 +694,7 @@ fn move_gas(
     m: Fast,
 ) -> bool {
     let r = ctx.rand(wx, wy, 3);
-    let side = if r & 1 == 0 { 1 } else { -1 };
+    let side = ctx.side(r);
     let first = match (r >> 1) % 8 {
         0..=3 => (0, -1),
         4 | 5 => (side, -1),
@@ -710,8 +730,13 @@ fn move_fire(
     if r.is_multiple_of(2) {
         return false;
     }
-    let side = if r & 8 == 0 { 1 } else { -1 };
-    for (dx, dy) in [(0, -1), (side, -1), (-side, -1)] {
+    let side = ctx.side(r >> 3);
+    let order = if ctx.wind != 0 {
+        [(side, -1), (0, -1), (side, 0)]
+    } else {
+        [(0, -1), (side, -1), (-side, -1)]
+    };
+    for (dx, dy) in order {
         if nb.get(lx + dx, ly + dy).is_air() {
             swap_to(nb, ctx, lx, ly, lx + dx, ly + dy, cell);
             return true;

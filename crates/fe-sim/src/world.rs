@@ -27,6 +27,7 @@ pub struct World {
     threads: usize,
     pool: Option<rayon::ThreadPool>,
     stats: CellStats,
+    wind: i8,
 }
 
 impl World {
@@ -42,6 +43,7 @@ impl World {
             threads: 1,
             pool: None,
             stats: CellStats::default(),
+            wind: 0,
         };
         w.set_threads(threads);
         w
@@ -84,6 +86,16 @@ impl World {
     /// Sets the tick counter, used when loading a snapshot.
     pub const fn set_tick(&mut self, tick: u64) {
         self.tick = tick;
+    }
+
+    /// Wind from -4 (strong, to the left) to 4 (strong, to the right). Gases and fire drift with it.
+    pub const fn wind(&self) -> i8 {
+        self.wind
+    }
+
+    /// Sets the wind, clamped to -4..=4.
+    pub fn set_wind(&mut self, w: i8) {
+        self.wind = w.clamp(-4, 4);
     }
 
     /// Counters from the last [`World::step_cells`].
@@ -171,7 +183,7 @@ impl World {
                 active += 1;
             }
         }
-        let ctx = RuleCtx::new(&self.mats, &self.fast, self.seed, self.tick);
+        let ctx = RuleCtx::new(&self.mats, &self.fast, self.seed, self.tick).with_wind(self.wind);
         let mut events = Vec::new();
         let mut visited = 0u64;
         let offset = (self.tick % 4) as usize;
@@ -213,6 +225,7 @@ impl World {
         let mut h = StableHasher::new();
         h.write_u64(self.tick);
         h.write_u64(self.seed);
+        h.write_i32(i32::from(self.wind));
         h.write_u64(self.mats.hash());
         h.write_u64(self.grid.hash());
         h.finish()

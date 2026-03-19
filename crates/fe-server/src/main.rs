@@ -2,6 +2,8 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::print_stdout, clippy::print_stderr, reason = "this is a command-line tool")]
 
+mod demo;
+
 use fe_net::server::ServerCore;
 use fe_net::soak::{SoakConfig, run_soak};
 use fe_net::{TICK_US, UdpTransport};
@@ -16,7 +18,8 @@ fe-server: falling-engine multiplayer server
 USAGE:
     fe-server host <scene> [--port 7777] [--threads N] [--max-players 8]
     fe-server soak [--scene FILE] [--ticks 6000] [--players 4] [--latency MS] [--jitter MS]
-                   [--loss PCT] [--late-join TICK] [--seed N] [--json]
+                   [--loss PCT] [--late-join TICK] [--seed N] [--style chaos|siege|flood] [--json]
+    fe-server demo <scene> --out FILE.mp4 [soak options] [--every K]
 
 host runs the scene at 60 ticks per second and accepts fe-client connections.
 soak runs a server and bot clients in one process over a simulated network and
@@ -25,11 +28,15 @@ fails if any client's state ever differs from the server's.
 
 const DEFAULT_ARENA: &str = include_str!("../../../scenes/multiplayer/chaos_soak.scene");
 
-fn opt<'a>(args: &'a [String], name: &str) -> Option<&'a str> {
+pub(crate) fn opt<'a>(args: &'a [String], name: &str) -> Option<&'a str> {
     args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).map(String::as_str)
 }
 
-fn num<T: std::str::FromStr>(args: &[String], name: &str, default: T) -> Result<T, String> {
+pub(crate) fn num<T: std::str::FromStr>(
+    args: &[String],
+    name: &str,
+    default: T,
+) -> Result<T, String> {
     match opt(args, name) {
         Some(v) => v.parse().map_err(|_| format!("{name} '{v}' is not a number")),
         None => Ok(default),
@@ -41,8 +48,8 @@ fn threads(args: &[String]) -> usize {
         .unwrap_or(1)
 }
 
-fn soak(args: &[String]) -> Result<bool, String> {
-    let (scene_text, scene_dir) = match opt(args, "--scene") {
+pub(crate) fn soak_config(args: &[String], scene_path: Option<&str>) -> Result<SoakConfig, String> {
+    let (scene_text, scene_dir) = match scene_path.or_else(|| opt(args, "--scene")) {
         Some(p) => (
             std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
             Path::new(p).parent().map_or_else(|| PathBuf::from("."), Path::to_path_buf),
@@ -50,7 +57,7 @@ fn soak(args: &[String]) -> Result<bool, String> {
         None => (DEFAULT_ARENA.to_string(), PathBuf::from(".")),
     };
     let ticks = num(args, "--ticks", 6000u64)?;
-    let cfg = SoakConfig {
+    Ok(SoakConfig {
         scene_text,
         scene_dir,
         players: num(args, "--players", 4u8)?.max(1),
@@ -62,7 +69,13 @@ fn soak(args: &[String]) -> Result<bool, String> {
         seed: num(args, "--seed", 1u64)?,
         threads: threads(args).min(2),
         corrupt_at: None,
-    };
+        style: fe_net::soak::BotStyle::parse(opt(args, "--style").unwrap_or("chaos"))
+            .ok_or("--style must be chaos, siege, or flood")?,
+    })
+}
+
+fn soak(args: &[String]) -> Result<bool, String> {
+    let cfg = soak_config(args, None)?;
     let start = Instant::now();
     let r = run_soak(&cfg)?;
     if args.iter().any(|a| a == "--json") {
@@ -140,6 +153,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("soak") => soak(&args[1..]),
         Some("host") => host(&args[1..]),
+        Some("demo") => demo::demo(&args[1..]),
         _ => {
             print!("{USAGE}");
             return ExitCode::from(2);
