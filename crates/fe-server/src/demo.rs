@@ -44,10 +44,13 @@ fn hud(
     let (gx, gy, gw, gh) = (img.width as i32 - 260, 8, 250, 70);
     img.shade(gx - 4, gy - 4, gx + gw + 4, gy + gh + 18, 150);
     img.text(gx, gy + gh + 4, 1, "TOTAL DOWNLOAD B/S", [200, 200, 200, 255]);
-    let max = history.iter().copied().fold(1.0f64, f64::max).max(4000.0);
+    // Scale to the median so join snapshots do not flatten the steady state.
+    let mut sorted: Vec<f64> = history.iter().copied().collect();
+    sorted.sort_by(f64::total_cmp);
+    let max = (sorted.get(sorted.len() / 2).copied().unwrap_or(1.0) * 3.0).max(2000.0);
     for (i, v) in history.iter().enumerate() {
         let x = gx + (i as i32 * gw / 120.max(history.len() as i32));
-        let bar = (v / max * f64::from(gh)) as i32;
+        let bar = (v.min(max) / max * f64::from(gh)) as i32;
         img.fill(x, gy + gh - bar, x + 2, gy + gh, [120, 200, 255, 255]);
     }
     img.text(gx, gy, 1, &format!("{max:.0}"), [160, 160, 160, 255]);

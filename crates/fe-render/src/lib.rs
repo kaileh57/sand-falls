@@ -365,8 +365,15 @@ impl Renderer {
                     let t = buf.trans[i];
                     // Only ground and structures end the sky; foliage, rain, mist and
                     // smoke only dim it.
-                    if t < 0.7 && self.look(cells[i].material()).structural {
+                    // Cells beyond the loaded world read as the boundary; above the
+                    // world that is open sky, so it never ends the sky.
+                    let boundary = cells[i].material() == MaterialId::BOUNDARY;
+                    if t < 0.7 && !boundary && self.look(cells[i].material()).structural {
                         open = false;
+                    }
+                    if boundary && open {
+                        buf.sky[i] = true;
+                        continue;
                     }
                     buf.sky[i] = open;
                     if k < 0.02 {
