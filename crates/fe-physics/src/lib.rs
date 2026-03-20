@@ -22,10 +22,12 @@ use rapier2d::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// Cells per meter in physics space.
-pub const CELLS_PER_METER: f32 = 10.0;
-/// Gravity in meters per second squared, matched to powder gravity (450 cells/s^2).
-pub const GRAVITY: f32 = 45.0;
+/// Cells per meter in physics space: [`fe_core::CELLS_PER_METER`].
+pub const CELLS_PER_METER: f32 = fe_core::CELLS_PER_METER as f32;
+/// Gravity in meters per second squared: [`fe_core::GRAVITY`] (7/256 cells per
+/// tick squared, 98.4 cells/s^2) at [`CELLS_PER_METER`], so bodies fall exactly
+/// as fast as cells, particles and characters.
+pub const GRAVITY: f32 = 9.843_75;
 /// Ticks a small body must rest before it merges into terrain.
 pub const MERGE_AFTER_TICKS: u32 = 300;
 /// Bodies at or below this size merge into terrain after resting.
@@ -506,5 +508,18 @@ fn drop_as_debris(
         } else if world.get(p).is_air() {
             let _ = world.set(p, d);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gravity_matches_the_cell_world() {
+        let cells_per_tick2 = fe_core::GRAVITY.0 as f32 / 65536.0;
+        let tps = fe_core::TICKS_PER_SECOND as f32;
+        let expected = cells_per_tick2 * tps * tps / fe_core::CELLS_PER_METER as f32;
+        assert_eq!(GRAVITY.to_bits(), expected.to_bits());
     }
 }

@@ -22,6 +22,15 @@ pub use rng::{SeqRng, cell_rand, mix64};
 /// Fixed simulation rate in ticks per second.
 pub const TICKS_PER_SECOND: u32 = 60;
 
+/// World scale: cells per metre. Every system (cells, particles, rigid bodies
+/// and characters) shares it, so a 1 kg water cell is 10 cm on a side.
+pub const CELLS_PER_METER: i32 = 10;
+
+/// Gravity in cells per tick squared: 7/256 = 0.0273 cells/tick^2, which is
+/// 98.4 cells/s^2, or 9.84 m/s^2 at [`CELLS_PER_METER`] and [`TICKS_PER_SECOND`].
+/// Cells, particles, rigid bodies and the avatar all fall with this value.
+pub const GRAVITY: Fx = Fx(1792);
+
 /// Ambient temperature in engine units (20 degrees C).
 pub const AMBIENT_TEMP: u8 = 7;
 

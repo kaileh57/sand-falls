@@ -13,12 +13,14 @@ pub const AVATAR_W: i32 = 6;
 /// Character height in cells.
 pub const AVATAR_H: i32 = 12;
 
-const GRAVITY: Fx = Fx(1 << 14); // 0.25 cells per tick squared
+/// The world's gravity, 7/256 cells per tick squared (9.84 m/s^2).
+const GRAVITY: Fx = fe_core::GRAVITY;
 const MAX_FALL: Fx = Fx(8 << 16);
 const WALK: Fx = Fx(1 << 16);
 const ACCEL_GROUND: Fx = Fx(1 << 14);
 const ACCEL_AIR: Fx = Fx(1 << 13);
-const JUMP: Fx = Fx(-(4 << 16));
+/// Take-off speed: -0.85 cells per tick, a 13-cell apex and 62 ticks in the air.
+const JUMP: Fx = Fx(-55_706);
 const SWIM: Fx = Fx(-(3 << 15));
 const STEP_UP: i32 = 3;
 
@@ -252,7 +254,7 @@ mod tests {
         let w = world();
         let mut a = Avatar::new(0, CellPos::new(100, 50));
         let idle = PlayerInput::default();
-        for _ in 0..60 {
+        for _ in 0..90 {
             a.step(&w, &idle);
         }
         assert!(a.on_ground);
@@ -274,11 +276,11 @@ mod tests {
         assert!(a.on_ground);
         a.step(&w, &PlayerInput { jump: true, ..Default::default() });
         let mut peak = a.y.floor();
-        for _ in 0..60 {
+        for _ in 0..120 {
             a.step(&w, &PlayerInput::default());
             peak = peak.min(a.y.floor());
         }
-        assert!(peak < 80, "peak {peak}");
+        assert!(peak < 90, "peak {peak}");
         assert!(a.on_ground);
     }
 }
