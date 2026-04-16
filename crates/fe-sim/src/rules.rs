@@ -5,15 +5,24 @@
 //! seed and the tick.
 
 use crate::sched::{Neighborhood, REACH};
-use fe_core::{AMBIENT_TEMP, Cell, CellPos, LocalRect, MaterialId, mix64};
+use fe_core::{AMBIENT_TEMP, Cell, CellPos, GRAVITY, LocalRect, MaterialId, mix64};
 use fe_materials::{MaterialSet, SpawnDir, State};
 
 /// Fall-speed units per cell: the value byte stores speed in 1/16 cells per tick.
 pub const SPEED_UNITS: u32 = 16;
-/// Fall speed gained per tick, in 1/16 cells per tick.
-pub const GRAVITY: u32 = 2;
 /// Fastest fall speed, in 1/16 cells per tick (15.9 cells per tick).
 pub const MAX_SPEED: u32 = 255;
+
+/// Fall speed gained on `tick`, in 1/16 cells per tick.
+///
+/// [`GRAVITY`] is 7/256 cells per tick squared, which is 7/16 of a speed unit per
+/// tick. The fraction is dithered over ticks with no randomness: the gains over
+/// any 16 consecutive ticks add up to exactly 7.
+#[inline]
+pub const fn gravity_gain(tick: u64) -> u32 {
+    let g = GRAVITY.0 as u64 * SPEED_UNITS as u64;
+    ((((tick + 1) * g) >> 16) - ((tick * g) >> 16)) as u32
+}
 
 /// How far a resting liquid cell looks along a surface for a drop.
 const SURFACE_SCAN: i32 = REACH - 1;
@@ -324,7 +333,7 @@ fn update_cell(
             State::Liquid => {
                 match move_liquid_inner(nb, ctx, lx, ly, &mut cell, f, r, &mut changed) {
                     LiquidMove::None => false,
-                    LiquidMove::Side => true,
+                    LiquidMove::Side | LiquidMove::Hover => true,
                     LiquidMove::Down => {
                         // A falling cell can open a drop for surface cells up to
                         // SURFACE_SCAN away; wake them so they look again.
@@ -493,7 +502,34 @@ fn swap_to(
     nb.mark_rect(lx.min(tx) - 1, ly.min(ty) - 1, lx.max(tx) + 1, ly.max(ty) + 1);
 }
 
-/// Falls straight down with acceleration. Returns true if the cell moved.
+/// What [`fall`] did with a cell.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FallResult {
+    /// Something is in the way below; the cell may slide or spread instead.
+    Blocked,
+    /// The cell moved down at least one cell. Its new position is written.
+    Moved,
+    /// The way down is open but the cell is still too slow to move a whole cell
+    /// this tick. It stays put with its speed stored; it must not slide or spread.
+    Hover,
+}
+
+/// Fall speed a cell keeps when `below` stops it: a falling powder or liquid
+/// cell carries the stream along at its own speed, anything else stops it dead.
+#[inline]
+fn blocked_speed(ctx: &RuleCtx<'_>, v: u32, below: Cell) -> u8 {
+    if below.is_air() || below.has(Cell::FLAG_IN_BODY) {
+        return 0;
+    }
+    let bf = ctx.f(below);
+    if bf.state.falls() && bf.flags & F_LIFETIME == 0 {
+        v.min(u32::from(below.value)) as u8
+    } else {
+        0
+    }
+}
+
+/// Falls straight down with acceleration.
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
 fn fall(
     nb: &Neighborhood<'_>,
@@ -504,23 +540,45 @@ fn fall(
     m: Fast,
     r: u32,
     changed: &mut bool,
-) -> bool {
+) -> FallResult {
     let has_speed = m.flags & F_LIFETIME == 0;
-    if !can_enter(ctx, m, nb.get(lx, ly + 1), true, r) {
-        if has_speed && cell.value != 0 {
-            cell.value = 0;
-            *changed = true;
+    let below = nb.get(lx, ly + 1);
+    let mut v = if has_speed {
+        (u32::from(cell.value) + gravity_gain(ctx.tick)).min(MAX_SPEED)
+    } else {
+        SPEED_UNITS
+    };
+    if !can_enter(ctx, m, below, true, r) {
+        if has_speed {
+            // Riding on a falling cell: accelerate with it, never past it.
+            let v = blocked_speed(ctx, v, below);
+            if cell.value != v {
+                cell.value = v;
+                *changed = true;
+            }
         }
-        return false;
+        return FallResult::Blocked;
     }
-    let mut v = if has_speed { u32::from(cell.value) } else { SPEED_UNITS };
-    v = (v + GRAVITY).min(MAX_SPEED);
-    let mut steps = v / SPEED_UNITS;
-    if (r >> 4) & (SPEED_UNITS - 1) < v % SPEED_UNITS {
-        steps += 1;
+    if !has_speed {
+        v = SPEED_UNITS;
     }
-    let steps = steps.max(1) as i32;
+    // Whole cells this tick. The fraction is dithered over ticks, with a phase
+    // per column: cells in one column at one speed move together, so a falling
+    // slab or stream keeps its shape, while neighboring columns do not move in
+    // lockstep.
+    let wx = nb.pos().origin().x + lx;
+    let phase = ctx.tick + u64::from(mix64(wx as u32 as u64) as u32 & 15);
+    let steps = (((phase + 1) * u64::from(v)) >> 4) - ((phase * u64::from(v)) >> 4);
+    if steps == 0 {
+        // Still accelerating from rest: keep the speed and look again next tick.
+        cell.value = v as u8;
+        nb.set(lx, ly, *cell);
+        nb.mark(lx, ly);
+        return FallResult::Hover;
+    }
+    let steps = steps as i32;
     let mut y = ly;
+    let mut stop = 0u8;
     let mut blocked = false;
     // `stored` is what (lx, y) holds right now. Each step moves the displaced cell
     // up into (lx, y); when that is the value already there (air falling through
@@ -537,6 +595,7 @@ fn fall(
         let t = nb.get(lx, y + 1);
         if !can_enter(ctx, m, t, true, r >> (8 + i as u32 % 16)) {
             blocked = true;
+            stop = blocked_speed(ctx, v, t);
             break;
         }
         let up = if t.is_air() { t } else { t.with_parity(ctx.tick) };
@@ -547,12 +606,12 @@ fn fall(
         y += 1;
     }
     if has_speed {
-        cell.value = if blocked { (v / 2) as u8 } else { v as u8 };
+        cell.value = if blocked { stop } else { v as u8 };
     }
     nb.set(lx, y, *cell);
     // One mark covers the whole column the cell passed through.
     nb.mark_rect(lx - 1, ly - 1, lx + 1, y + 1);
-    true
+    FallResult::Moved
 }
 
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
@@ -568,8 +627,9 @@ fn move_powder(
     r: u32,
     changed: &mut bool,
 ) -> bool {
-    if fall(nb, ctx, lx, ly, cell, m, r, changed) {
-        return true;
+    match fall(nb, ctx, lx, ly, cell, m, r, changed) {
+        FallResult::Moved | FallResult::Hover => return true,
+        FallResult::Blocked => {}
     }
     if (r >> 8) & 0xffff >= m.slide {
         return false;
@@ -590,6 +650,7 @@ enum LiquidMove {
     None,
     Down,
     Side,
+    Hover,
 }
 
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
@@ -603,8 +664,10 @@ fn move_liquid_inner(
     r: u32,
     changed: &mut bool,
 ) -> LiquidMove {
-    if fall(nb, ctx, lx, ly, cell, m, r, changed) {
-        return LiquidMove::Down;
+    match fall(nb, ctx, lx, ly, cell, m, r, changed) {
+        FallResult::Moved => return LiquidMove::Down,
+        FallResult::Hover => return LiquidMove::Hover,
+        FallResult::Blocked => {}
     }
     let d = if r & (1 << 30) == 0 { 1 } else { -1 };
     for dx in [d, -d] {

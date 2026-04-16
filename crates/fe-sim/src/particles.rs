@@ -5,8 +5,8 @@ use fe_core::{Cell, CellPos, Fx, MaterialId};
 use fe_materials::State;
 use serde::{Deserialize, Serialize};
 
-/// Gravity on particles, in cells per tick squared (0.125).
-pub const PARTICLE_GRAVITY: Fx = Fx(1 << 13);
+/// Gravity on particles, in cells per tick squared: the world's [`fe_core::GRAVITY`].
+pub const PARTICLE_GRAVITY: Fx = fe_core::GRAVITY;
 /// Fastest particle speed on each axis, in cells per tick.
 pub const PARTICLE_MAX_SPEED: i32 = 40;
 
@@ -144,8 +144,13 @@ fn fly(world: &World, p: &mut Particle) -> Flight {
         p.y = ny;
         last = cell;
     }
-    // A particle that barely moves has come to rest.
-    if p.age > 4 && p.vx.abs().0 < Fx::ONE.0 / 8 && p.vy.abs().0 < Fx::ONE.0 / 8 {
+    // A particle that barely moves has come to rest, unless it is only at the top
+    // of its arc with open space below it.
+    if p.age > 4
+        && p.vx.abs().0 < Fx::ONE.0 / 8
+        && p.vy.abs().0 < Fx::ONE.0 / 8
+        && passable(world, CellPos::new(last.x, last.y + 1)) != Some(true)
+    {
         return Flight::Landed(last);
     }
     Flight::Airborne
@@ -185,7 +190,7 @@ mod tests {
         w.fill_rect(IRect::new(0, 100, 128, 128), stone);
         let mut ps = Particles::default();
         let c = w.make_cell(sand, CellPos::new(0, 0));
-        ps.spawn(Fx::from_int(10), Fx::from_int(40), Fx::from_int(1), Fx::from_int(-2), c);
+        ps.spawn(Fx::from_int(10), Fx::from_int(40), Fx(1 << 14), Fx::from_int(-1), c);
         for _ in 0..200 {
             ps.step(&mut w);
         }
