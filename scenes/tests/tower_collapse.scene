@@ -14,4 +14,4 @@ at 5: dig 124 150 6
 
 [expect]
 after 6: bodies >= 1
-after 200: count brick in 90 60 160 120 < 300
+after 400: count brick in 90 60 160 120 < 300

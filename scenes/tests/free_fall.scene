@@ -1,0 +1,17 @@
+// A slab of rubble dropped from rest falls with the world's gravity:
+// 7/256 cells per tick squared, so about 3 cells in 15 ticks and 49 in 60.
+// The slab must stay together instead of spraying into a long streak.
+[scene]
+name = free fall
+size = 64 640
+seed = 4
+
+[build]
+fill 0 0 64 2 rubble
+
+[expect]
+after 15: count rubble in 0 8 64 640 == 0
+after 15: count rubble in 0 3 64 8 > 64
+after 60: count rubble in 0 0 64 42 == 0
+after 60: count rubble in 0 57 64 640 == 0
+after 60: count rubble in 0 46 64 54 > 64

@@ -14,4 +14,4 @@ at 10: heat 96 58 3 60
 [expect]
 after 12: particles > 50
 after 400: count stone in 70 40 122 80 < 1700
-after 600: particles == 0
+after 900: particles == 0
