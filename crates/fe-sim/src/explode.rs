@@ -88,7 +88,7 @@ pub fn explode(
                     // The inner part of the blast throws its debris; the rim crumbles in place.
                     if dm.state.falls() && (d * 3 < r * 2 || roll.is_multiple_of(3)) {
                         events.extend(world.set(p, Cell::AIR));
-                        fling(particles, pos, p, falloff, power, debris, &mut rng);
+                        fling(particles, pos, p, falloff, r, power, debris, &mut rng);
                     } else {
                         events.extend(world.set(p, debris));
                     }
@@ -98,7 +98,7 @@ pub fn explode(
                         let _ = world.set(p, Cell::AIR);
                         let mut flung = c;
                         flung.temp = c.temp.saturating_add((dmg / 6) as u8);
-                        fling(particles, pos, p, falloff, power, flung, &mut rng);
+                        fling(particles, pos, p, falloff, r, power, flung, &mut rng);
                     } else {
                         let mut warm = c;
                         warm.temp = c.temp.saturating_add((dmg / 6) as u8);
@@ -112,25 +112,33 @@ pub fn explode(
     events
 }
 
+/// Throws a cell out of the blast as a particle.
+///
+/// Speed is `power * falloff / (80 * radius)` cells per tick, clamped to 0.25..3
+/// (1.5 to 18 m/s), plus an upward bias of a quarter of that. At the world's
+/// gravity the highest debris peaks about 260 cells above the blast.
+#[expect(clippy::too_many_arguments, reason = "all of these describe one throw")]
 fn fling(
     particles: &mut Particles,
     center: CellPos,
     p: CellPos,
     falloff: i32,
+    radius: i32,
     power: u8,
     cell: Cell,
     rng: &mut SeqRng,
 ) {
     let (dx, dy) = (p.x - center.x, p.y - center.y);
-    let len = (isqrt((dx * dx + dy * dy) as u64) as i32).max(1);
-    // Speed in cells per tick, scaled by distance from the edge of the blast.
-    let speed = (i32::from(power) * falloff / 96).clamp(1, 24);
-    let jitter = |rng: &mut SeqRng| Fx(rng.range_i32(-(1 << 15), 1 << 15));
-    let vx = Fx::from_ratio(dx * speed, len) + jitter(rng);
+    let len = i64::from((isqrt((dx * dx + dy * dy) as u64) as i32).max(1));
+    let speed = Fx::from_ratio(i32::from(power) * falloff, 80 * radius.max(1))
+        .clamp(Fx(1 << 14), Fx(3 << 16));
+    let jitter = |rng: &mut SeqRng| Fx(rng.range_i32(-(1 << 14), 1 << 14));
+    let along = |num: i64, den: i64| Fx((i64::from(speed.0) * num / (len * den)) as i32);
+    let vx = along(i64::from(dx), 1) + jitter(rng);
     // Debris below the center bounces back up out of the crater instead of
     // burying itself, so most of it flies up and outward.
-    let up = if dy > 0 { -dy * speed * 3 / 10 } else { dy * speed };
-    let vy = Fx::from_ratio(up, len) - Fx::from_int(speed / 3 + 1) + jitter(rng);
+    let up = if dy > 0 { along(-3 * i64::from(dy), 10) } else { along(i64::from(dy), 1) };
+    let vy = up - Fx(speed.0 / 4) + jitter(rng);
     particles.spawn(Fx::from_int(p.x) + Fx(1 << 15), Fx::from_int(p.y) + Fx(1 << 15), vx, vy, cell);
 }
 

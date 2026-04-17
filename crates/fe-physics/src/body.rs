@@ -310,6 +310,44 @@ impl PixelBody {
         CellPos::new(wx.floor() as i32, wy.floor() as i32)
     }
 
+    /// The body's solid cell nearest to `center` (world cells) within `r` cells,
+    /// as its world-space center and distance.
+    pub(crate) fn nearest_cell(
+        &self,
+        pose: &Pose,
+        center: (f32, f32),
+        r: f32,
+    ) -> Option<(f32, f32, f32)> {
+        let (c, s) = (pose.rotation.cos(), pose.rotation.sin());
+        let tx = pose.translation.x * CELLS_PER_METER;
+        let ty = pose.translation.y * CELLS_PER_METER;
+        // Reject by the bounding circle of the local grid first.
+        let (w, h) = (f32::from(self.w), f32::from(self.h));
+        // (`hypot` is not guaranteed to round the same on every platform; `sqrt` is.)
+        let (ex, ey) = (self.com.0.max(w - self.com.0), self.com.1.max(h - self.com.1));
+        let reach = (ex * ex + ey * ey).sqrt();
+        let (cx, cy) = (tx - center.0, ty - center.1);
+        if (cx * cx + cy * cy).sqrt() > r + reach {
+            return None;
+        }
+        let mut best: Option<(f32, f32, f32)> = None;
+        let wi = self.w as usize;
+        for (i, cell) in self.cells.iter().enumerate() {
+            if cell.is_air() {
+                continue;
+            }
+            let ox = (i % wi) as f32 + 0.5 - self.com.0;
+            let oy = (i / wi) as f32 + 0.5 - self.com.1;
+            let wx = tx + c * ox - s * oy;
+            let wy = ty + s * ox + c * oy;
+            let d2 = (wx - center.0) * (wx - center.0) + (wy - center.1) * (wy - center.1);
+            if d2 <= r * r && best.is_none_or(|b| d2 < b.2) {
+                best = Some((wx, wy, d2));
+            }
+        }
+        best.map(|(x, y, d2)| (x, y, d2.sqrt()))
+    }
+
     /// True if the body moved since its last stamp or was never stamped.
     pub(crate) fn needs_restamp(&self, rapier: &PhysicsWorld) -> bool {
         match rapier.bodies.get(self.handle) {

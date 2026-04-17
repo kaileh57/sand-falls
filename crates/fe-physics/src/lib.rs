@@ -248,23 +248,27 @@ impl Physics {
     }
 
     /// Applies blast impulses to bodies near each explosion.
+    ///
+    /// The blast reaches out to 2.5 times its radius. Each body inside that circle
+    /// gets one impulse at its cell nearest the blast, scaled by how close that
+    /// cell is, so a charge at the foot of a tall tower pushes the foot and the
+    /// tower tips instead of sliding as a whole.
     pub fn apply_blasts(&mut self, blasts: &[Blast]) {
         for blast in blasts {
-            let center = cell_to_m(blast.pos);
-            let r = f32::from(blast.radius) / CELLS_PER_METER * 2.5;
+            let center = (blast.pos.x as f32 + 0.5, blast.pos.y as f32 + 0.5);
+            let r = f32::from(blast.radius) * 2.5;
             for b in &self.bodies {
                 let Some(rb) = self.rapier.bodies.get_mut(b.handle) else { continue };
-                let delta = rb.translation() - center;
-                let d = delta.length();
-                if d > r || d <= 1e-4 {
-                    continue;
-                }
-                let strength = f32::from(blast.power) * 0.6 * (1.0 - d / r) * rb.mass().sqrt();
-                rb.apply_impulse(delta / d * strength, true);
-                rb.apply_torque_impulse(
-                    strength * 0.02 * if delta.x > 0.0 { 1.0 } else { -1.0 },
-                    true,
-                );
+                let pose = *rb.position();
+                let Some((px, py, d)) = b.nearest_cell(&pose, center, r) else { continue };
+                let strength = f32::from(blast.power) * 0.28 * (1.0 - d / r) * rb.mass().sqrt();
+                let dir = if d > 1e-3 {
+                    Vector::new((px - center.0) / d, (py - center.1) / d)
+                } else {
+                    Vector::new(0.0, -1.0)
+                };
+                let at = Vector::new(px / CELLS_PER_METER, py / CELLS_PER_METER);
+                rb.apply_impulse_at_point(dir * strength, at, true);
             }
         }
     }
@@ -389,8 +393,8 @@ impl Physics {
                 part.iter().map(|&(lx, ly, c)| (body.local_to_world(&pose, lx, ly), c)).collect();
             let mut v = (linvel.x, linvel.y);
             if shatter.is_some() {
-                v.0 += (rng.range_i32(-100, 100) as f32) / 40.0;
-                v.1 += (rng.range_i32(-100, 20) as f32) / 40.0;
+                v.0 += (rng.range_i32(-100, 100) as f32) / 85.0;
+                v.1 += (rng.range_i32(-100, 20) as f32) / 85.0;
             }
             if self.create_body(world, &cells, v, angvel).is_none() {
                 drop_as_debris(world, particles, &cells, v);
