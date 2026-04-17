@@ -12,7 +12,10 @@ fill 4 95 124 120 water
 fill 50 20 78 40 lava
 
 [expect]
-// Water cools most lava into basalt before the two react into obsidian.
+// Lava that touches water reacts into obsidian; lava that freezes while it
+// falls or floats on the water crumbles to rubble and sinks. Boiling uses up
+// some water as steam.
 after 600: count lava in 0 0 128 128 < 100
-after 600: count basalt in 0 0 128 128 >= 200
+after 600: count obsidian in 0 0 128 128 >= 150
+after 600: count rubble in 0 0 128 128 >= 100
 after 600: count water in 0 0 128 128 < 3000
