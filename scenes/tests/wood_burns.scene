@@ -1,4 +1,5 @@
-// A burning plank spreads fire through a wooden block, leaving ash.
+// A burning plank spreads fire through a wooden block. Most of the wood goes
+// up as smoke; only a little is left as ash.
 [scene]
 name = wood burns
 size = 128 128
@@ -10,5 +11,8 @@ fill 40 90 90 120 wood
 fill 62 88 66 90 burning_wood
 
 [expect]
+after 600: count smoke in 0 0 128 128 > 50
 after 2400: count wood in 0 0 128 128 < 1200
-after 2400: count ash in 0 0 128 128 > 200
+after 2400: count ash in 0 0 128 128 > 0
+// Under a quarter of the 1508 cells of fuel.
+after 2400: count ash in 0 0 128 128 < 377
