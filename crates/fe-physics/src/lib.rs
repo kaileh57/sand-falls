@@ -288,32 +288,25 @@ impl Physics {
             world,
         );
 
-        let (cs, _cr) = std::sync::mpsc::channel();
-        let (fs, fr) = std::sync::mpsc::channel();
-        let (ts, _tr) = std::sync::mpsc::channel();
-        let events = ChannelEventCollector::new(cs, fs, ts);
-        self.rapier.step_with_events(&(), &events);
-
-        // Fracture: the strongest impact per body, in body order.
-        let mut impacts: BTreeMap<u32, f32> = BTreeMap::new();
-        while let Ok(e) = fr.try_recv() {
-            for c in [e.collider1, e.collider2] {
-                if let Some(b) = self.bodies.iter().find(|b| b.collider == c) {
-                    let v = impacts.entry(b.id).or_insert(0.0);
-                    *v = v.max(e.max_force_magnitude);
-                }
-            }
-        }
+        // Fracture by impact: a body shatters when the step changed its velocity,
+        // apart from gravity, by more than its strength allows. A sudden stop is an
+        // impact; resting under a heavy pile is not.
+        let before: Vec<Vector> = self
+            .bodies
+            .iter()
+            .map(|b| self.rapier.bodies.get(b.handle).map_or(Vector::ZERO, RigidBody::linvel))
+            .collect();
+        self.rapier.step();
+        let fall = Vector::new(0.0, GRAVITY * self.rapier.integration_parameters.dt);
         let mut to_shatter = Vec::new();
-        for (&id, &force) in &impacts {
-            if let Some(i) = self.bodies.iter().position(|b| b.id == id) {
-                let b = &self.bodies[i];
-                if b.fracture > 0
-                    && let Some(rb) = self.rapier.bodies.get(b.handle)
-                    && force > f32::from(b.fracture) * 4.0 * rb.mass()
-                {
-                    to_shatter.push(i);
-                }
+        for (i, b) in self.bodies.iter().enumerate() {
+            if b.fracture == 0 {
+                continue;
+            }
+            let Some(rb) = self.rapier.bodies.get(b.handle) else { continue };
+            let dv = (rb.linvel() - before[i] - fall).length();
+            if dv > f32::from(b.fracture) / 32.0 {
+                to_shatter.push(i);
             }
         }
         for i in to_shatter.into_iter().rev() {

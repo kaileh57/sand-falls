@@ -62,7 +62,8 @@ pub struct PixelBody {
     last_pose: [u32; 4],
     /// Ticks spent at rest.
     pub rest_ticks: u32,
-    /// Weakest fracture strength among the body's materials. 0 never shatters.
+    /// Fracture strength: the body shatters when one tick's change in velocity,
+    /// apart from gravity, exceeds `fracture / 32` m/s. 0 never shatters.
     pub fracture: u16,
 }
 
@@ -122,14 +123,7 @@ impl PixelBody {
         let (mass, com, inertia) = body.mass_props(world);
         body.com = com;
         body.interior = body.find_interior();
-        body.fracture = body
-            .cells
-            .iter()
-            .filter(|c| !c.is_air())
-            .map(|c| world.materials().get(c.material()).fracture)
-            .filter(|&f| f > 0)
-            .min()
-            .unwrap_or(0);
+        body.fracture = body.compute_fracture(world);
         let origin = Vector::new((x0 as f32 + com.0) * S, (y0 as f32 + com.1) * S);
         let rb = RigidBodyBuilder::dynamic()
             .translation(origin)
@@ -139,10 +133,30 @@ impl PixelBody {
             .ccd_enabled(true)
             .build();
         body.handle = rapier.bodies.insert(rb);
-        let collider = body.build_collider(mass);
+        let collider = body.build_collider();
         body.collider =
             rapier.colliders.insert_with_parent(collider, body.handle, &mut rapier.bodies);
         Some(body)
+    }
+
+    /// The mass-weighted mean fracture strength of the cells that can shatter, or
+    /// 0 (never shatters) when those cells are under half of the body's mass. One
+    /// glass pane in a brick tower does not make the whole tower shatter like glass.
+    fn compute_fracture(&self, world: &World) -> u16 {
+        let (mut total, mut brittle, mut sum) = (0.0f32, 0.0f32, 0.0f32);
+        for c in self.cells.iter().filter(|c| !c.is_air()) {
+            let m = cell_mass(world, *c);
+            let f = world.materials().get(c.material()).fracture;
+            total += m;
+            if f > 0 {
+                brittle += m;
+                sum += m * f32::from(f);
+            }
+        }
+        if brittle <= 0.0 || brittle * 2.0 < total {
+            return 0;
+        }
+        (sum / brittle).round().clamp(1.0, f32::from(u16::MAX)) as u16
     }
 
     /// Splits the cells into rectangles: horizontal runs merged with identical runs below.
@@ -182,7 +196,7 @@ impl PixelBody {
     ///
     /// Rapier collides voxel shapes with other shapes but not with each other, so
     /// bodies use cuboids and terrain uses voxels.
-    fn build_collider(&self, mass: f32) -> Collider {
+    fn build_collider(&self) -> Collider {
         let shapes: Vec<(Pose, SharedShape)> = self
             .rectangles()
             .into_iter()
@@ -194,13 +208,7 @@ impl PixelBody {
                 (Pose::from_translation(Vector::new(cx * S, cy * S)), SharedShape::cuboid(hx, hy))
             })
             .collect();
-        let mut b = ColliderBuilder::compound(shapes).density(0.0).friction(0.7).restitution(0.05);
-        if self.fracture > 0 {
-            b = b
-                .active_events(ActiveEvents::CONTACT_FORCE_EVENTS)
-                .contact_force_event_threshold(f32::from(self.fracture) * 4.0 * mass);
-        }
-        b.build()
+        ColliderBuilder::compound(shapes).density(0.0).friction(0.7).restitution(0.05).build()
     }
 
     /// Mass in kilograms, center of mass in local cells, and angular inertia.
@@ -560,7 +568,7 @@ impl PixelBody {
             .filter(|&i| !self.cells[i].is_air())
             .map(|i| (i as i32 % w, i as i32 / w))
             .collect();
-        let k = (2 + solid.len() / 150).min(8);
+        let k = (2 + solid.len() / 200).min(32);
         let mut rng = SeqRng::new(seed);
         let sites: Vec<(i32, i32)> =
             (0..k).map(|_| solid[rng.below(solid.len() as u32) as usize]).collect();
