@@ -31,6 +31,7 @@
 //! [expect]
 //! after 300: count sand in 0 0 128 80 == 0
 //! after 300: asleep
+//! after 300: temp sand in 0 80 128 96 < 100
 //! ```
 //!
 //! Comments start with `//` everywhere except inside `[grid]` blocks.

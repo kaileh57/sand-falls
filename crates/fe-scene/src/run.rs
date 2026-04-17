@@ -90,7 +90,7 @@ impl Runner {
             timeline.push(TimedResolved { when: t.when, action });
         }
         for e in &scene.expects {
-            if let Check::Count(m, ..) = &e.check {
+            if let Check::Count(m, ..) | Check::Temp(m, ..) = &e.check {
                 mats.id(m)
                     .ok_or_else(|| SceneError::new(e.line, format!("unknown material '{m}'")))?;
             }
@@ -235,6 +235,28 @@ impl Runner {
                 }
                 None => (false, format!("avatar {id} does not exist")),
             },
+            Check::Temp(m, r, cmp, n) => {
+                let id = self.mats.id(m).unwrap_or(MaterialId::BOUNDARY);
+                let (mut sum, mut cells) = (0i64, 0i64);
+                for y in r.min.y..r.max.y {
+                    for x in r.min.x..r.max.x {
+                        let c = sim.world.get(fe_core::CellPos::new(x, y));
+                        if c.material() == id {
+                            sum += i64::from(fe_core::temp_to_celsius(c.temp));
+                            cells += 1;
+                        }
+                    }
+                }
+                if cells == 0 {
+                    (false, format!("no {m} cells in the rectangle"))
+                } else {
+                    let got = sum / cells;
+                    (
+                        cmp.test(got, *n),
+                        format!("mean temp of {m} = {got} C, expected {} {n}", cmp.symbol()),
+                    )
+                }
+            }
         };
         CheckResult { line: e.line, after: e.after, passed, detail, found_hash }
     }

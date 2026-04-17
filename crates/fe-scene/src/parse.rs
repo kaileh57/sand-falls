@@ -243,6 +243,9 @@ pub enum Check {
     Active(Cmp, i64),
     /// A character coordinate: player, `true` for x, comparison, value.
     Avatar(u8, bool, Cmp, i64),
+    /// Mean temperature in degrees C of a material's cells in a rectangle.
+    /// Fails when the rectangle holds none of the material.
+    Temp(String, IRect, Cmp, i64),
 }
 
 /// An expectation checked after a tick.
@@ -634,6 +637,12 @@ fn parse_check(line: usize, s: &str) -> Result<Check, SceneError> {
             rect(line, &[x0, y0, x1, y1])?,
             cmp(op)?,
             num(line, n, "count")?,
+        ),
+        ["temp", mat, "in", x0, y0, x1, y1, op, n] => Check::Temp(
+            mat.to_string(),
+            rect(line, &[x0, y0, x1, y1])?,
+            cmp(op)?,
+            num(line, n, "temperature")?,
         ),
         ["hash", "==", h] => Check::Hash(hex_or_num(line, h)?),
         ["bodies", op, n] => Check::Bodies(cmp(op)?, num(line, n, "count")?),
