@@ -61,6 +61,9 @@ pub struct PhysicsStats {
     pub removed: u32,
     /// Joints broken this tick.
     pub joints_broken: u32,
+    /// Liquid or powder cells a body displaced that found no room and were lost,
+    /// summed over the run.
+    pub lost_cells: u64,
 }
 
 /// All bodies, joints and terrain colliders.
@@ -230,7 +233,13 @@ impl Physics {
             }
         }
         for i in changed.into_iter().rev() {
-            self.resplit(world, particles, i, None);
+            // A body that is still in one piece keeps its Rapier body and motion;
+            // rebuilding it would reset its contacts and kick it.
+            if self.bodies[i].components().len() == 1 {
+                self.bodies[i].refresh_shape(world, &mut self.rapier);
+            } else {
+                self.resplit(world, particles, i, None);
+            }
         }
     }
 
@@ -330,7 +339,7 @@ impl Physics {
     pub fn stamp(&mut self, world: &mut World) {
         for b in &mut self.bodies {
             if b.stamped.is_empty() || b.needs_restamp(&self.rapier) {
-                b.stamp(world, &self.rapier);
+                self.stats.lost_cells += u64::from(b.stamp(world, &self.rapier));
             }
         }
     }
@@ -382,16 +391,32 @@ impl Physics {
         self.stats.removed += 1;
         let mut rng = SeqRng::new(shatter.unwrap_or(0) ^ u64::from(body.id));
         for part in parts {
+            let mut v = linvel;
+            if shatter.is_some() {
+                v.x += (rng.range_i32(-100, 100) as f32) / 85.0;
+                v.y += (rng.range_i32(-100, 20) as f32) / 85.0;
+            }
+            if part.len() >= MIN_BODY_CELLS {
+                let id = self.next_id;
+                if let Some(child) = PixelBody::from_local_cells(
+                    id,
+                    world,
+                    &mut self.rapier,
+                    &body,
+                    &pose,
+                    &part,
+                    v,
+                    angvel,
+                ) {
+                    self.next_id += 1;
+                    self.bodies.push(child);
+                    self.stats.created += 1;
+                    continue;
+                }
+            }
             let cells: Vec<(CellPos, Cell)> =
                 part.iter().map(|&(lx, ly, c)| (body.local_to_world(&pose, lx, ly), c)).collect();
-            let mut v = (linvel.x, linvel.y);
-            if shatter.is_some() {
-                v.0 += (rng.range_i32(-100, 100) as f32) / 85.0;
-                v.1 += (rng.range_i32(-100, 20) as f32) / 85.0;
-            }
-            if self.create_body(world, &cells, v, angvel).is_none() {
-                drop_as_debris(world, particles, &cells, v);
-            }
+            drop_as_debris(world, particles, &cells, (v.x, v.y));
         }
     }
 
@@ -500,17 +525,95 @@ fn drop_as_debris(
         if d.is_air() {
             continue;
         }
+        // A rotated part can map two cells onto one world cell; use the nearest air.
+        let at = nearest_air(world, p, 3);
         if world.materials().get(debris_id).state.falls() {
-            particles.spawn(Fx::from_int(p.x), Fx::from_int(p.y), vx, vy, d);
-        } else if world.get(p).is_air() {
-            let _ = world.set(p, d);
+            let q = at.unwrap_or(p);
+            particles.spawn(Fx::from_int(q.x), Fx::from_int(q.y), vx, vy, d);
+        } else if let Some(q) = at {
+            let _ = world.set(q, d);
         }
     }
+}
+
+/// The air cell nearest to `p` within `r` cells (Chebyshev rings, in a fixed order).
+fn nearest_air(world: &World, p: CellPos, r: i32) -> Option<CellPos> {
+    if world.get(p).is_air() {
+        return Some(p);
+    }
+    for k in 1..=r {
+        for dy in -k..=k {
+            for dx in -k..=k {
+                if dx.abs() != k && dy.abs() != k {
+                    continue;
+                }
+                let q = CellPos::new(p.x + dx, p.y + dy);
+                if world.get(q).is_air() {
+                    return Some(q);
+                }
+            }
+        }
+    }
+    None
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fe_core::IRect;
+    use std::sync::Arc;
+
+    fn world() -> World {
+        let mats = Arc::new(fe_materials::base_set());
+        let mut w = World::new(mats, 3, 1);
+        w.ensure_rect(IRect::new(0, 0, 256, 256), Cell::AIR);
+        w
+    }
+
+    fn brick_body(w: &mut World, ph: &mut Physics, rect: IRect) -> u32 {
+        let brick = w.materials().id("brick").unwrap_or_default();
+        w.fill_rect(rect, brick);
+        ph.carve_body(w, rect).unwrap_or_else(|| panic!("no body"))
+    }
+
+    #[test]
+    fn resplit_of_a_rotated_body_keeps_every_cell() {
+        let mut w = world();
+        let mut ps = Particles::default();
+        let mut ph = Physics::new();
+        let id = brick_body(&mut w, &mut ph, IRect::new(98, 98, 158, 158));
+        let h = ph.bodies[0].handle;
+        let rb = &mut ph.rapier.bodies[h];
+        let mut pose = *rb.position();
+        pose.rotation = Rotation::new(std::f32::consts::FRAC_PI_4);
+        rb.set_position(pose, true);
+        ph.stamp(&mut w);
+        ph.resplit(&mut w, &mut ps, 0, None);
+        assert_eq!(ph.bodies.len(), 1);
+        assert_ne!(ph.bodies[0].id, id);
+        assert_eq!(ph.bodies[0].cell_count(), 3600);
+        let a = ph.rapier.bodies[ph.bodies[0].handle].rotation().angle();
+        assert!((a - std::f32::consts::FRAC_PI_4).abs() < 1e-5, "angle {a}");
+    }
+
+    #[test]
+    fn a_body_that_loses_one_cell_keeps_its_identity_and_motion() {
+        let mut w = world();
+        let mut ps = Particles::default();
+        let mut ph = Physics::new();
+        let id = brick_body(&mut w, &mut ph, IRect::new(100, 100, 130, 120));
+        ph.push_body(id, 30.0, -12.0);
+        ph.stamp(&mut w);
+        let before = ph.rapier.bodies[ph.bodies[0].handle].linvel();
+        let (p, _) = ph.bodies[0].stamped[37];
+        w.grid.set(p, Cell::AIR);
+        ph.sync(&mut w, &mut ps);
+        assert_eq!(ph.bodies.len(), 1);
+        assert_eq!(ph.bodies[0].id, id);
+        assert_eq!(ph.bodies[0].cell_count(), 599);
+        let after = ph.rapier.bodies[ph.bodies[0].handle].linvel();
+        assert!((after - before).length() < 1e-3, "{before:?} -> {after:?}");
+    }
 
     #[test]
     fn gravity_matches_the_cell_world() {

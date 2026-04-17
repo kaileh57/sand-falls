@@ -105,11 +105,59 @@ impl PixelBody {
             grid[(p.y - y0) as usize * w + (p.x - x0) as usize] =
                 c.with_flag(Cell::FLAG_IN_BODY, false);
         }
-        let mut body = Self {
+        let mut body = Self::from_grid(id, w, h, grid);
+        let (mass, inertia) = body.refresh_props(world);
+        let origin = Vector::new((x0 as f32 + body.com.0) * S, (y0 as f32 + body.com.1) * S);
+        let pose = Pose::from_translation(origin);
+        body.insert(rapier, pose, Vector::new(linvel.0, linvel.1), angvel, mass, inertia);
+        Some(body)
+    }
+
+    /// Builds a body from part of another body's local grid, keeping the parent's
+    /// rotation, so no cell is lost or doubled the way rasterizing a rotated part
+    /// into world cells would. `linvel` and `angvel` are the parent's velocity; the
+    /// child gets the velocity of the parent's motion at its own center of mass.
+    #[expect(clippy::too_many_arguments, reason = "the parent's whole motion is needed")]
+    pub(crate) fn from_local_cells(
+        id: u32,
+        world: &World,
+        rapier: &mut PhysicsWorld,
+        parent: &Self,
+        pose: &Pose,
+        part: &[(i32, i32, Cell)],
+        linvel: Vector,
+        angvel: f32,
+    ) -> Option<Self> {
+        let x0 = part.iter().map(|c| c.0).min()?;
+        let y0 = part.iter().map(|c| c.1).min()?;
+        let x1 = part.iter().map(|c| c.0).max()?;
+        let y1 = part.iter().map(|c| c.1).max()?;
+        let (w, h) = ((x1 - x0 + 1) as usize, (y1 - y0 + 1) as usize);
+        let mut grid = vec![Cell::AIR; w * h];
+        for &(lx, ly, c) in part {
+            grid[(ly - y0) as usize * w + (lx - x0) as usize] =
+                c.with_flag(Cell::FLAG_IN_BODY, false);
+        }
+        let mut body = Self::from_grid(id, w, h, grid);
+        let (mass, inertia) = body.refresh_props(world);
+        // Offset of the child's center of mass from the parent's, in world meters.
+        let ox = (x0 as f32 + body.com.0 - parent.com.0) * S;
+        let oy = (y0 as f32 + body.com.1 - parent.com.1) * S;
+        let (c, s) = (pose.rotation.cos(), pose.rotation.sin());
+        let off = Vector::new(c * ox - s * oy, s * ox + c * oy);
+        let mut child = *pose;
+        child.translation = pose.translation + off;
+        let v = linvel + Vector::new(-angvel * off.y, angvel * off.x);
+        body.insert(rapier, child, v, angvel, mass, inertia);
+        Some(body)
+    }
+
+    fn from_grid(id: u32, w: usize, h: usize, cells: Vec<Cell>) -> Self {
+        Self {
             id,
             w: w as u16,
             h: h as u16,
-            cells: grid,
+            cells,
             interior: Vec::new(),
             com: (0.0, 0.0),
             handle: RigidBodyHandle::invalid(),
@@ -119,24 +167,70 @@ impl PixelBody {
             last_pose: [0; 4],
             rest_ticks: 0,
             fracture: 0,
-        };
-        let (mass, com, inertia) = body.mass_props(world);
-        body.com = com;
-        body.interior = body.find_interior();
-        body.fracture = body.compute_fracture(world);
-        let origin = Vector::new((x0 as f32 + com.0) * S, (y0 as f32 + com.1) * S);
+        }
+    }
+
+    /// Recomputes the center of mass, hull interior and fracture strength from the
+    /// cells. Returns the mass and angular inertia.
+    fn refresh_props(&mut self, world: &World) -> (f32, f32) {
+        let (mass, com, inertia) = self.mass_props(world);
+        self.com = com;
+        self.interior = self.find_interior();
+        self.fracture = self.compute_fracture(world);
+        (mass, inertia)
+    }
+
+    fn insert(
+        &mut self,
+        rapier: &mut PhysicsWorld,
+        pose: Pose,
+        linvel: Vector,
+        angvel: f32,
+        mass: f32,
+        inertia: f32,
+    ) {
         let rb = RigidBodyBuilder::dynamic()
-            .translation(origin)
-            .linvel(Vector::new(linvel.0, linvel.1))
+            .pose(pose)
+            .linvel(linvel)
             .angvel(angvel)
             .additional_mass_properties(MassProperties::new(Vector::ZERO, mass, inertia))
             .ccd_enabled(true)
             .build();
-        body.handle = rapier.bodies.insert(rb);
-        let collider = body.build_collider();
-        body.collider =
-            rapier.colliders.insert_with_parent(collider, body.handle, &mut rapier.bodies);
-        Some(body)
+        self.handle = rapier.bodies.insert(rb);
+        let collider = self.build_collider();
+        self.collider =
+            rapier.colliders.insert_with_parent(collider, self.handle, &mut rapier.bodies);
+    }
+
+    /// Updates a body that lost cells but is still in one piece, keeping its Rapier
+    /// body, id, velocity, sleep state and rest time: new mass properties, hull,
+    /// fracture strength and collider, and a translation shifted so the remaining
+    /// cells stay where they are.
+    pub(crate) fn refresh_shape(&mut self, world: &World, rapier: &mut PhysicsWorld) {
+        let old_com = self.com;
+        let (mass, inertia) = self.refresh_props(world);
+        let shape = self.compound_shape();
+        if let Some(col) = rapier.colliders.get_mut(self.collider) {
+            col.set_shape(shape);
+        }
+        let Some(rb) = rapier.bodies.get_mut(self.handle) else { return };
+        let sleeping = rb.is_sleeping();
+        rb.set_additional_mass_properties(MassProperties::new(Vector::ZERO, mass, inertia), false);
+        let mut pose = *rb.position();
+        let (dx, dy) = ((self.com.0 - old_com.0) * S, (self.com.1 - old_com.1) * S);
+        let (c, s) = (pose.rotation.cos(), pose.rotation.sin());
+        let off = Vector::new(c * dx - s * dy, s * dx + c * dy);
+        pose.translation += off;
+        rb.set_position(pose, false);
+        // The new center of mass moves with the old body's motion at that point.
+        let w = rb.angvel();
+        let v = rb.linvel() + Vector::new(-w * off.y, w * off.x);
+        rb.set_linvel(v, false);
+        if sleeping {
+            rb.sleep();
+        }
+        // Force a restamp so the lost cells' slots are written fresh.
+        self.last_pose = [u32::MAX; 4];
     }
 
     /// The mass-weighted mean fracture strength of the cells that can shatter, or
@@ -197,6 +291,14 @@ impl PixelBody {
     /// Rapier collides voxel shapes with other shapes but not with each other, so
     /// bodies use cuboids and terrain uses voxels.
     fn build_collider(&self) -> Collider {
+        ColliderBuilder::new(self.compound_shape())
+            .density(0.0)
+            .friction(0.7)
+            .restitution(0.05)
+            .build()
+    }
+
+    fn compound_shape(&self) -> SharedShape {
         let shapes: Vec<(Pose, SharedShape)> = self
             .rectangles()
             .into_iter()
@@ -208,7 +310,7 @@ impl PixelBody {
                 (Pose::from_translation(Vector::new(cx * S, cy * S)), SharedShape::cuboid(hx, hy))
             })
             .collect();
-        ColliderBuilder::compound(shapes).density(0.0).friction(0.7).restitution(0.05).build()
+        SharedShape::compound(shapes)
     }
 
     /// Mass in kilograms, center of mass in local cells, and angular inertia.
@@ -404,9 +506,11 @@ impl PixelBody {
         self.cavity.clear();
     }
 
-    /// Writes the body's cells into the world at its current pose, pushing fluids aside.
-    pub(crate) fn stamp(&mut self, world: &mut World, rapier: &PhysicsWorld) {
-        let Some(rb) = rapier.bodies.get(self.handle) else { return };
+    /// Writes the body's cells into the world at its current pose, pushing fluids
+    /// aside. Returns the number of displaced fluid cells that found no room.
+    pub(crate) fn stamp(&mut self, world: &mut World, rapier: &PhysicsWorld) -> u32 {
+        let Some(rb) = rapier.bodies.get(self.handle) else { return 0 };
+        let mut lost = 0;
         let pose = *rb.position();
         if !self.stamped.is_empty() {
             self.unstamp(world);
@@ -448,11 +552,17 @@ impl PixelBody {
                 if cell.is_air() {
                     continue;
                 }
-                if place(world, p, cell) {
-                    self.stamped.push((p, idx as u32));
+                match place(world, p, cell) {
+                    Placed::Yes => self.stamped.push((p, idx as u32)),
+                    Placed::Displaced(ok) => {
+                        self.stamped.push((p, idx as u32));
+                        lost += u32::from(!ok);
+                    }
+                    Placed::No => {}
                 }
             }
         }
+        lost
     }
 
     /// Applies buoyancy and drag from liquids and powders around the body.
@@ -627,34 +737,65 @@ impl PixelBody {
     }
 }
 
+/// What [`place`] did.
+enum Placed {
+    /// The cell was written into air or a gas.
+    Yes,
+    /// The cell was written over a liquid or powder cell, which moved to air if
+    /// the flag is true and was lost if it is false.
+    Displaced(bool),
+    /// Something solid is in the way.
+    No,
+}
+
 /// Places a body cell into the world, pushing a fluid or powder cell to nearby air.
-fn place(world: &mut World, p: CellPos, cell: Cell) -> bool {
+fn place(world: &mut World, p: CellPos, cell: Cell) -> Placed {
     let existing = world.get(p);
     if existing.material() == fe_core::MaterialId::BOUNDARY || existing.has(Cell::FLAG_IN_BODY) {
-        return false;
+        return Placed::No;
     }
+    let mut placed = Placed::Yes;
     if !existing.is_air() {
         let m = world.materials().get(existing.material());
         if m.state == State::Static {
-            return false;
+            return Placed::No;
         }
         if matches!(m.state, State::Liquid | State::Powder) {
-            push_aside(world, p, existing);
+            placed = Placed::Displaced(push_aside(world, p, existing));
         }
     }
     world.grid.set(p, cell.with_flag(Cell::FLAG_IN_BODY, true));
-    true
+    placed
 }
 
 /// Moves a displaced cell to the nearest air within a few cells, sideways first.
-fn push_aside(world: &mut World, from: CellPos, cell: Cell) {
+///
+/// When there is none, as under a wide slab sinking into a lake, the cell goes up
+/// its column through liquid, powder and body cells to the first air, which is
+/// usually the space the body just left above itself. Returns false if that also
+/// fails and the cell is lost.
+fn push_aside(world: &mut World, from: CellPos, cell: Cell) -> bool {
     for r in 1..=4 {
         for (dx, dy) in [(-r, 0), (r, 0), (-r, -r), (r, -r), (-r, r), (r, r), (0, -r), (0, r)] {
             let q = CellPos::new(from.x + dx, from.y + dy);
             if world.get(q).is_air() {
                 world.grid.set(q, cell);
-                return;
+                return true;
             }
         }
     }
+    for k in 1..=256 {
+        let q = CellPos::new(from.x, from.y - k);
+        let c = world.get(q);
+        if c.is_air() {
+            world.grid.set(q, cell);
+            return true;
+        }
+        let through = c.has(Cell::FLAG_IN_BODY)
+            || matches!(world.materials().get(c.material()).state, State::Liquid | State::Powder);
+        if !through || c.material() == fe_core::MaterialId::BOUNDARY {
+            return false;
+        }
+    }
+    false
 }
