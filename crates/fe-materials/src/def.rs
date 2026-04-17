@@ -27,6 +27,16 @@ pub struct TransitionDef {
     pub latent: Option<i32>,
 }
 
+/// A material sometimes left behind when a lifetime ends.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ResidueDef {
+    /// Material left behind.
+    pub into: String,
+    /// Chance, as `"10%"` or `"1/10"`, that a cell leaves it instead of its decay.
+    pub chance: String,
+}
+
 /// Ignition settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -138,6 +148,14 @@ pub struct MaterialDef {
     /// What the material becomes when its lifetime ends.
     #[serde(default)]
     pub decay: Option<String>,
+    /// A chance to leave a different material than `decay` when the lifetime
+    /// ends, such as ash from a burnt plank.
+    #[serde(default)]
+    pub residue: Option<ResidueDef>,
+    /// Chance per tick that the lifetime counts down, as `"50%"`. Defaults to
+    /// 100%. Lower rates make a u8 lifetime last longer than 255 ticks.
+    #[serde(default)]
+    pub lifetime_rate: Option<String>,
     /// Spawns another material into neighboring air.
     #[serde(default)]
     pub spawn: Option<SpawnDef>,

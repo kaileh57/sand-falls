@@ -204,13 +204,14 @@ name = "burning_wood"
 state = "static"
 density = 55
 hp = 10
-debris = "ash"
+debris = "ember"
 conductivity = 30
 lifetime = [140, 250]
-decay = "ash"
+decay = "smoke"
 hold_temp = 650
 light = "#ff5a14"
 spawn = { into = "fire", chance = "22%", dir = "any" }
+residue = { into = "ash", chance = "10%" }
 colors = ["#b0401a", "#8a3010", "#d05020"]
 
 [[material]]
@@ -237,6 +238,8 @@ state = "powder"
 density = 30
 slide = "50%"
 heat_capacity = 4
+cooling = 64
+conductivity = 8
 colors = ["#8a8580", "#7e7974", "#96918c"]
 
 [[material]]
@@ -255,10 +258,11 @@ density = 130
 hp = 20
 debris = "ash"
 lifetime = [250, 255]
-decay = "ash"
+decay = "smoke"
 hold_temp = 1100
 light = "#ff4a10"
 spawn = { into = "fire", chance = "8%", dir = "up" }
+residue = { into = "ash", chance = "20%" }
 colors = ["#c03a10", "#a02c0a", "#e05018"]
 
 # ---------------------------------------------------------------- volcanic
@@ -510,11 +514,12 @@ colors = ["#5a5e66"]
 name = "ember"
 state = "fire"
 temp = 700
-lifetime = [70, 160]
-decay = "ash"
-hold_temp = 650
+lifetime = [30, 70]
+decay = "smoke"
+hold_temp = 400
 light = "#ff6010"
 heat_capacity = 6
+residue = { into = "ash", chance = "25%" }
 colors = ["#ffa040", "#ff7020", "#ffc060"]
 
 [[material]]
@@ -525,10 +530,11 @@ structural = false
 hp = 2
 conductivity = 60
 lifetime = [40, 90]
-decay = "ember"
+decay = "smoke"
 hold_temp = 600
 light = "#ff7018"
 spawn = { into = "fire", chance = "35%", dir = "any" }
+residue = { into = "ember", chance = "8%" }
 colors = ["#ff8a20", "#e05a10", "#ffb040", "#c04008"]
 
 # ---------------------------------------------------------------- reactions
@@ -567,6 +573,20 @@ b = "burning_coal"
 into_a = "steam"
 into_b = "coal"
 chance = "15%"
+
+[[reaction]]
+a = "water"
+b = "ember"
+into_a = "steam"
+into_b = "air"
+chance = "60%"
+
+[[reaction]]
+a = "water"
+b = "ash"
+into_a = "water"
+into_b = "air"
+chance = "5%"
 
 [[reaction]]
 a = "water"

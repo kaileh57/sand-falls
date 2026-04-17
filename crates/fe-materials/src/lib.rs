@@ -11,7 +11,7 @@ mod def;
 mod set;
 
 pub use chance::{CHANCE_ONE, parse_chance};
-pub use def::{MaterialDef, MaterialFile, ReactionDef};
+pub use def::{MaterialDef, MaterialFile, ReactionDef, ResidueDef};
 pub use set::{
     Explode, Ignite, Material, MaterialSet, Reaction, SpawnDir, SpawnRule, State, Transition,
 };
