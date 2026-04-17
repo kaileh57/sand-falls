@@ -6,7 +6,7 @@
 
 use crate::sched::{Neighborhood, REACH};
 use fe_core::{AMBIENT_TEMP, Cell, CellPos, GRAVITY, LocalRect, MaterialId, mix64};
-use fe_materials::{MaterialSet, SpawnDir, State};
+use fe_materials::{MaterialSet, SpawnDir, State, Transition};
 
 /// Fall-speed units per cell: the value byte stores speed in 1/16 cells per tick.
 pub const SPEED_UNITS: u32 = 16;
@@ -64,8 +64,13 @@ pub struct Fast {
     cooling: u8,
     hold_temp: u8,
     spread: u8,
-    slide: u32,
+    heat_cap: u8,
+    /// Chance to slide out of 65,536; [`SLIDE_ALWAYS`] means every time.
+    slide: u16,
 }
+
+/// [`Fast::slide`] value for powders that always slide.
+const SLIDE_ALWAYS: u16 = u16::MAX;
 
 const F_LIFETIME: u8 = 1;
 const F_TRANSITIONS: u8 = 2;
@@ -97,7 +102,8 @@ pub fn fast_table(mats: &MaterialSet) -> Vec<Fast> {
                 cooling: m.cooling,
                 hold_temp: m.hold_temp,
                 spread: m.spread,
-                slide: m.slide,
+                heat_cap: m.heat_capacity.max(1),
+                slide: u16::try_from(m.slide).unwrap_or(SLIDE_ALWAYS),
             }
         })
         .collect()
@@ -237,7 +243,7 @@ fn update_cell(
         changed = true;
     }
 
-    if f.conductivity > 0 && exchange_heat(nb, ctx, lx, ly, &mut cell, f, r) {
+    if f.conductivity > 0 && exchange_heat(nb, ctx, lx, ly, wx, wy, &mut cell, f, r) {
         changed = true;
     }
     if f.hold_temp > cell.temp {
@@ -254,16 +260,33 @@ fn update_cell(
         if let Some(t) = m.melt
             && cell.temp >= t.at
         {
-            let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
-            transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-            return;
+            if latent_done(ctx, wx, wy, t, cell.temp) {
+                let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
+                transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+                return;
+            }
+            // Still taking in latent heat: hold at the melting point.
+            if cell.temp != t.at {
+                cell.temp = t.at;
+                changed = true;
+            }
+            awake = true;
         }
         if let Some(t) = m.freeze
             && cell.temp <= t.at
         {
-            let nc = new_cell(ctx.mats, t.into, Some(cell.temp), r);
-            transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-            return;
+            if latent_done(ctx, wx, wy, t, cell.temp) {
+                let into = freeze_into(nb, ctx, lx, ly, cell, f, t.into);
+                let nc = new_cell(ctx.mats, into, Some(cell.temp), r);
+                transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+                return;
+            }
+            // Still giving off latent heat: hold at the freezing point.
+            if cell.temp != t.at {
+                cell.temp = t.at;
+                changed = true;
+            }
+            awake = true;
         }
         if let Some(e) = m.explode
             && cell.temp >= e.at
@@ -317,8 +340,14 @@ fn update_cell(
         let n = nb.get(lx + dx, ly + dy);
         if let Some(rx) = ctx.mats.reaction(id, n.material()) {
             if (r2 & 0xffff) < rx.chance {
-                let me = new_cell(ctx.mats, rx.into_self, None, r2);
-                let other = new_cell(ctx.mats, rx.into_other, None, r2 >> 7);
+                // Both products start at the reactants' mixed temperature, so
+                // water on lava gives hot steam and glowing obsidian, and water on
+                // a burning plank leaves wood too cool to catch again.
+                let (ca, cb) = (u32::from(f.heat_cap), u32::from(ctx.f(n).heat_cap));
+                let mix = (ca * u32::from(cell.temp) + cb * u32::from(n.temp)) / (ca + cb);
+                let mix = Some(mix as u8);
+                let me = new_cell(ctx.mats, rx.into_self, mix, r2);
+                let other = new_cell(ctx.mats, rx.into_other, mix, r2 >> 7);
                 transform(nb, ctx, out, lx + dx, ly + dy, wx + dx, wy + dy, n, other);
                 transform(nb, ctx, out, lx, ly, wx, wy, c, me);
                 return;
@@ -371,12 +400,57 @@ fn update_air(
     let f = ctx.fast[0];
     let r = ctx.rand(wx, wy, 0);
     let mut cell = c;
-    exchange_heat(nb, ctx, lx, ly, &mut cell, f, r);
+    exchange_heat(nb, ctx, lx, ly, wx, wy, &mut cell, f, r);
     if ((r >> 24) as u8) < f.cooling && cell.temp != AMBIENT_TEMP {
         cell.temp = if cell.temp > AMBIENT_TEMP { cell.temp - 1 } else { cell.temp + 1 };
     }
     nb.set(lx, ly, cell);
     nb.mark(lx, ly);
+}
+
+/// Latent heat: a cell past a transition threshold changes with a chance equal to
+/// its overshoot over the latent heat, and is held at the threshold otherwise, so
+/// on average it takes in (or gives off) `latent` steps of heat before it changes.
+#[inline]
+fn latent_done(ctx: &RuleCtx<'_>, wx: i32, wy: i32, t: Transition, temp: u8) -> bool {
+    if t.latent == 0 {
+        return true;
+    }
+    let over = u32::from(temp.abs_diff(t.at));
+    ctx.rand(wx, wy, 5) % u32::from(t.latent) < over
+}
+
+/// What a freezing cell becomes. A liquid that freezes while falling, over open
+/// space, or on top of a different fluid or powder crumbles into its solid's
+/// debris instead of hanging in the air as a fixed solid: falling lava lands as
+/// rubble, and molten metal poured into water sinks as scrap. A crust on its own
+/// melt (basalt on lava, metal on molten metal, ice on water) stays solid.
+fn freeze_into(
+    nb: &Neighborhood<'_>,
+    ctx: &RuleCtx<'_>,
+    lx: i32,
+    ly: i32,
+    cell: Cell,
+    f: Fast,
+    target: MaterialId,
+) -> MaterialId {
+    if f.state != State::Liquid || ctx.mats.get(target).state != State::Static {
+        return target;
+    }
+    let below = nb.get(lx, ly + 1);
+    let unsupported = if cell.value > 0 || below.is_air() {
+        true
+    } else if below.has(Cell::FLAG_IN_BODY) {
+        false
+    } else {
+        match ctx.f(below).state {
+            State::Gas | State::Fire | State::Empty => true,
+            State::Liquid | State::Powder => below.material() != cell.material(),
+            State::Static => false,
+        }
+    };
+    let debris = ctx.mats.get(target).debris;
+    if unsupported && debris != MaterialId::AIR { debris } else { target }
 }
 
 /// Replaces a cell with a different material and records the side effects.
@@ -414,12 +488,53 @@ fn transform(
     }
 }
 
+/// Temperature changes for one heat exchange between a cell (capacity `ca`) and
+/// a neighbor (capacity `cb`) that is `diff` steps hotter, with conductivity `k`
+/// (at most 128). Returns the change for the cell and for the neighbor.
+///
+/// Each side changes in inverse proportion to its heat capacity, so `ca * qa`
+/// equals `-cb * qb` in expectation and the total heat is conserved. Fractions
+/// are rounded stochastically: with equal capacities both sides use the same
+/// draw from `r_same`, which is exactly the original equal-capacity rule and
+/// conserves heat exactly; otherwise each side rounds with its own 16 bits of
+/// `r_split`.
+pub(crate) fn heat_split(
+    diff: i32,
+    k: i32,
+    ca: i32,
+    cb: i32,
+    r_same: u32,
+    r_split: u32,
+) -> (i32, i32) {
+    if ca == cb {
+        let total = diff * k;
+        let mut q = total / 256;
+        if (((r_same >> 8) & 0xff) as i32) < (total % 256).abs() {
+            q += total.signum();
+        }
+        return (q, -q);
+    }
+    let den = 128 * (ca + cb);
+    let round = |num: i32, bits: u32| {
+        let mut q = num / den;
+        let rem = (num % den).unsigned_abs();
+        if ((u64::from(bits & 0xffff) * den as u64) >> 16) < u64::from(rem) {
+            q += num.signum();
+        }
+        q
+    };
+    (round(diff * k * cb, r_split), -round(diff * k * ca, r_split >> 16))
+}
+
 #[inline]
+#[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
 fn exchange_heat(
     nb: &Neighborhood<'_>,
     ctx: &RuleCtx<'_>,
     lx: i32,
     ly: i32,
+    wx: i32,
+    wy: i32,
     cell: &mut Cell,
     f: Fast,
     r: u32,
@@ -433,23 +548,24 @@ fn exchange_heat(
     if diff.abs() < 2 {
         return false;
     }
-    let k = i32::from(f.conductivity.min(ctx.f(n).conductivity));
+    let fnb = ctx.f(n);
+    let k = i32::from(f.conductivity.min(fnb.conductivity).min(128));
     if k == 0 {
         return false;
     }
-    let total = diff * k;
-    let mut q = total / 256;
-    if (((r >> 8) & 0xff) as i32) < (total % 256).abs() {
-        q += total.signum();
-    }
-    if q == 0 {
+    let (ca, cb) = (i32::from(f.heat_cap), i32::from(fnb.heat_cap));
+    let r_split = if ca == cb { 0 } else { ctx.rand(wx, wy, 7) };
+    let (qa, qb) = heat_split(diff, k, ca, cb, r, r_split);
+    if qa == 0 && qb == 0 {
         return false;
     }
-    cell.temp = (i32::from(cell.temp) + q) as u8;
-    let mut n2 = n;
-    n2.temp = (i32::from(n.temp) - q) as u8;
-    nb.set(lx + dx, ly + dy, n2);
-    nb.mark(lx + dx, ly + dy);
+    cell.temp = (i32::from(cell.temp) + qa).clamp(0, 255) as u8;
+    if qb != 0 {
+        let mut n2 = n;
+        n2.temp = (i32::from(n.temp) + qb).clamp(0, 255) as u8;
+        nb.set(lx + dx, ly + dy, n2);
+        nb.mark(lx + dx, ly + dy);
+    }
     true
 }
 
@@ -631,7 +747,7 @@ fn move_powder(
         FallResult::Moved | FallResult::Hover => return true,
         FallResult::Blocked => {}
     }
-    if (r >> 8) & 0xffff >= m.slide {
+    if m.slide != SLIDE_ALWAYS && (r >> 8) & 0xffff >= u32::from(m.slide) {
         return false;
     }
     let d = if r & (1 << 30) == 0 { 1 } else { -1 };
@@ -806,4 +922,69 @@ fn move_fire(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The rule before heat capacities existed: one amount, moved from one cell
+    /// to the other.
+    fn old_rule(diff: i32, k: i32, r: u32) -> i32 {
+        let total = diff * k;
+        let mut q = total / 256;
+        if (((r >> 8) & 0xff) as i32) < (total % 256).abs() {
+            q += total.signum();
+        }
+        q
+    }
+
+    #[test]
+    fn equal_capacities_match_the_old_rule() {
+        let mut seed = 1u64;
+        for _ in 0..20_000 {
+            seed = mix64(seed);
+            let diff = (seed % 511) as i32 - 255;
+            let k = ((seed >> 16) % 129) as i32;
+            let c = ((seed >> 24) % 255 + 1) as i32;
+            let r = (seed >> 32) as u32;
+            let q = old_rule(diff, k, r);
+            assert_eq!(heat_split(diff, k, c, c, r, (seed >> 7) as u32), (q, -q));
+        }
+    }
+
+    #[test]
+    fn heat_is_conserved_in_expectation() {
+        let mut seed = 7u64;
+        let mut net = 0i64;
+        let mut moved = 0i64;
+        for _ in 0..10_000 {
+            seed = mix64(seed);
+            let diff = (seed % 400) as i32 - 200;
+            let k = ((seed >> 12) % 128 + 1) as i32;
+            let ca = [1, 4, 14, 20, 30, 42, 50][(seed >> 20) as usize % 7];
+            let cb = [1, 6, 16, 22, 40, 60][(seed >> 28) as usize % 6];
+            let (qa, qb) = heat_split(diff, k, ca, cb, (seed >> 36) as u32, (seed >> 3) as u32);
+            // The colder side warms, the hotter side cools, neither overshoots.
+            assert!(qa * diff.signum() >= 0 && qb * diff.signum() <= 0);
+            assert!((qa - qb).abs() <= diff.abs() + 1);
+            net += i64::from(ca * qa + cb * qb);
+            moved += i64::from((ca * qa).abs());
+        }
+        assert!(moved > 100_000, "moved {moved}");
+        assert!(net.abs() * 100 < moved, "net {net} of {moved}");
+    }
+
+    #[test]
+    fn fast_fields_stay_packed() {
+        assert_eq!(size_of::<Fast>(), 12);
+    }
+
+    #[test]
+    fn gravity_gain_adds_seven_units_every_sixteen_ticks() {
+        for start in [0u64, 5, 1000, 123_456] {
+            let sum: u32 = (start..start + 16).map(gravity_gain).sum();
+            assert_eq!(sum, 7);
+        }
+    }
 }

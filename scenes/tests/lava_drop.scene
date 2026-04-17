@@ -1,0 +1,15 @@
+// A ball of lava that cools while it falls lands as a heap: lava that freezes
+// in the air turns to rubble, not to basalt hanging in mid-air.
+[scene]
+name = lava drop
+size = 192 256
+seed = 22
+
+[build]
+fill 0 240 192 256 bedrock
+circle 96 30 10 lava
+temp 80 14 112 46 760
+
+[expect]
+after 600: count basalt in 0 0 192 236 == 0
+after 600: count lava in 0 0 192 236 == 0

@@ -1,0 +1,16 @@
+// Lava poured onto cold stone keeps flowing for a long way: the crust that
+// freezes against the stone gives off latent heat, and lava holds twice the
+// heat of stone per cell, so the front does not freeze in place at once.
+[scene]
+name = lava flow
+size = 384 128
+seed = 21
+
+[build]
+fill 0 112 384 128 bedrock
+fill 0 100 384 112 stone
+fill 0 40 6 100 stone
+fill 6 60 36 100 lava
+
+[expect]
+after 900: count basalt in 116 80 384 100 > 0
