@@ -27,6 +27,8 @@ pub struct Particle {
     pub cell: Cell,
     /// Ticks in flight.
     pub age: u16,
+    /// Landings that found no room, after which the particle was thrown back up.
+    pub retries: u8,
 }
 
 /// All particles in flight, in spawn order.
@@ -34,7 +36,11 @@ pub struct Particle {
 pub struct Particles {
     list: Vec<Particle>,
     next_id: u32,
+    lost: u64,
 }
+
+/// Landings a particle may retry before it is pushed up its column.
+const LAND_RETRIES: u8 = 30;
 
 impl Particles {
     /// Number of particles in flight.
@@ -63,6 +69,7 @@ impl Particles {
             vy: vy.clamp(-lim, lim),
             cell: cell.with_flag(Cell::FLAG_IN_BODY, false),
             age: 0,
+            retries: 0,
         });
         self.next_id = self.next_id.wrapping_add(1);
     }
@@ -81,14 +88,29 @@ impl Particles {
             match fly(world, &mut p) {
                 Flight::Airborne => keep.push(p),
                 Flight::Landed(at) => {
-                    land(world, at, p);
-                    landed += 1;
+                    if land(world, at, p) {
+                        landed += 1;
+                    } else if p.retries < LAND_RETRIES {
+                        // No room here: bounce up and try again further on.
+                        p.retries += 1;
+                        p.vy = Fx(-(p.vy.0.abs() / 2));
+                        keep.push(p);
+                    } else if land_up_column(world, at, p) {
+                        landed += 1;
+                    } else {
+                        self.lost += 1;
+                    }
                 }
                 Flight::Lost => {}
             }
         }
         self.list = keep;
         landed
+    }
+
+    /// Particles that found no room to land anywhere and were dropped, over the run.
+    pub const fn lost(&self) -> u64 {
+        self.lost
     }
 
     /// Hash of every particle in order.
@@ -102,7 +124,7 @@ impl Particles {
             h.write_i32(p.vx.0);
             h.write_i32(p.vy.0);
             h.write_u32(p.cell.to_bits());
-            h.write_u32(u32::from(p.age));
+            h.write_u32(u32::from(p.age) | u32::from(p.retries) << 16);
         }
     }
 }
@@ -156,22 +178,67 @@ fn fly(world: &World, p: &mut Particle) -> Flight {
     Flight::Airborne
 }
 
-/// Puts the particle's cell back into the grid at or near `at`.
-fn land(world: &mut World, at: CellPos, p: Particle) {
+/// The cell a particle turns into when it lands.
+fn landing_cell(world: &World, p: &Particle) -> Cell {
     let m = world.materials().get(p.cell.material());
     let mut cell = p.cell;
     if m.state.falls() && !m.has_lifetime() {
         cell.value = (p.vy.0.max(0) >> 12).min(255) as u8;
     }
+    cell
+}
+
+/// Puts the particle's cell back into the grid at or near `at`. Returns false if
+/// there is no air within six cells.
+fn land(world: &mut World, at: CellPos, p: Particle) -> bool {
+    let cell = landing_cell(world, &p);
     // Look for air at the landing spot, then above it, then in a small ring.
     let candidates = [(0, 0), (0, -1), (-1, 0), (1, 0), (0, -2), (-1, -1), (1, -1), (0, -3)];
     for (dx, dy) in candidates {
         let q = CellPos::new(at.x + dx, at.y + dy);
         if world.get(q).is_air() {
             let _ = world.set(q, cell);
-            return;
+            return true;
         }
     }
+    // Then in rings out to six cells, the upper half of each ring first.
+    for r in 2..=6i32 {
+        for upper in [true, false] {
+            for dy in -r..=r {
+                if (dy <= 0) != upper {
+                    continue;
+                }
+                for dx in -r..=r {
+                    if dx.abs() != r && dy.abs() != r {
+                        continue;
+                    }
+                    let q = CellPos::new(at.x + dx, at.y + dy);
+                    if world.get(q).is_air() {
+                        let _ = world.set(q, cell);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Last resort for a particle buried in a crowd: the first air up its column.
+fn land_up_column(world: &mut World, at: CellPos, p: Particle) -> bool {
+    let cell = landing_cell(world, &p);
+    for k in 0..=64 {
+        let q = CellPos::new(at.x, at.y - k);
+        let c = world.get(q);
+        if c.material() == MaterialId::BOUNDARY {
+            return false;
+        }
+        if c.is_air() {
+            let _ = world.set(q, cell);
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]

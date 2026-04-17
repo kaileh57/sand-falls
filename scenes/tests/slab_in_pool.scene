@@ -1,0 +1,18 @@
+// A wide stone slab dropped into a deep pool sinks without destroying water:
+// every water cell it displaces moves up and around it.
+[scene]
+name = slab in pool
+size = 320 256
+seed = 12
+
+[build]
+fill 0 240 320 256 bedrock
+fill 0 100 10 240 bedrock
+fill 310 100 320 240 bedrock
+fill 10 120 310 240 water
+body 120 70 200 80 stone
+
+[expect]
+after 100: count water in 0 0 320 256 >= 35820
+after 400: count water in 0 0 320 256 >= 35820
+after 400: count water in 0 0 320 256 <= 36000
