@@ -355,13 +355,47 @@ mod tests {
     }
 
     #[test]
-    fn wood_burns_to_ash() {
+    fn wood_burns_to_smoke_and_a_little_ash() {
         let mut w = world(1);
+        let wood = id(&w, "wood");
         w.fill_rect(IRect::new(0, 180, 256, 192), id(&w, "stone"));
-        w.fill_rect(IRect::new(100, 150, 140, 180), id(&w, "wood"));
+        w.fill_rect(IRect::new(100, 150, 140, 180), wood);
         w.fill_rect(IRect::new(118, 148, 122, 150), id(&w, "burning_wood"));
-        run(&mut w, 1500);
+        let mut smoke_seen = 0;
+        for _ in 0..15 {
+            run(&mut w, 100);
+            smoke_seen = smoke_seen.max(w.census()[id(&w, "smoke").index()]);
+        }
         let census = w.census();
-        assert!(census[id(&w, "ash").index()] > 100, "ash {}", census[id(&w, "ash").index()]);
+        let left = census[wood.index()] + census[id(&w, "burning_wood").index()];
+        let burned = 1200 + 8 - left;
+        let ash = census[id(&w, "ash").index()];
+        assert!(left < 1000, "wood left {left}");
+        assert!(smoke_seen > 50, "smoke {smoke_seen}");
+        assert!(ash > 0 && ash * 4 < burned, "ash {ash} of {burned} burned");
+    }
+
+    #[test]
+    fn wind_tilts_flames_but_keeps_some_jitter() {
+        for wind in [3, 4] {
+            flames_in_wind(wind);
+        }
+    }
+
+    fn flames_in_wind(wind: i8) {
+        let mut w = world(1);
+        w.set_wind(wind);
+        w.fill_rect(IRect::new(0, 180, 256, 192), id(&w, "stone"));
+        w.fill_rect(IRect::new(126, 176, 130, 180), id(&w, "heater"));
+        w.fill_rect(IRect::new(126, 172, 130, 176), id(&w, "burning_coal"));
+        let fire = id(&w, "fire");
+        let (mut upwind, mut downwind) = (0, 0);
+        for _ in 0..120 {
+            run(&mut w, 1);
+            upwind += w.count(IRect::new(100, 140, 126, 172), fire);
+            downwind += w.count(IRect::new(130, 140, 156, 172), fire);
+        }
+        assert!(downwind > upwind, "wind {wind}: down {downwind} up {upwind}");
+        assert!(upwind > 0, "wind {wind}: no flame ever moved upwind");
     }
 }

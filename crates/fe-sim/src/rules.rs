@@ -137,7 +137,8 @@ impl<'a> RuleCtx<'a> {
     /// Picks a sideways direction, biased by the wind. `r` supplies the randomness.
     #[inline]
     fn side(&self, r: u32) -> i32 {
-        if self.wind != 0 && ((r >> 20) & 3) < self.wind.unsigned_abs() {
+        // Even the strongest wind leaves an eighth of the moves upwind.
+        if self.wind != 0 && ((r >> 20) & 3) < self.wind.unsigned_abs().min(3) {
             self.wind.signum()
         } else if r & 1 == 0 {
             1
@@ -234,13 +235,26 @@ fn update_cell(
     let mut awake = false;
 
     if f.flags & F_LIFETIME != 0 {
-        if cell.value <= 1 {
-            let nc = new_cell(ctx.mats, ctx.mats.get(id).decay, Some(cell.temp), r);
-            transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
-            return;
+        let m = ctx.mats.get(id);
+        // A lifetime rate under 100% stretches a u8 lifetime past 255 ticks.
+        if m.lifetime_rate >= fe_materials::CHANCE_ONE
+            || (ctx.rand(wx, wy, 6) & 0xffff) < m.lifetime_rate
+        {
+            if cell.value <= 1 {
+                // Most of a burnt-out cell goes up as smoke; only some leaves residue.
+                let into = match m.residue {
+                    Some((res, chance)) if (ctx.rand(wx, wy, 5) & 0xffff) < chance => res,
+                    _ => m.decay,
+                };
+                let nc = new_cell(ctx.mats, into, Some(cell.temp), r);
+                transform(nb, ctx, out, lx, ly, wx, wy, c, nc);
+                return;
+            }
+            cell.value -= 1;
+            changed = true;
+        } else {
+            awake = true;
         }
-        cell.value -= 1;
-        changed = true;
     }
 
     if f.conductivity > 0 && exchange_heat(nb, ctx, lx, ly, wx, wy, &mut cell, f, r) {
@@ -910,11 +924,10 @@ fn move_fire(
         return false;
     }
     let side = ctx.side(r >> 3);
-    let order = if ctx.wind != 0 {
-        [(side, -1), (0, -1), (side, 0)]
-    } else {
-        [(0, -1), (side, -1), (-side, -1)]
-    };
+    // Wind tilts some flames, more the stronger it blows; the rest rise straight.
+    let gust = ctx.wind != 0 && ((r >> 12) & 3) < ctx.wind.unsigned_abs();
+    let order =
+        if gust { [(side, -1), (0, -1), (side, 0)] } else { [(0, -1), (side, -1), (-side, -1)] };
     for (dx, dy) in order {
         if nb.get(lx + dx, ly + dy).is_air() {
             swap_to(nb, ctx, lx, ly, lx + dx, ly + dy, cell);

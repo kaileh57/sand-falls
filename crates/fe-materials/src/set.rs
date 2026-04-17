@@ -150,6 +150,10 @@ pub struct Material {
     pub lifetime: Option<(u8, u8)>,
     /// Material after the lifetime ends.
     pub decay: MaterialId,
+    /// Material sometimes left instead of `decay`, with its chance out of [`CHANCE_ONE`].
+    pub residue: Option<(MaterialId, u32)>,
+    /// Chance per tick out of [`CHANCE_ONE`] that the lifetime counts down.
+    pub lifetime_rate: u32,
     /// Spawn rule.
     pub spawn: Option<SpawnRule>,
     /// Minimum temperature the cell holds. 0 means none.
@@ -245,6 +249,8 @@ fn air_def() -> Material {
         explode: None,
         lifetime: None,
         decay: MaterialId::AIR,
+        residue: None,
+        lifetime_rate: CHANCE_ONE,
         spawn: None,
         hold_temp: 0,
         light: [0, 0, 0],
@@ -425,6 +431,14 @@ impl MaterialSet {
                 Some((a, b)) => h.write_u32(u32::from(a) | u32::from(b) << 8),
                 None => h.write_u32(u32::MAX),
             }
+            match m.residue {
+                Some((into, chance)) => {
+                    h.write_u32(u32::from(into.0));
+                    h.write_u32(chance);
+                }
+                None => h.write_u32(u32::MAX),
+            }
+            h.write_u32(m.lifetime_rate);
             match m.spawn {
                 Some(s) => {
                     h.write_u32(u32::from(s.into.0) | (s.dir as u32) << 16);
@@ -583,6 +597,17 @@ fn compile_one(
         }),
         lifetime,
         decay: d.decay.as_deref().map(|n| lookup(n, &ctx)).transpose()?.unwrap_or(MaterialId::AIR),
+        residue: d
+            .residue
+            .as_ref()
+            .map(|r| Ok::<_, MaterialError>((lookup(&r.into, &ctx)?, chance(&r.chance, &ctx)?)))
+            .transpose()?,
+        lifetime_rate: d
+            .lifetime_rate
+            .as_deref()
+            .map(|r| chance(r, &ctx))
+            .transpose()?
+            .unwrap_or(CHANCE_ONE),
         spawn,
         hold_temp,
         light,
