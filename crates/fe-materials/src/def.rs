@@ -20,6 +20,11 @@ pub struct TransitionDef {
     pub at: i32,
     /// Material to become.
     pub into: String,
+    /// Latent heat in degrees C of the material's own temperature: how much heat
+    /// the cell takes in (melting) or gives off (freezing) at the threshold
+    /// before it changes. Unset or 0 changes at once.
+    #[serde(default)]
+    pub latent: Option<i32>,
 }
 
 /// Ignition settings.
@@ -92,6 +97,11 @@ pub struct MaterialDef {
     /// Chance out of 255 per tick to drift one step toward ambient temperature.
     #[serde(default)]
     pub cooling: Option<u8>,
+    /// Heat held per cell per degree, relative to other materials: when two cells
+    /// exchange heat, each one's temperature changes in inverse proportion to it.
+    /// Defaults: static 20, powder 14, liquid 30, gas and fire 1.
+    #[serde(default)]
+    pub heat_capacity: Option<u8>,
     /// Hit points for static solids.
     #[serde(default)]
     pub hp: Option<u8>,

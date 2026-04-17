@@ -23,6 +23,7 @@ debris = "rubble"
 fracture = 400
 conductivity = 30
 melt = { at = 1200, into = "lava" }
+heat_capacity = 22
 colors = ["#6b6870", "#646169", "#726f77", "#5d5a62"]
 
 [[material]]
@@ -80,7 +81,8 @@ conductivity = 60
 opacity = 50
 viscosity = 20
 freeze = { at = -10, into = "ice" }
-melt = { at = 100, into = "steam" }
+melt = { at = 100, into = "steam", latent = 540 }
+heat_capacity = 42
 colors = ["#2f6fcf", "#2c69c6", "#3374d6"]
 
 [[material]]
@@ -104,7 +106,8 @@ conductivity = 40
 viscosity = 160
 opacity = 255
 light = "#ff6a1f"
-freeze = { at = 700, into = "basalt" }
+freeze = { at = 700, into = "basalt", latent = 250 }
+heat_capacity = 40
 colors = ["#ff5a10", "#f04a08", "#ff7a20"]
 
 [[material]]
@@ -117,8 +120,8 @@ cooling = 1
 conductivity = 45
 viscosity = 90
 opacity = 255
-light = "#ffb060"
-freeze = { at = 1300, into = "metal" }
+freeze = { at = 1300, into = "metal", latent = 300 }
+heat_capacity = 50
 colors = ["#ffd080", "#ffc060", "#ffe0a0"]
 
 [[material]]
@@ -180,6 +183,7 @@ state = "fire"
 lifetime = [10, 28]
 decay = "smoke"
 light = "#ff7a20"
+heat_capacity = 20
 colors = ["#ff9a2a", "#ffc040", "#ff6a1a", "#ffe070"]
 
 # ---------------------------------------------------------------- flammables
@@ -232,6 +236,7 @@ name = "ash"
 state = "powder"
 density = 30
 slide = "50%"
+heat_capacity = 4
 colors = ["#8a8580", "#7e7974", "#96918c"]
 
 [[material]]
@@ -265,6 +270,7 @@ density = 280
 hp = 50
 debris = "rubble"
 melt = { at = 1100, into = "lava" }
+heat_capacity = 24
 colors = ["#3a3436", "#332e30", "#423b3d"]
 
 [[material]]
@@ -286,6 +292,7 @@ hp = 120
 debris = "scrap"
 conductivity = 120
 melt = { at = 1400, into = "molten_metal" }
+heat_capacity = 40
 colors = ["#7f8a96", "#76818d", "#88939f"]
 
 [[material]]
@@ -303,6 +310,7 @@ density = 200
 hp = 60
 debris = "rubble"
 fracture = 320
+heat_capacity = 16
 colors = ["#9a4a32", "#8e432d", "#a55238", "#7f3b28"]
 
 [[material]]
@@ -454,7 +462,6 @@ structural = false
 indestructible = true
 opacity = 0
 hold_temp = 1900
-light = "#ffb060"
 spawn = { into = "molten_metal", chance = "50%", dir = "down" }
 colors = ["#ffd080"]
 
@@ -466,6 +473,7 @@ indestructible = true
 hold_temp = 2000
 conductivity = 200
 light = "#a02008"
+heat_capacity = 60
 colors = ["#702010", "#802818"]
 
 [[material]]
@@ -506,6 +514,7 @@ lifetime = [70, 160]
 decay = "ash"
 hold_temp = 650
 light = "#ff6010"
+heat_capacity = 6
 colors = ["#ffa040", "#ff7020", "#ffc060"]
 
 [[material]]
@@ -530,13 +539,6 @@ b = "lava"
 into_a = "steam"
 into_b = "obsidian"
 chance = "30%"
-
-[[reaction]]
-a = "water"
-b = "molten_metal"
-into_a = "steam"
-into_b = "metal"
-chance = "25%"
 
 [[reaction]]
 a = "water"

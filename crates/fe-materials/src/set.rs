@@ -55,6 +55,8 @@ pub struct Transition {
     pub at: u8,
     /// Material to become.
     pub into: MaterialId,
+    /// Latent heat in temperature steps. 0 changes at once.
+    pub latent: u8,
 }
 
 /// Compiled ignition settings.
@@ -122,6 +124,8 @@ pub struct Material {
     pub conductivity: u8,
     /// Chance out of 256 per tick to drift one step toward ambient.
     pub cooling: u8,
+    /// Relative heat capacity per cell, at least 1.
+    pub heat_capacity: u8,
     /// Hit points for static solids.
     pub hp: u8,
     /// What the material becomes at zero hit points.
@@ -223,9 +227,12 @@ fn air_def() -> Material {
         slide: 0,
         spread: 0,
         temp: fe_core::AMBIENT_TEMP,
-        // Air holds little heat, so it should barely cool what it touches.
-        conductivity: 2,
+        // Air holds a fiftieth of the heat a metal cell does, so it can conduct
+        // well without draining what it touches: it warms up instead, and hot
+        // air rises off the heat as haze.
+        conductivity: 24,
         cooling: 48,
+        heat_capacity: 1,
         hp: 0,
         debris: MaterialId::AIR,
         anchored: false,
@@ -393,9 +400,13 @@ impl MaterialSet {
                     | u32::from(m.glow) << 3,
             );
             h.write_u32(u32::from(m.fracture));
+            h.write_u32(u32::from(m.heat_capacity));
             for t in [m.melt, m.freeze] {
                 match t {
-                    Some(t) => h.write_u32(u32::from(t.at) | u32::from(t.into.0) << 8),
+                    Some(t) => {
+                        h.write_u32(u32::from(t.at) | u32::from(t.into.0) << 8);
+                        h.write_u32(u32::from(t.latent));
+                    }
                     None => h.write_u32(u32::MAX),
                 }
             }
@@ -465,7 +476,13 @@ fn compile_one(
 
     let transition = |t: &Option<crate::def::TransitionDef>| -> Result<_, MaterialError> {
         t.as_ref()
-            .map(|t| Ok(Transition { at: celsius_to_temp(t.at), into: lookup(&t.into, &ctx)? }))
+            .map(|t| {
+                Ok(Transition {
+                    at: celsius_to_temp(t.at),
+                    into: lookup(&t.into, &ctx)?,
+                    latent: (t.latent.unwrap_or(0) / 10).clamp(0, 255) as u8,
+                })
+            })
             .transpose()
     };
 
@@ -536,6 +553,15 @@ fn compile_one(
         temp: d.temp.map_or(fe_core::AMBIENT_TEMP, celsius_to_temp),
         conductivity: d.conductivity.unwrap_or(cond),
         cooling: d.cooling.unwrap_or(cool),
+        heat_capacity: d
+            .heat_capacity
+            .unwrap_or(match state {
+                State::Static => 20,
+                State::Powder => 14,
+                State::Liquid => 30,
+                State::Gas | State::Fire | State::Empty => 1,
+            })
+            .max(1),
         hp: d.hp.unwrap_or(hp).max(1),
         debris: d
             .debris
