@@ -888,15 +888,19 @@ fn move_gas(
 ) -> bool {
     let r = ctx.rand(wx, wy, 3);
     let side = ctx.side(r);
-    let first = match (r >> 1) % 8 {
-        0..=3 => (0, -1),
-        4 | 5 => (side, -1),
-        _ => (side, 0),
-    };
-    for (dx, dy) in [first, (0, -1), (-side, -1)] {
-        if can_enter(ctx, m, nb.get(lx + dx, ly + dy), false, r >> 5) {
-            swap_to(nb, ctx, lx, ly, lx + dx, ly + dy, cell);
-            return true;
+    // Buoyancy: the further a gas's density is from air's, the more often it
+    // moves vertically, up if lighter and down if heavier. Steam (-10) always
+    // rises, smoke (-5) on 62% of ticks, mist (-1) on 12%, so mist lingers and
+    // drifts while steam boils straight up.
+    let lift = (u32::from(m.density.unsigned_abs()) * 32).min(255);
+    if m.density != 0 && (r >> 24) < lift {
+        let dy = if m.density < 0 { -1 } else { 1 };
+        let first = if (r >> 1).is_multiple_of(4) { (side, dy) } else { (0, dy) };
+        for (dx, dy) in [first, (0, dy), (-side, dy)] {
+            if can_enter(ctx, m, nb.get(lx + dx, ly + dy), dy > 0, r >> 5) {
+                swap_to(nb, ctx, lx, ly, lx + dx, ly + dy, cell);
+                return true;
+            }
         }
     }
     let spread = i32::from(m.spread.max(1));

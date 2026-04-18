@@ -1,0 +1,17 @@
+// A charge in a brick wall throws rubble and leaves dust that hangs in the air
+// for several seconds.
+[scene]
+name = dust
+size = 192 160
+seed = 13
+
+[build]
+fill 0 140 192 160 bedrock
+fill 80 60 112 140 brick
+
+[events]
+at 10: explode 96 110 10 200
+
+[expect]
+after 12: count dust in 0 0 192 160 > 0
+after 310: count dust in 0 0 192 160 > 0
