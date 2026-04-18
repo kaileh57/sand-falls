@@ -36,6 +36,7 @@ pub fn explode(
             ^ (u64::from(pos.x as u32) << 32 | u64::from(pos.y as u32)),
     );
     let fire = world.materials().id("fire");
+    let dust = world.materials().id("dust");
     blast.pos = pos;
     blast.radius = radius;
     blast.power = power;
@@ -87,7 +88,16 @@ pub fn explode(
                     let dm = world.materials().get(m.debris);
                     // The inner part of the blast throws its debris; the rim crumbles in place.
                     if dm.state.falls() && (d * 3 < r * 2 || roll.is_multiple_of(3)) {
-                        events.extend(world.set(p, Cell::AIR));
+                        // A third of the thrown powder leaves a puff of dust behind.
+                        let left = match dust {
+                            Some(id)
+                                if dm.state == State::Powder && (roll >> 8).is_multiple_of(3) =>
+                            {
+                                world.make_cell(id, p)
+                            }
+                            _ => Cell::AIR,
+                        };
+                        events.extend(world.set(p, left));
                         fling(particles, pos, p, falloff, r, power, debris, &mut rng);
                     } else {
                         events.extend(world.set(p, debris));

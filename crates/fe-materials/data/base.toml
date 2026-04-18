@@ -537,6 +537,19 @@ spawn = { into = "fire", chance = "35%", dir = "any" }
 residue = { into = "ember", chance = "8%" }
 colors = ["#ff8a20", "#e05a10", "#ffb040", "#c04008"]
 
+# Dust: fine powder kicked up by explosions and shattering. It is a gas a
+# little heavier than air, so it hangs and drifts, settling slowly, and fades
+# after about eight seconds. Appended last so existing material ids stay the same.
+[[material]]
+name = "dust"
+state = "gas"
+density = 1
+spread = 3
+opacity = 60
+lifetime = [200, 255]
+lifetime_rate = "50%"
+colors = ["#8c847a", "#7a7268", "#9a9286"]
+
 # ---------------------------------------------------------------- reactions
 
 [[reaction]]

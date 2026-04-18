@@ -389,6 +389,9 @@ impl Physics {
         };
         self.remove_rapier_body(&body);
         self.stats.removed += 1;
+        if let Some(seed) = shatter {
+            crack_dust(world, &body, &pose, &parts, seed);
+        }
         let mut rng = SeqRng::new(shatter.unwrap_or(0) ^ u64::from(body.id));
         for part in parts {
             let mut v = linvel;
@@ -532,6 +535,60 @@ fn drop_as_debris(
             particles.spawn(Fx::from_int(q.x), Fx::from_int(q.y), vx, vy, d);
         } else if let Some(q) = at {
             let _ = world.set(q, d);
+        }
+    }
+}
+
+/// Most dust cells one shatter may release.
+const CRACK_DUST_MAX: u32 = 400;
+
+/// Releases dust where the cracks between a shattered body's shards reach its
+/// surface: a third of the open cells next to a shard-boundary cell turn to dust.
+fn crack_dust(
+    world: &mut World,
+    body: &PixelBody,
+    pose: &Pose,
+    parts: &[Vec<(i32, i32, Cell)>],
+    seed: u64,
+) {
+    let Some(dust) = world.materials().id("dust") else { return };
+    let (w, h) = body.size();
+    let (w, h) = (i32::from(w), i32::from(h));
+    let mut label = vec![u32::MAX; (w * h) as usize];
+    for (k, part) in parts.iter().enumerate() {
+        for &(x, y, _) in part {
+            label[(y * w + x) as usize] = k as u32;
+        }
+    }
+    let at = |x: i32, y: i32| {
+        if x < 0 || y < 0 || x >= w || y >= h { u32::MAX } else { label[(y * w + x) as usize] }
+    };
+    let mut rng = SeqRng::new(seed ^ 0xd057);
+    let mut made = 0;
+    for (k, part) in parts.iter().enumerate() {
+        for &(x, y, _) in part {
+            let dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+            let cracked = dirs.iter().any(|&(dx, dy)| {
+                let l = at(x + dx, y + dy);
+                l != u32::MAX && l != k as u32
+            });
+            if !cracked {
+                continue;
+            }
+            for (dx, dy) in dirs {
+                if at(x + dx, y + dy) != u32::MAX || rng.below(3) != 0 {
+                    continue;
+                }
+                let p = body.local_to_world(pose, x + dx, y + dy);
+                if world.get(p).is_air() {
+                    let c = world.make_cell(dust, p);
+                    let _ = world.set(p, c);
+                    made += 1;
+                    if made >= CRACK_DUST_MAX {
+                        return;
+                    }
+                }
+            }
         }
     }
 }
