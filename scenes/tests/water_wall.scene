@@ -1,0 +1,17 @@
+// A tall block of water released toward open floor on its right must level
+// out, not stand as a vertical face that drains a few cells per tick. 12,700
+// cells over a 316-wide floor level at about y 100.
+[scene]
+name = water wall
+size = 320 160
+seed = 5
+
+[build]
+fill 0 140 320 160 bedrock
+fill 0 0 4 140 bedrock
+fill 4 40 131 140 water
+
+[expect]
+after 600: count water in 0 0 320 92 < 50
+after 600: count water in 200 104 320 140 > 4000
+after 600: count water in 0 0 320 160 == 12700
