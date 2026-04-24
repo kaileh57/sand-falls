@@ -129,6 +129,11 @@ struct MatLook {
     state: State,
     glow: bool,
     structural: bool,
+    /// For glowing liquids that freeze (lava): the freezing point and the
+    /// material's own temperature in degrees C, to dim the glow as it cools.
+    cooling_glow: Option<(i32, i32)>,
+    /// Water: tinted pale as it nears boiling.
+    water: bool,
 }
 
 /// Cached per-material render data.
@@ -159,7 +164,9 @@ fn blackbody(celsius: i32) -> [f32; 3] {
         return [0.0; 3];
     }
     let t = (celsius - 480) as f32;
-    let i = (t / 400.0).min(3.0);
+    // Brightness keeps climbing up to about 2000 C, so a white-hot pour reads
+    // brighter than metal near its freezing point.
+    let i = if t <= 800.0 { t / 400.0 } else { (2.0 + (t - 800.0) / 900.0).min(3.5) };
     let r = 1.0f32.min(0.25 + t / 500.0);
     let g = (t / 1100.0).powf(1.4).min(0.95);
     let b = ((t - 700.0).max(0.0) / 1600.0).min(0.85);
@@ -205,6 +212,13 @@ impl Renderer {
                 state: m.state,
                 glow: m.glow,
                 structural: m.structural || m.anchored,
+                cooling_glow: match m.freeze {
+                    Some(f) if m.state == State::Liquid && m.light != [0; 3] && m.temp > f.at => {
+                        Some((temp_to_celsius(f.at), temp_to_celsius(m.temp)))
+                    }
+                    _ => None,
+                },
+                water: m.name == "water",
             })
             .collect();
         Self { looks }
@@ -212,6 +226,26 @@ impl Renderer {
 
     fn look(&self, id: MaterialId) -> &MatLook {
         self.looks.get(id.index()).unwrap_or(&self.looks[1])
+    }
+
+    /// Light a cell gives off: its material's light, dimmed toward the freezing
+    /// point for cooling liquids such as lava, plus the glow of its temperature.
+    fn emission(&self, c: Cell) -> [f32; 3] {
+        if c.is_air() {
+            return [0.0; 3];
+        }
+        let look = self.look(c.material());
+        let celsius = temp_to_celsius(c.temp);
+        let mut e = look.light;
+        if let Some((freeze, hot)) = look.cooling_glow {
+            let k = ((celsius - freeze) as f32 / (hot - freeze) as f32).clamp(0.15, 1.0);
+            e = [e[0] * k, e[1] * k, e[2] * k];
+        }
+        if look.glow {
+            let b = blackbody(celsius);
+            e = [e[0] + b[0], e[1] + b[1], e[2] + b[2]];
+        }
+        e
     }
 
     /// Renders one frame. `frame` animates haze and liquid shimmer.
@@ -318,8 +352,10 @@ impl Renderer {
             .zip(buf.light.par_chunks_mut(bw))
             .zip(buf.trans.par_chunks_mut(bw))
             .zip(buf.emit.par_chunks_mut(bw))
+            .zip(buf.gas_density.par_chunks_mut(bw))
+            .zip(buf.gas_color.par_chunks_mut(bw))
             .enumerate()
-            .for_each(|(y, (((alb, lig), tr), em))| {
+            .for_each(|(y, (((((alb, lig), tr), em), gd), gc))| {
                 for x in 0..bw {
                     let c = cells[y * bw + x];
                     let look = self.look(c.material());
@@ -332,12 +368,14 @@ impl Renderer {
                                 * 0.06)
                                 + 1.0;
                         a = [a[0] * shimmer, a[1] * shimmer, a[2] * shimmer];
+                        if look.water {
+                            // Hot water turns pale, up to 30% at boiling.
+                            let k = ((temp_to_celsius(c.temp) - 60) as f32 / 40.0).clamp(0.0, 1.0)
+                                * 0.3;
+                            a = lerp3(a, [0.5, 0.58, 0.66], k);
+                        }
                     }
-                    let mut e = if c.is_air() { [0.0; 3] } else { look.light };
-                    if look.glow && !c.is_air() {
-                        let b = blackbody(temp_to_celsius(c.temp));
-                        e = [e[0] + b[0], e[1] + b[1], e[2] + b[2]];
-                    }
+                    let mut e = self.emission(c);
                     if look.state == State::Fire {
                         let f = 0.8 + (h % 100) as f32 / 250.0;
                         e = [
@@ -345,6 +383,10 @@ impl Renderer {
                             look.colors[h as usize % look.colors.len()][1] * 3.0 * f,
                             look.colors[h as usize % look.colors.len()][2] * 2.0 * f,
                         ];
+                    }
+                    if look.state == State::Gas {
+                        gd[x] = [look.opacity, 0.0, 0.0];
+                        gc[x] = [a[0] * look.opacity, a[1] * look.opacity, a[2] * look.opacity];
                     }
                     alb[x] = a;
                     em[x] = e;
@@ -354,6 +396,10 @@ impl Renderer {
                     tr[x] = if c.is_air() { 0.982 } else { 0.95 - look.opacity * 0.45 };
                 }
             });
+        // Gas reads as a soft volume, not as specks: its density and color are
+        // blurred over neighboring cells, and the air around a puff is tinted too.
+        buf.gas_density = light::soften(&light::soften(&buf.gas_density, bw, bh), bw, bh);
+        buf.gas_color = light::soften(&light::soften(&buf.gas_color, bw, bh), bw, bh);
         // Sky light falls down each column until it meets something opaque. Air
         // above that point shows the sky; air below it is underground.
         if s.sky != Sky::Cave {
@@ -401,11 +447,7 @@ impl Renderer {
                 let i = y as usize * bw + x as usize;
                 let look = self.look(p.cell.material());
                 buf.albedo[i] = look.colors[0];
-                let mut e = look.light;
-                if look.glow {
-                    let b = blackbody(temp_to_celsius(p.cell.temp));
-                    e = [e[0] + b[0], e[1] + b[1], e[2] + b[2]];
-                }
+                let e = self.emission(p.cell);
                 buf.emit[i] = e;
                 buf.light[i] =
                     [buf.light[i][0] + e[0], buf.light[i][1] + e[1], buf.light[i][2] + e[2]];
@@ -470,6 +512,10 @@ impl Renderer {
                 let a = buf.albedo[i];
                 let e = buf.emit[i];
                 let look = self.look(c.material());
+                // A glowing cell's look is its own glow; its surface is lit only by
+                // light from elsewhere, or a white-hot pour and one about to freeze
+                // would both saturate to the same yellow.
+                let l = [(l[0] - e[0]).max(0.0), (l[1] - e[1]).max(0.0), (l[2] - e[2]).max(0.0)];
                 let lit = |k: f32| {
                     [
                         a[0] * (amb[0] + l[0] * k),
@@ -477,12 +523,15 @@ impl Renderer {
                         a[2] * (amb[2] + l[2] * k),
                     ]
                 };
+                let gas = buf.gas_density[i][0];
+                let is_gas = look.state == State::Gas && !c.is_air();
+                let open = c.is_air() || (look.state == State::Static && look.opacity < 0.02);
                 row[x] = if buf.solid_override[i] {
                     let v = lit(1.0);
                     [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
-                } else if c.is_air() || (look.state == State::Static && look.opacity < 0.02) {
+                } else if open || is_gas {
                     let sh = buf.shaft[i];
-                    if buf.sky[i] {
+                    let back = if buf.sky[i] {
                         // Open sky, plus dust lit by light passing through.
                         [
                             bg[0] + l[0] * 0.012 + sh[0] * 0.09,
@@ -500,20 +549,29 @@ impl Renderer {
                             wall[1] * (amb[1] + l[1] * 0.35) + l[1] * 0.01 + sh[1] * 0.09,
                             wall[2] * (amb[2] + l[2] * 0.35) + l[2] * 0.01 + sh[2] * 0.09,
                         ]
+                    };
+                    if is_gas || gas > 0.02 {
+                        // Smoke, steam, mist and dust: the blurred gas color, lit by
+                        // the light around it, over what lies behind.
+                        let alpha = (gas * 2.2).clamp(0.0, 0.85);
+                        let gc = buf.gas_color[i];
+                        let g =
+                            if gas > 1e-4 { [gc[0] / gas, gc[1] / gas, gc[2] / gas] } else { a };
+                        let v = [
+                            g[0] * (amb[0] + l[0] * 1.3),
+                            g[1] * (amb[1] + l[1] * 1.3),
+                            g[2] * (amb[2] + l[2] * 1.3),
+                        ];
+                        [
+                            back[0] + (v[0] - back[0]) * alpha + e[0],
+                            back[1] + (v[1] - back[1]) * alpha + e[1],
+                            back[2] + (v[2] - back[2]) * alpha + e[2],
+                        ]
+                    } else {
+                        back
                     }
                 } else {
                     match look.state {
-                        State::Gas => {
-                            let alpha = (look.opacity * 2.2).clamp(0.04, 0.85);
-                            let v = lit(1.3);
-                            let back =
-                                [bg[0] + l[0] * 0.035, bg[1] + l[1] * 0.035, bg[2] + l[2] * 0.035];
-                            [
-                                back[0] + (v[0] - back[0]) * alpha + e[0],
-                                back[1] + (v[1] - back[1]) * alpha + e[1],
-                                back[2] + (v[2] - back[2]) * alpha + e[2],
-                            ]
-                        }
                         State::Fire => [e[0] * 0.9, e[1] * 0.9, e[2] * 0.9],
                         State::Liquid => {
                             let v = lit(0.9);
@@ -525,7 +583,7 @@ impl Renderer {
                         }
                         _ => {
                             // Rock far from open space sinks into shadow; edges stay lit.
-                            let ao = (0.12 + buf.open[i] * 2.2).min(1.0);
+                            let ao = (0.22 + buf.open[i] * 2.2).min(1.0);
                             let v = lit(1.0);
                             [v[0] * ao + e[0], v[1] * ao + e[1], v[2] * ao + e[2]]
                         }
@@ -550,6 +608,10 @@ struct Buffers {
     shaft: Vec<[f32; 3]>,
     /// Openness of the neighborhood, for ambient occlusion.
     open: Vec<f32>,
+    /// Blurred gas density (opacity, 0 to 1) in the first channel.
+    gas_density: Vec<[f32; 3]>,
+    /// Blurred gas color weighted by density.
+    gas_color: Vec<[f32; 3]>,
 }
 
 impl Buffers {
@@ -566,6 +628,8 @@ impl Buffers {
             sky: vec![false; n],
             shaft: vec![[0.0; 3]; n],
             open: vec![1.0; n],
+            gas_density: vec![[0.0; 3]; n],
+            gas_color: vec![[0.0; 3]; n],
         }
     }
 }
@@ -640,5 +704,50 @@ mod tests {
         // Lava lights the stone next to it more than the stone far away.
         assert!(lum(66, 100) > lum(125, 100));
         assert!(!img.encode_png().is_empty());
+    }
+
+    /// Tone-mapped luminance of a cell's own glow at the default exposure.
+    fn glow_lum(r: &Renderer, mats: &MaterialSet, name: &str, celsius: i32) -> f32 {
+        let id = mats.id(name).unwrap_or_default();
+        let e = r.emission(Cell::new(id, fe_core::celsius_to_temp(celsius), 0));
+        let x = RenderSettings::default().exposure;
+        let t = |v: f32| 1.0 - (-v * x).exp();
+        0.2126 * t(e[0]) + 0.7152 * t(e[1]) + 0.0722 * t(e[2])
+    }
+
+    #[test]
+    fn hotter_melts_glow_brighter() {
+        let mats = fe_materials::base_set();
+        let r = Renderer::new(&mats);
+        for (name, cool, hot) in [("molten_metal", 1300, 1900), ("lava", 750, 1150)] {
+            let (a, b) = (glow_lum(&r, &mats, name, cool), glow_lum(&r, &mats, name, hot));
+            assert!(b > a * 1.15, "{name}: {cool} C {a}, {hot} C {b}");
+        }
+    }
+
+    #[test]
+    fn a_white_hot_pour_renders_whiter_than_cooling_metal() {
+        let mats = Arc::new(fe_materials::base_set());
+        let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+        sim.load_rect(IRect::new(0, 0, 192, 64));
+        let id = sim.material("molten_metal").unwrap_or_default();
+        for (x0, c) in [(0, 1300), (128, 1900)] {
+            for y in 0..64 {
+                for x in x0..x0 + 64 {
+                    let cell = Cell::new(id, fe_core::celsius_to_temp(c), 0);
+                    let _ = sim.world.set(CellPos::new(x, y), cell);
+                }
+            }
+        }
+        let r = Renderer::new(&mats);
+        let s = RenderSettings { view_w: 192, view_h: 64, scale: 1, ..RenderSettings::default() };
+        let img = r.render(&sim, View { cx: 96.0, cy: 32.0, zoom: 1.0 }, &s, 0);
+        let px = |x: u32| {
+            let i = ((32 * img.width + x) * 4) as usize;
+            [img.rgba[i], img.rgba[i + 1], img.rgba[i + 2]]
+        };
+        let (cool, hot) = (px(32), px(160));
+        assert!(hot[2] > cool[2] + 40, "cool {cool:?} hot {hot:?}");
+        assert!(hot[1] >= cool[1], "cool {cool:?} hot {hot:?}");
     }
 }
