@@ -116,6 +116,18 @@ after 600: asleep
 
 The format is documented in [crates/fe-scene/src/lib.rs](crates/fe-scene/src/lib.rs), and every file in `scenes/` is an example. Materials and reactions are data, defined in [crates/fe-materials/data/base.toml](crates/fe-materials/data/base.toml).
 
+A material sets its `state` (static, powder, liquid, gas or fire), `density`, `colors`, and any of these optional fields:
+
+- Movement: `slide` (powders), `spread` (liquids and gases), `viscosity` (drag on bodies).
+- Heat: `temp`, `conductivity`, `cooling`, `heat_capacity`, `hold_temp`, `glow`, `light`, `opacity`.
+- Phase changes: `melt` and `freeze`, each `{ at, into, latent }`, where `latent` is the latent heat in degrees C that a cell takes in or gives off before it changes.
+- Fire: `ignite = { at, chance, into }`, `explode = { at, radius, power }`.
+- Lifetime: `lifetime = [min, max]` in ticks, `lifetime_rate` (the chance per tick that it counts down), `decay` (what it becomes), and `residue = { into, chance }` (what it leaves instead, sometimes).
+- Damage: `hp`, `debris`, `fracture`, `anchored`, `structural`, `indestructible`.
+- Emission: `spawn = { into, chance, dir }`.
+
+Reactions are `a` touching `b` becomes `into_a` and `into_b` with a `chance`. The world uses 10 cells per meter and 60 ticks per second, and everything falls at 9.84 m/s^2.
+
 ## Crates
 
 | Crate | Purpose |

@@ -47,7 +47,17 @@ Within a chunk, cells update bottom to top. The horizontal direction alternates 
 
 Liquids level in two ways. A cell that can find a drop within its spread distance moves toward it. A cell resting on top of liquid with an open side walks along the surface until it drops off an edge; it cannot climb onto a higher step, so the walk always ends lower and staircases flatten however wide their steps are. A level pool sleeps, except for a partly filled top row, whose cells keep shimmering. That keeps only the surface rows of a pool awake.
 
-Every cell has the same heat capacity, which makes air an unlimited heat sink if it conducts well. Air's conductivity is set low so that hot metal and lava cool mainly through what they touch.
+Powder and liquid cells fall with a speed stored in their 8-bit value, in sixteenths of a cell per tick, capped at 255 (about 16 cells per tick). Gravity adds 7 speed units every 16 ticks, spread over the ticks by a fixed dither on the tick number rather than by randomness. A cell moving slower than one cell per tick hovers in place and keeps its speed until it has built up a whole step. A falling cell blocked by another falling cell takes the slower of the two speeds instead of stopping, so a stream stays together instead of breaking into spray. Gases and fire, which have lifetimes in their value, move one cell per tick.
+
+Heat moves between neighboring cells. Each material has a heat capacity (by default 20 for static solids, 14 for powders, 30 for liquids and 1 for gases and fire), and an exchange changes each side in inverse proportion to its capacity: with a rate k from the two conductivities, the cell gains diff * k * c_other / (128 * (c_self + c_other)) and its neighbor loses the matching share, each rounded stochastically from separate random bits. The total of capacity times temperature is conserved in expectation, and with equal capacities the rule reduces to the old one exactly. Air holds 1/50 of what a metal cell does, so it conducts freely without draining hot metal: it warms up, rises and shows as heat haze.
+
+Melting, boiling and freezing can have a latent heat. A cell past its threshold changes with a chance of overshoot / latent per tick and is otherwise held at the threshold, so it sits on a plateau and takes in or gives off about the latent heat first. Water boils with 540 C of latent heat, so a quench boils little water, and molten metal and lava freeze with 300 C and 250 C, so a pour stays liquid long enough to fill a mold. A liquid that freezes while it is falling, hanging over open space, or resting on a different fluid or powder becomes its solid's debris (lava turns to rubble, molten metal to scrap) instead of a floating static crust. A crust on its own melt stays static.
+
+Reaction products start at the reactants' capacity-weighted mean temperature. Water on lava gives hot steam and glowing obsidian, and water on burning wood leaves wood below its ignition point, which is how water puts fires out.
+
+## World scale
+
+Every system uses one scale: 10 cells per meter, and 60 ticks per second. Gravity is one constant in `fe-core`, `GRAVITY = Fx(1792)`, which is 7/256 cells per tick squared, 98.4 cells per second squared, or 9.84 m/s^2. Cells, free particles, rigid bodies and the avatar all fall with it; the rigid body world converts it to Rapier units with `CELLS_PER_METER`, and a unit test checks that the two agree. A water cell weighs 1 kg. Scenes are built to the same scale: a 4 m floor is 40 cells, and the 12-cell avatar is a small 1.2 m figure. Before this, cells, particles and bodies fell at 450 cells per second squared and the avatar at 900, so every fall played more than twice as fast as it should and a collapsing building looked like a time lapse.
 
 ## Parallel scheduling
 
@@ -63,11 +73,15 @@ Materials are data, loaded from files in the scene or game directory. A material
 
 At load time the material set is compiled into lookup tables indexed by material id, so the inner loop never branches on strings or walks a list. The compiled set has a hash, and a multiplayer client cannot join a server whose material hash differs from its own.
 
+Cells with a lifetime (fire, smoke, embers) count it down each tick with a chance set by `lifetime_rate`, so an 8-bit lifetime can last longer than 255 ticks. When it runs out, the cell becomes its `residue` with the residue's chance and its `decay` otherwise. Burning wood, leaves and coal decay mostly to smoke and leave ash or embers only sometimes, so a burned forest leaves a thin layer of ash instead of one ash cell per plank. Embers glow at 400 C for a second or so and water puts them out.
+
+Gases rise or sink by buoyancy. Each tick a gas tries a vertical move first with a chance of |density| * 32 / 256, up when it is lighter than air and down when it is heavier, and drifts sideways otherwise. Steam always rises, smoke rises on 62% of ticks and mist on 12%, so mist lingers in a cave while steam boils off. Dust is a gas slightly heavier than air that hangs and settles for about eight seconds; explosions and shattering bodies release it, always into air cells, so no mass is lost. Fire in wind tilts downwind with a chance of |wind| / 4 and keeps some sideways jitter even in the strongest wind.
+
 The engine knows nothing about wands, spells, or any other game concept. Everything game-specific sits above the material layer.
 
 ## Free particles
 
-Cells that are thrown, splashed, or blasted leave the grid and become free particles with fixed-point position and velocity. Particles are stored per chunk, updated in spawn-id order, and turned back into cells when they land. This is how the engine handles movement faster than 32 cells per tick, and it keeps explosions from breaking the checkerboard rule.
+Cells that are thrown, splashed, or blasted leave the grid and become free particles with fixed-point position and velocity. Particles are stored per chunk, updated in spawn-id order, and turned back into cells when they land. They fall with the same gravity as everything else. A particle that lands where no neighboring cell is free searches further out, then bounces up for a while, and finally takes the first free cell up its column, so particles do not delete what they land in. This is how the engine handles movement faster than 32 cells per tick, and it keeps explosions from breaking the checkerboard rule.
 
 ## Rigid and destructible bodies
 
@@ -87,11 +101,13 @@ The check is bounded so that one explosion cannot stall a tick. It searches up t
 
 Every solid cell has hit points, stored in its 8-bit material value. Explosions, impacts, heat, and acid reduce them. A cell at zero becomes the debris its material defines: brick turns to rubble, wood to splinters, glass to shards, and metal to scrap. Depending on the material, debris becomes powder or free particles.
 
-When a body is destroyed in pieces, it re-runs the flood fill and splits into one body per connected part. When an impact on a body is stronger than its material's fracture threshold, the body shatters along a Voronoi pattern whose seed points come from the deterministic hash, so the same hit cracks the same way on every machine. Glass has a low threshold and shatters readily. Steel bends nothing and only loses cells.
+When a body is destroyed in pieces, it re-runs the flood fill and splits into one body per connected part. When one physics step changes a body's velocity, apart from gravity, by more than its fracture strength divided by 32 (in m/s), the body shatters along a Voronoi pattern whose seed points come from the deterministic hash, so the same hit cracks the same way on every machine. Glass breaks at a 1.9 m/s jolt, wood at 8.1, brick at 10 (about a 5 m drop) and concrete at 16. The test looks at impacts only, so the weight of a resting pile never shatters the bodies at its bottom. A body's fracture strength is the mass-weighted mean of its brittle cells, so one glass pane does not make a brick tower shatter like glass. Steel bends nothing and only loses cells.
+
+A body split into parts builds each part from the parent's own local grid and keeps the parent's rotation, so no cells are lost to rasterizing a rotated part, and each part moves with the parent's velocity at its own center of mass. A body that loses cells but stays in one piece keeps its Rapier body, velocity and contacts and only gets a new collider and mass. Explosions push a body at the cell of it nearest the blast, with an impulse that scales with the square root of its mass, so a charge at the foot of a tall tower tips it over.
 
 ### Bodies in liquids
 
-Bodies and liquids push on each other. When a body is stamped into the grid, liquid and powder cells in its way are moved to the nearest free cell, sideways first. Each tick, the engine walks the body's footprint and its hull cavity column by column; cells below the first one touching a liquid or powder count as submerged. Lift from the medium's density acts at the center of mass, plus drag from its viscosity. Wood floats, stone sinks, and a hull goes down once water fills its cavity. Lift at the center of mass means bodies do not right themselves; applying it at the wet cells' centroid made spinning bodies feed their own spin through the air they leave behind.
+Bodies and liquids push on each other. When a body is stamped into the grid, liquid and powder cells in its way are moved to the nearest free cell, sideways first, and if there is no air within 4 cells they go up the column to the first air, usually the space the body just left. A cell that still finds no room is counted in the physics stats as lost. Each tick, the engine walks the body's footprint and its hull cavity column by column; cells below the first one touching a liquid or powder count as submerged. Lift from the medium's density acts at the center of mass, plus drag from its viscosity. Wood floats, stone sinks, and a hull goes down once water fills its cavity. Lift at the center of mass means bodies do not right themselves; applying it at the wet cells' centroid made spinning bodies feed their own spin through the air they leave behind.
 
 ### Joints
 
@@ -109,7 +125,7 @@ Rapier uses floats. Cross-platform determinism holds only if Rapier's guarantees
 
 The renderer works on the CPU at cell resolution and scales up to pixels, so frames can be rendered headless on any machine, including CI runners without a GPU. The windowed client copies each frame into the window's surface texture through `wgpu`. Cell color comes from the material palette plus a per-cell variant so that sand reads as grains instead of a flat color.
 
-Lighting is where the demos get their look. Emissive materials and hot cells (which glow with their temperature) seed a light field that spreads through open space by repeated sweeps and is then softened with a blur. Sky light falls down each column until it meets a structure, which gives light shafts through cracks; foliage and smoke only dim it. Air underground shows a dim rock back wall that catches nearby light, and rock far from open space sinks into ambient occlusion. Bloom, heat haze over hot air, and smoke that scatters light go on top. None of this feeds back into the simulation, so it does not need to be deterministic.
+Lighting is where the demos get their look. Emissive materials and hot cells (which glow with their temperature) seed a light field that spreads through open space by repeated sweeps and is then softened with a blur. Sky light falls down each column until it meets a structure, which gives light shafts through cracks; foliage and smoke only dim it. Air underground shows a dim rock back wall that catches nearby light, and rock far from open space sinks into ambient occlusion. Gas is drawn as a soft volume: its density and color are blurred over neighboring cells, so smoke, steam, mist and dust read as clouds rather than specks. Hot cells glow by temperature with a brightness that keeps rising up to about 2000 C, so a white-hot pour and metal about to freeze look different, and lava dims toward red as it nears its freezing point. Bloom, heat haze over hot air, and smoke that scatters light go on top. None of this feeds back into the simulation, so it does not need to be deterministic.
 
 A 1920x1080 frame (960x540 cells) takes about 0.2 s on four cores. That is enough for recording video and for a playable window at smaller sizes, but not the 60 fps at 1440p the original target asked for; moving the light pass to a GPU compute shader is the obvious next step.
 
@@ -207,7 +223,7 @@ Glowcave is a huge cavern under a rainstorm. Water seeps through soil, gathers i
 
 Demolition is a tall tower of brick, timber, and glass. Charges go off floor by floor, the structure breaks into hundreds of rigid bodies that tumble and shatter, dust rolls outward, and the timber catches fire. It tests rigid body creation, splitting, and free particles under load.
 
-Firestorm is a forest on a hillside that catches fire in a crosswind. Leaves flash first, trunks burn slowly, smoke rises and lights orange from below, and embers carry the fire across a river. It tests fire spread, gases, and wind across a wide active area.
+Firestorm is a forest on a hillside that catches fire in a crosswind. Leaves flash first, trunks burn slowly, smoke rises and lights orange from below, and the river stops the fire: flames and embers that reach the water go out. It tests fire spread, gases, and wind across a wide active area.
 
 Dam break is the stress test: a reservoir of 4 million water cells released at once into a valley. It doubles as the main benchmark for the 4-million-cell target.
 
@@ -292,6 +308,6 @@ The CPU renderer draws a 1080p frame in about 0.2 s, roughly 5 frames per second
 
 Liquid surfaces with a partly filled top row never fully sleep, because single cells keep walking along the surface. The cost is bounded (a settled lake visits fewer than 3,000 cells per tick) but it is not zero.
 
-Every material has the same heat capacity, so air cooled hot metal as fast as stone did. Air conductivity is set very low to work around it. A per-material heat capacity column is the proper fix and changes every golden hash.
+Every material used to have the same heat capacity, so air cooled hot metal as fast as stone did, and air conductivity was set very low to work around it. Materials now have a heat capacity and transitions a latent heat (see the world model), so air conducts normally and holds little heat, and a pour stays liquid while it fills its molds. Cooling into the surroundings is still conduction only; there is no separate radiation or Newtonian cooling term.
 
 Buoyancy is applied at the center of mass with no righting torque, so a floating body keeps whatever angle it lands at. Strong angular damping hides this in the demos.

@@ -127,7 +127,8 @@ pub struct MaterialDef {
     /// Indestructible cells ignore damage.
     #[serde(default)]
     pub indestructible: bool,
-    /// Impact strength at which a rigid body made of this material shatters. 0 never shatters.
+    /// Impact strength at which a rigid body made of this material shatters: a
+    /// velocity change of more than `fracture / 32` m/s in one step. 0 never shatters.
     #[serde(default)]
     pub fracture: u16,
     /// Melts or boils at or above a temperature.
