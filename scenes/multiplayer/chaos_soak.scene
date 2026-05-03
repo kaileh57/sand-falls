@@ -1,27 +1,111 @@
-// Chaos soak: bots dig, paint and blow things up under bad network conditions
-// while a player joins mid-explosion. The desync counter has to stay at zero.
+// Chaos soak: bots dig, paint, heat, drop crates and blow things up under a
+// lossy, laggy network, a fourth player joins a third of the way in, and the
+// desync counter has to stay at zero.
+//
+// fe-server uses this file as its default soak arena (DEFAULT_ARENA), so it
+// must keep working with any number of bots and ticks. Bots spawn at x
+// 120-162 and wander; the set pieces sit around them so that what they do
+// reads as more than noise:
+//   - a wooden hut over a small gunpowder cellar, with a seam running from
+//     the cellar to an oil puddle next to the spawn;
+//   - a brick tower on an arch with two thin legs 8 cells apart, so a single
+//     blast or dig between them frees the tower as one rigid body;
+//   - a water tank at the foot of a soil plateau, split by a 3-cell stone
+//     wall from a lava pit dug into the plateau's edge, its floor just above
+//     the water;
+//   - a shelf on the plateau where a stack of crates is dropped.
+// Scheduled charges make sure every system is used even when the bots wander
+// off (the bots usually get to the tower first):
+//   300   a blast between the tower legs: the tower tips over as a body;
+//   600   the tank wall is breached just as the late player joins (at tick
+//         600 in the 1800-tick demo): lava pours over the water, crusts to
+//         obsidian and boils some of it to steam;
+//   900   the oil puddle is heated until it burns; the fire sets off the
+//         gunpowder seam, which chain-detonates into the cellar, throws the
+//         hut and leaves its timber burning into smoke;
+//   1080  six wooden crates drop onto the plateau shelf;
+//   1200  a blast under the crates scatters them before they rest long
+//         enough to merge into the terrain.
 [scene]
 name = chaos soak
-description = Bots wreck an arena over a lossy, laggy network while the desync counter stays at zero.
+description = Bots wreck an arena over a lossy, laggy network: a tower falls as a rigid body, lava pours over a water tank in steam, a gunpowder seam blows up a hut, crates tumble, a player joins mid-explosion, and the desync counter stays at zero.
 size = 512 288
 seed = 0xc4a05
 spawn = 120 150
+ticks = 1800
 
 [build]
-fill 0 230 512 288 soil
 fill 0 270 512 288 bedrock
-terrain 0 512 220 10 48 soil 270
-fill 300 160 340 230 brick
-fill 290 150 350 160 brick
-fill 380 190 470 230 water
-fill 30 180 90 230 wood
-fill 200 240 230 255 gunpowder
-fill 420 250 470 268 lava
+terrain 0 512 222 3 64 soil 270
+terrain 0 512 244 8 40 stone 270
+// A soil plateau on the right, with the lava pit dug into its edge and a
+// flat shelf for the crates.
+terrain 289 508 168 3 48 soil 244
+fill 289 168 424 244 soil
+
+// Wooden hut over a gunpowder cellar. A seam runs from the cellar to the
+// right, under a small oil puddle next to the spawn.
+fill 66 223 80 230 gunpowder
+fill 80 224 116 227 gunpowder
+fill 50 220 96 222 wood
+fill 52 194 56 220 wood
+fill 90 194 94 220 wood
+fill 48 190 98 194 wood
+fill 54 186 92 190 wood
+fill 62 182 84 186 wood
+fill 66 202 80 210 glass
+// Oil puddle in a shallow dip over the seam.
+fill 102 218 116 224 air
+fill 103 219 115 224 oil
+
+// Brick tower on an arch with two thin legs 8 cells apart, so one blast
+// between them cuts both and the tower comes free as one body.
+fill 184 192 186 222 brick
+fill 194 192 196 222 brick
+fill 177 186 203 192 brick
+fill 179 138 201 186 brick
+fill 184 146 196 154 glass
+fill 184 162 196 170 glass
+fill 175 134 205 138 brick
+
+// Water tank at the foot of the plateau. A 3-cell stone wall separates it
+// from the lava pit, whose floor is just above the water, so a breach pours
+// lava over the water.
+fill 236 200 292 240 stone
+fill 240 200 289 206 air
+fill 240 206 289 236 water
+fill 289 168 292 240 stone
+fill 292 200 337 204 stone
+fill 333 168 337 200 stone
+fill 289 140 337 168 air
+fill 292 168 333 172 air
+fill 292 172 333 200 lava
+
+// Light.
+paint 73 214 1 torch
+paint 352 166 1 torch
+paint 440 166 1 torch
+
+// Arena walls.
 fill 0 0 4 270 bedrock
 fill 508 0 512 270 bedrock
+
+[events]
+at 300: explode 190 212 9 180
+at 600: explode 290 192 10 180
+every 2 from 900 to 940: heat 109 220 4 8
+at 1080: body 384 148 396 160 wood
+at 1080: body 397 148 409 160 wood
+at 1080: body 410 148 422 160 wood
+at 1080: body 390 136 402 148 wood
+at 1080: body 403 136 415 148 wood
+at 1080: body 397 124 409 136 wood
+at 1200: explode 400 171 9 180
 
 [camera]
 view 512 288
 scale 2
 sky dusk
+ambient 0.22 0.19 0.2
+exposure 1.3
 at 0: 256 144

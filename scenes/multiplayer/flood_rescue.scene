@@ -1,35 +1,177 @@
-// Flood rescue, co-op: water pours into a cave system from above. Players dig
-// channels to steer it away from the villagers' chamber at the bottom.
+// Flood rescue, co-op: an underground lake breaks through the roof of a cave
+// system. A slab of the lake floor drops out as a rigid body and the flood
+// pours down two fissures into the top tunnel, runs both ways along it and
+// spills down the open shafts into the middle caves, which fill to pools.
+// The players start in the top tunnel and dig: their pit through the soil
+// plug under their feet opens a new waterfall into the centre chamber, and
+// their channels through the rock bend the flow toward it. Charges blast a
+// drain through the thin floor of the lower tunnel and the thin wall over the
+// sump, so the water runs off into the well and the sump. Water that takes
+// the right-hand way spills onto a lava pocket and crusts it over. The
+// villagers sit dry in a lit bedrock vault at the bottom, which no digging
+// can break.
 [scene]
 name = flood rescue
-description = Co-op: steer a flood through a cave system away from the villagers.
+description = Co-op: an underground lake bursts into a cave system; four players dig channels and blast drains to steer the flood through tunnels, shafts and chambers, past a lava pocket and around the villagers' lit vault.
 size = 640 480
 seed = 0xf100d
 spawn = 300 120
+ticks = 2400
 
 [build]
 fill 0 0 640 480 stone
 fill 0 470 640 480 bedrock
 fill 0 0 6 480 bedrock
 fill 634 0 640 480 bedrock
-// Caves.
-fill 40 60 600 140 air
-fill 80 140 140 260 air
-fill 260 140 330 300 air
-fill 480 140 560 240 air
-fill 80 260 560 320 air
-fill 200 320 460 400 air
-// The villagers' chamber, lit by torches.
-fill 260 400 400 450 air
-fill 270 440 274 444 torch
-fill 386 440 390 444 torch
-fill 300 446 360 450 wood
-// The flood source.
-fill 60 62 120 64 water_source
+
+// The underground lake, topped up by springs, and the fissures in its floor.
+fill 130 8 470 58 air
+circle 250 12 34 air
+circle 400 14 30 air
+fill 130 16 470 58 water
+fill 226 6 266 8 water_source
+fill 400 8 430 10 water_source
+fill 226 58 262 72 air
+circle 244 62 12 air
+fill 410 58 434 72 air
+circle 422 62 10 air
+// A rock column holds up the lake floor between the fissures.
+fill 326 8 342 58 stone
+circle 334 58 10 stone
+
+// Top tunnel, floor at 130, with a ragged roof.
+fill 14 72 620 130 air
+circle 60 72 14 air
+circle 160 78 12 air
+circle 400 72 16 air
+circle 480 70 10 air
+circle 570 72 14 air
+circle 200 132 6 stone
+circle 430 132 5 stone
+
+// Shafts from the top tunnel to the middle caves.
+// Left shaft, open: the flood's first way down.
+fill 100 130 128 236 air
+// Centre shaft under the players, plugged with soil.
+fill 288 130 312 250 air
+fill 288 130 312 156 soil
+// Right shaft, open.
+fill 520 130 548 236 air
+
+// Middle caves: two chambers joined by a low tunnel, and a third on the
+// right walled off by a pillar of rock that holds up the rock between the
+// shafts.
+fill 60 230 210 320 air
+circle 120 232 26 air
+fill 210 290 250 320 air
+fill 250 250 400 320 air
+circle 330 254 30 air
+fill 440 230 590 320 air
+circle 520 232 26 air
+
+// Left shaft down to the sump, behind a thin stone wall at its top.
+fill 90 324 116 350 air
+// The sump: a big empty cave on the lower left, and an old tunnel from it
+// that ends at the vault wall.
+fill 14 350 220 462 air
+circle 110 366 24 air
+fill 220 372 252 392 air
+
+// The right chamber drains over a sill in its far wall, so it fills to a
+// pool first, then spills down a shaft to the lower tunnel.
+fill 590 292 606 302 air
+fill 594 302 612 352 air
+// Lower tunnel, floor at 392, running left over the vault.
+fill 420 352 620 392 air
+// A lava pocket right under the spill: water that takes this way boils.
+fill 556 392 618 422 air
+fill 556 402 618 422 lava
+// A deep well under the tunnel, behind a thin stone floor.
+fill 440 396 520 464 air
+
+// The villagers' vault: a sealed bedrock shell no digging can break.
+fill 254 394 410 456 bedrock
+fill 260 400 404 450 air
+
+// Wooden huts on the vault floor.
+fill 272 434 274 450 wood
+fill 292 434 294 450 wood
+fill 270 432 296 434 wood
+fill 273 430 293 432 wood
+fill 276 428 290 430 wood
+fill 279 426 287 428 wood
+fill 316 432 318 450 wood
+fill 340 432 342 450 wood
+fill 314 430 344 432 wood
+fill 317 428 341 430 wood
+fill 320 426 338 428 wood
+fill 323 424 335 426 wood
+fill 326 422 332 424 wood
+fill 362 436 364 450 wood
+fill 380 436 382 450 wood
+fill 360 434 384 436 wood
+fill 363 432 381 434 wood
+fill 366 430 378 432 wood
+// Torches inside and between the huts.
+fill 282 440 284 443 torch
+fill 328 438 330 441 torch
+fill 371 442 373 445 torch
+fill 262 412 264 415 torch
+fill 304 410 306 413 torch
+fill 352 410 354 413 torch
+fill 396 412 398 415 torch
+// Glowshroom garden.
+fill 300 446 301 450 glowshroom
+fill 298 444 303 446 glowshroom
+fill 305 447 306 450 glowshroom
+fill 304 445 307 447 glowshroom
+fill 349 446 350 450 glowshroom
+fill 347 444 352 446 glowshroom
+fill 354 447 355 450 glowshroom
+fill 353 445 356 447 glowshroom
+fill 388 446 389 450 glowshroom
+fill 386 444 391 446 glowshroom
+
+// Torches along the tunnels.
+fill 130 112 132 115 torch
+fill 220 112 222 115 torch
+fill 400 112 402 115 torch
+fill 590 112 592 115 torch
+fill 70 290 72 293 torch
+fill 200 296 202 299 torch
+fill 460 290 462 293 torch
+fill 580 296 582 299 torch
+fill 470 372 472 375 torch
+fill 30 420 32 423 torch
+fill 200 420 202 423 torch
+// Glowshroom clusters on the floors and moss on the roofs.
+decorate 14 72 620 130 glowshroom 2 floor
+decorate 60 230 590 320 glowshroom 2 floor
+decorate 14 350 220 462 glowshroom 2 floor
+// No moss under the lake floor: it would pin the slab that breaks away.
+decorate 14 60 150 462 moss 2 ceiling
+decorate 280 60 620 462 moss 2 ceiling
+decorate 150 140 280 462 moss 2 ceiling
+
+[events]
+// The lake floor cracks: the slab beside the left fissure is cut loose,
+// falls into the top tunnel as a rigid body, and the lake pours through.
+at 90: explode 168 65 7 160
+at 90: dig 168 65 8
+// A charge blows a hole in the thin floor of the lower tunnel, and the water
+// there drains into the well instead of running on toward the vault.
+at 1100: explode 476 394 7 200
+// Another blasts the thin wall at the bottom of the left chamber, and the
+// middle caves drain into the sump.
+at 1500: explode 103 322 7 200
 
 [camera]
-view 640 480
-scale 2
+view 640 360
+scale 3
 sky cave
-ambient 0.04 0.045 0.06
-at 0: 320 240
+ambient 0.07 0.075 0.09
+exposure 1.6
+// Watch the lake break through, then follow the flood down to the vault.
+at 0: 320 180
+at 420: 320 180
+at 600: 320 282
