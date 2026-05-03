@@ -1,25 +1,128 @@
-// Shared sandbox: up to 8 players paint, dig and blow things up in one world.
-// The bandwidth graph should stay flat while the screen fills with chaos.
+// Shared sandbox: eight players in one world full of set pieces, each wired
+// to a different system. Beside the spawn a forest burns, sand dunes slide,
+// and a pond sits on a thin cap over a lava pocket. Further out, a water tower
+// on wooden stilts falls as a body and splashes, and a gunpowder fuse under a
+// stone ridge chains on into a brick bridge and a second forest. Only inputs
+// cross the network, so the bandwidth graph stays flat while the screen fills
+// with chaos.
 [scene]
 name = shared sandbox
-description = Eight players in one world; bandwidth stays flat however chaotic it gets.
+description = Eight players set off sand, fire, lava, a falling water tower and a gunpowder chain through a ridge and a bridge; bandwidth stays flat because only inputs cross the network.
 size = 768 432
 seed = 0x5a4d
 spawn = 200 220
 
 [build]
+// Trees go in before the ground so the soil cuts each trunk at the surface.
+fill 138 226 142 272 wood
+circle 140 222 11 leaves
+circle 132 230 7 leaves
+circle 148 229 7 leaves
+fill 158 212 162 272 wood
+circle 160 208 14 leaves
+circle 149 216 9 leaves
+circle 171 215 9 leaves
+fill 179 232 182 272 wood
+circle 180 228 9 leaves
+circle 174 236 6 leaves
+circle 186 235 6 leaves
+fill 616 222 620 272 wood
+circle 618 218 12 leaves
+circle 609 226 8 leaves
+circle 627 225 8 leaves
+fill 640 210 644 272 wood
+circle 642 206 14 leaves
+circle 631 214 9 leaves
+circle 653 213 9 leaves
+fill 663 228 666 272 wood
+circle 664 224 10 leaves
+circle 657 232 6 leaves
+circle 671 231 6 leaves
+fill 686 214 690 272 wood
+circle 688 210 14 leaves
+circle 677 218 9 leaves
+circle 699 217 9 leaves
+fill 710 224 714 272 wood
+circle 712 220 12 leaves
+circle 703 228 8 leaves
+circle 721 227 8 leaves
+fill 732 232 735 272 wood
+circle 733 228 9 leaves
+circle 727 236 6 leaves
+circle 739 235 6 leaves
+
+// Ground: soil over stone over bedrock.
 fill 0 380 768 432 bedrock
-terrain 0 768 300 40 64 soil 380
-terrain 0 768 340 20 40 stone 380
-fill 520 200 600 300 sand
-fill 80 250 160 300 water
-fill 640 250 700 330 wood
-fill 400 330 440 360 gunpowder
+terrain 0 768 262 3 64 soil 380
+terrain 0 768 288 6 48 stone 380
 fill 0 0 4 380 bedrock
 fill 764 0 768 380 bedrock
 
+// 1. Sand dunes, piled past their angle of repose, left of the spawn.
+fill 40 244 132 264 sand
+fill 50 226 122 244 sand
+fill 62 210 110 226 sand
+fill 74 196 98 210 sand
+
+// 2. A forest beside the spawn, with undergrowth.
+decorate 130 200 196 266 leaves 35 floor
+
+// 3. A pond on a thin stone cap over a lava pocket, just right of the spawn.
+// Dig through the pond floor and the water meets the lava.
+fill 206 259 298 340 stone
+fill 214 259 290 282 water
+fill 220 288 284 326 lava
+circle 232 312 16 lava
+circle 272 312 16 lava
+circle 252 322 14 lava
+
+// 4. Water tower: a wooden tank of water on two thin wooden stilts.
+fill 320 214 323 268 wood
+fill 349 214 352 268 wood
+fill 312 210 360 214 wood
+fill 312 174 315 210 wood
+fill 357 174 360 210 wood
+fill 315 178 357 210 water
+
+// 5. Stone ridge over a gunpowder vein. The vein surfaces left of the ridge
+// and has two TNT charges under it.
+fill 410 252 476 262 stone
+fill 416 242 470 252 stone
+fill 422 232 464 242 stone
+fill 429 224 457 232 stone
+fill 436 218 450 224 stone
+fill 398 258 406 268 gunpowder
+fill 398 264 483 268 gunpowder
+fill 426 256 434 268 tnt
+fill 452 256 460 268 tnt
+
+// 6. Brick bridge over a ravine with a pool. The deck stands on two piers,
+// not on the banks, so cutting the piers drops it. The fuse drops down the
+// near bank and runs under the pool to a charge at the foot of each pier,
+// then climbs the far bank.
+fill 476 240 572 262 air
+fill 476 262 483 266 soil
+fill 561 262 572 266 soil
+fill 483 262 561 380 air
+fill 483 320 561 380 stone
+fill 483 300 561 320 water
+fill 484 262 560 272 brick
+fill 504 272 511 320 brick
+fill 533 272 540 320 brick
+fill 478 264 482 330 gunpowder
+fill 478 326 566 330 gunpowder
+fill 562 264 566 330 gunpowder
+fill 503 310 512 328 tnt
+fill 532 310 541 328 tnt
+
+// 7. The fuse ends under a second forest, across the ravine.
+fill 562 264 602 268 gunpowder
+fill 598 260 606 268 tnt
+decorate 600 200 744 266 leaves 30 floor
+
 [camera]
-view 768 432
+view 960 540
 scale 2
 sky day
-at 0: 384 216
+ambient 0.25 0.25 0.28
+at 0: 384 198 zoom=1.35
