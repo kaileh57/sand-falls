@@ -1,18 +1,29 @@
-// Demolition: a tall tower of brick, timber and glass. Charges go off floor by
-// floor, the structure breaks into hundreds of rigid bodies that tumble and
-// shatter, dust rolls outward, and the timber catches fire.
+// Demolition: a 16 x 36 m brick tower with timber floors and glass windows
+// (10 cells per metre), brought down in real time under real gravity.
+//
+// Charges are explode events, not packed explosives. Over about 2.5 s they cut
+// the right wall and the right core on floors 1-3, then the left core on floor
+// 1, then, half a second later, the left wall on floor 1. The right side loses
+// three storeys and the left only one, so once the base is cut the tower comes
+// free as one rigid body, drops onto its left stumps and pivots right. It
+// shatters on the ground: small fragments near the impact, big slabs farther
+// up the tower. A grey dust cloud rolls out over the ground, the oil-soaked
+// timber floors and wooden crates catch fire inside the falling structure, and
+// the scene ends on a smoking, burning pile.
 [scene]
 name = demolition
-description = Charges bring down a brick, timber and glass tower floor by floor.
+description = Staggered charges cut a brick tower's base; it tips right on its last wall, shatters into slabs and fragments, and burns in a cloud of dust.
 size = 960 540
 seed = 0xde30
-ticks = 700
+ticks = 1500
 
 [build]
 fill 0 500 960 540 bedrock
 terrain 0 960 470 6 120 soil 500
 fill 300 440 660 500 concrete
 
+// Floors 1-8: brick walls, timber columns and floor beams, a brick slab per
+// floor, glass only in the window panes. Brick crown and glass top.
 fill 400 400 408 440 brick
 fill 552 400 560 440 brick
 fill 452 406 458 440 wood
@@ -79,21 +90,47 @@ fill 400 136 408 146 glass
 fill 552 136 560 146 glass
 fill 420 96 540 120 brick
 fill 460 76 500 96 glass
-// Charges: gunpowder packed at the base of each wall, low floors first.
+
+// Fuel: wooden crates and furniture on floors 2-5, sitting on the slab below,
+// and a 2-row oil film on floors 3 and 5.
+// floor 2 (slab top y 400)
+fill 414 392 424 400 wood
+fill 428 394 436 400 wood
+fill 470 390 482 400 wood
+fill 520 392 530 400 wood
+// floor 3 (slab top y 360)
+fill 412 358 450 360 oil
+fill 462 358 500 360 oil
+fill 512 358 550 360 oil
+fill 418 350 428 358 wood
+fill 476 352 486 358 wood
+fill 530 350 540 358 wood
+// floor 4 (slab top y 320)
+fill 412 312 424 320 wood
+fill 468 310 478 320 wood
+fill 484 314 494 320 wood
+fill 526 312 538 320 wood
+// floor 5 (slab top y 280)
+fill 412 278 450 280 oil
+fill 462 278 500 280 oil
+fill 512 278 550 280 oil
+fill 416 270 426 278 wood
+fill 470 272 482 278 wood
+fill 528 270 538 278 wood
 
 
 [events]
-// Right side first so the tower tips, then the left side and the core.
-at 120: explode 556 432 16 240
-at 123: explode 505 432 14 220
-at 126: explode 556 392 16 240
-at 129: explode 505 392 14 220
-at 132: explode 556 352 16 240
-at 135: explode 505 352 14 220
-at 200: explode 455 432 14 220
-at 203: explode 404 432 16 240
-at 206: explode 455 392 14 220
-at 209: explode 404 392 16 240
+// Right wall and right core on floors 1-3, ten ticks apart.
+at 90: explode 556 432 16 240
+at 100: explode 505 432 14 220
+at 110: explode 556 392 16 240
+at 120: explode 505 392 14 220
+at 130: explode 556 352 16 240
+at 140: explode 505 352 14 220
+// Left core on floor 1.
+at 160: explode 455 432 14 220
+// Left wall on floor 1, half a second later.
+at 190: explode 404 432 16 240
 
 [camera]
 view 960 540
@@ -101,7 +138,7 @@ scale 2
 sky dusk
 ambient 0.12 0.1 0.11
 exposure 1.4
-at 0: 480 300 zoom=1.25
-at 200: 480 320 zoom=1.2
-at 450: 500 380 zoom=1.1
-at 700: 500 380 zoom=1.05
+at 0: 480 280 zoom=1.1
+at 220: 480 280 zoom=1.1
+at 700: 540 360 zoom=1.25
+at 1500: 560 400 zoom=1.35
