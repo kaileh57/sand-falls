@@ -3,18 +3,21 @@
 //
 // The charges are explode events; no explosive is packed in the build. Over
 // about two seconds they cut the right wall and the right core on floors 1-3,
-// then the left core at the floor 2 slab, then, half a second later, the left
-// wall just above the floor 1 slab. Floor 1 on the left stays standing as a
-// stump, while the right half of the tower has nothing under it for three
-// storeys. The tower comes free as one rigid body, drops onto the stump,
-// pivots right on its left wall and takes about six seconds to go over. It
-// shatters when it hits the concrete pad, the pieces tumble against the soil
-// bank on the right, and blast and crack dust puffs up. The timber floors and
-// the wooden crates on floors 2-5 catch fire from the charges, an oil film
-// burns at the foot of the stump, and the scene ends on a burning pile.
+// then the left core on floor 1, then, half a second later, the left wall on
+// floor 1. The right half of the tower has nothing under it for three storeys,
+// so when the left wall goes the tower comes free as one rigid body (tick 215),
+// drops two metres onto the stump of its left wall and pivots right into the
+// gap. It takes about four seconds to lean past 45 degrees. Then a row of
+// delayed charges on floors 4 and 6 fires (tick 445) and the falling tower
+// comes apart in the air into three sections. The top section, moving
+// fastest, hits the pad and the soil bank on the right and shatters into small
+// pieces; the two lower sections land slower and stay as big slabs leaning on
+// the stump. The charges light the crates on floors 2-5 and the oil films on
+// floors 1 and 2, the timber floors catch, and the scene ends on a smoking,
+// burning pile.
 [scene]
 name = demolition
-description = Staggered charges cut a brick tower's base; it pivots right on its last wall, topples in real time, shatters on the ground and burns.
+description = Staggered charges cut a brick tower's base; it pivots right on its last wall, breaks into three sections in the air, shatters at the far end and burns.
 size = 960 540
 seed = 0xde30
 ticks = 1500
@@ -27,7 +30,8 @@ fill 300 440 880 500 concrete
 circle 1090 620 280 soil
 
 // Floors 1-8: brick walls, timber columns and floor beams, a brick slab per
-// floor, glass only in the window panes. Brick crown and glass top.
+// floor, glass only in the window panes. A hollow brick plant room on the
+// roof with a glass lantern on top.
 fill 400 400 408 440 brick
 fill 552 400 560 440 brick
 fill 452 406 458 440 wood
@@ -93,11 +97,12 @@ fill 408 124 552 126 wood
 fill 400 136 408 146 glass
 fill 552 136 560 146 glass
 fill 420 96 540 120 brick
+fill 426 100 534 120 air
 fill 460 76 500 96 glass
 
-// Fuel: wooden crates and furniture on floors 2-5, standing on the slab
-// below. A 2-row oil film lies on floors 1 and 2 on the left, which stay
-// standing, so the burning oil sits under the tower as it goes over.
+// Fuel: wooden crates and furniture (6-12 cell wood blocks) on floors 2-5,
+// standing on the slab below, and a 2-row oil film on floors 1 and 2 under
+// the left half of the tower, where the charges light them.
 // floor 1 (ground, y 440)
 fill 412 438 448 440 oil
 // floor 2 (slab top y 400)
@@ -108,9 +113,9 @@ fill 520 392 530 400 wood
 fill 438 398 468 400 oil
 // floor 3 (slab top y 360)
 fill 418 350 428 360 wood
+fill 440 352 450 360 wood
 fill 476 352 486 360 wood
 fill 530 350 540 360 wood
-fill 440 352 450 360 wood
 // floor 4 (slab top y 320)
 fill 412 312 424 320 wood
 fill 468 310 478 320 wood
@@ -118,10 +123,10 @@ fill 484 314 494 320 wood
 fill 526 312 538 320 wood
 // floor 5 (slab top y 280)
 fill 416 270 426 280 wood
+fill 440 272 450 280 wood
 fill 470 272 482 280 wood
 fill 492 274 500 280 wood
 fill 528 270 538 280 wood
-fill 440 272 450 280 wood
 
 [events]
 // Right wall and right core on floors 1-3, a quarter second apart. The core
@@ -134,12 +139,23 @@ at 120: explode 556 384 16 240
 at 135: explode 505 370 16 220
 at 150: explode 556 344 16 240
 at 165: explode 505 338 14 220
-// Left core, at the floor 2 slab.
-at 185: explode 455 364 14 220
-// Left wall, just above the floor 1 slab, half a second later. Floor 1 on the
-// left stays standing; the tower drops onto it and pivots right on its left
-// wall into the three-storey gap.
-at 215: explode 404 392 12 240
+// Left core on floor 1.
+at 185: explode 455 422 14 220
+// Left wall on floor 1, half a second later. The tower comes free, drops onto
+// the stump of the left wall and pivots right into the three-storey gap.
+at 215: explode 404 420 12 240
+// Delayed charges, timed to the falling tower. At tick 445 it leans about 52
+// degrees; these sit on its walls and timber columns at the floor 6 and
+// floor 4 windows (building y 221 and y 301, moved with the tower's pose at
+// that tick) and cut it into three sections.
+at 445: explode 573 246 12 200
+at 445: explode 605 286 12 200
+at 445: explode 636 326 12 200
+at 445: explode 667 366 12 200
+at 445: explode 510 296 12 200
+at 445: explode 542 336 12 200
+at 445: explode 573 375 12 200
+at 445: explode 604 415 12 200
 
 [camera]
 view 960 540
@@ -147,10 +163,13 @@ scale 2
 sky dusk
 ambient 0.12 0.1 0.11
 exposure 1.4
+// Wide shot with the glass lantern in frame and 2.5 tower widths of ground on
+// either side, then a slow pan right with the fall and a push in on the pile.
 at 0: 480 280 zoom=1.1
-at 450: 480 280 zoom=1.1
-at 800: 560 315 zoom=1.2
-at 1500: 650 350 zoom=1.55
+at 380: 480 280 zoom=1.1
+at 560: 524 300 zoom=1.1
+at 850: 576 330 zoom=1.25
+at 1500: 640 360 zoom=1.5
 
 [expect]
 after 1500: count burning_wood in 0 0 960 500 >= 100

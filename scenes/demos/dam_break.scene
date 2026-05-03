@@ -1,27 +1,146 @@
-// The stress test: a reservoir of 4 million water cells released into a valley.
-// The world is 4096x2048 (8.4 million cells loaded).
+// The stress test: a reservoir of 4 million water cells (204 x 195 m at 10
+// cells per metre) released into a valley, in an 8.4-million-cell world.
+//
+// Charges go off at the foot of the dam at tick 1 and the whole dam is removed,
+// so no water is deleted. The flood spills into a bowl below the dam where a
+// village stands: wooden houses and trees are bodies hinged to the brick
+// houses, which are pinned to the ground. As the water rises the wooden houses
+// and trees float, break their hinges and drift; the brick houses stay put.
+// Further on the flood runs over a small lava pool kept hot by lava sources.
+// The camera opens on the whole reservoir and follows the wave front into the
+// village.
 [scene]
 name = dam break
-description = A 2048x2048-equivalent reservoir of water released at once.
+description = Charges blow out a concrete dam holding 4 million water cells; the flood pours into a valley village, lifts its wooden houses and trees off their footings and swamps a lava pool.
 size = 4096 2048
 seed = 22
-ticks = 600
+ticks = 1500
 
 [build]
+// Valley: a stone plateau with a bowl carved below the dam. Two offset circles
+// leave a soil skin on the bowl floor; the arcs they leave in the sky on the
+// right are cleared again.
+fill 2056 1400 4088 2000 stone
+circle 2300 650 1300 soil
+circle 2300 620 1300 air
+fill 3300 0 4088 1400 air
 fill 0 2000 4096 2048 bedrock
-terrain 2200 4096 1700 120 96 stone 2000
 fill 0 0 8 2000 bedrock
 fill 4088 0 4096 2000 bedrock
-fill 2048 0 2056 2000 concrete
+// The dam and its 4-million-cell reservoir.
+fill 2048 20 2056 2000 concrete
 fill 8 46 2048 2000 water
+// tree, body 0
+fill 2111 1907 2140 1912 soil
+fill 2123 1871 2127 1907 wood
+circle 2125 1871 14 leaves
+carve 2111 1857 2140 1907
+// wooden house, body 1
+fill 2159 1913 2191 1918 stone
+fill 2160 1897 2190 1913 wood
+fill 2164 1900 2170 1905 glass
+fill 2180 1900 2186 1905 glass
+fill 2171 1889 2179 1891 wood
+fill 2167 1891 2183 1893 wood
+fill 2163 1893 2187 1895 wood
+fill 2159 1895 2191 1897 wood
+carve 2159 1889 2191 1913
+// brick house with a timber roof, body 2
+fill 2214 1918 2248 1921 stone
+fill 2215 1898 2247 1918 brick
+fill 2220 1902 2226 1908 glass
+fill 2236 1902 2242 1908 glass
+fill 2226 1890 2236 1892 wood
+fill 2222 1892 2240 1894 wood
+fill 2218 1894 2244 1896 wood
+fill 2214 1896 2248 1898 wood
+carve 2214 1890 2248 1918
+// wooden house, body 3
+fill 2271 1920 2303 1923 stone
+fill 2272 1904 2302 1920 wood
+fill 2276 1907 2282 1912 glass
+fill 2292 1907 2298 1912 glass
+fill 2283 1896 2291 1898 wood
+fill 2279 1898 2295 1900 wood
+fill 2275 1900 2299 1902 wood
+fill 2271 1902 2303 1904 wood
+carve 2271 1896 2303 1920
+// wooden house, body 4
+fill 2329 1919 2361 1922 stone
+fill 2330 1903 2360 1919 wood
+fill 2334 1906 2340 1911 glass
+fill 2350 1906 2356 1911 glass
+fill 2341 1895 2349 1897 wood
+fill 2337 1897 2353 1899 wood
+fill 2333 1899 2357 1901 wood
+fill 2329 1901 2361 1903 wood
+carve 2329 1895 2361 1919
+// a 40x10 lava pool in a basalt basin, held hot by lava sources in its floor and at its surface
+fill 2384 1910 2436 1922 basalt
+fill 2390 1910 2430 1920 lava
+fill 2404 1920 2416 1922 lava_source
+fill 2406 1910 2414 1912 lava_source
+// tree, body 5
+fill 2463 1907 2488 1912 soil
+fill 2473 1877 2477 1907 wood
+circle 2475 1877 12 leaves
+carve 2463 1865 2488 1907
+// brick house with a timber roof, body 6
+fill 2509 1898 2543 1906 stone
+fill 2510 1878 2542 1898 brick
+fill 2515 1882 2521 1888 glass
+fill 2531 1882 2537 1888 glass
+fill 2521 1870 2531 1872 wood
+fill 2517 1872 2535 1874 wood
+fill 2513 1874 2539 1876 wood
+fill 2509 1876 2543 1878 wood
+carve 2509 1870 2543 1898
+// wooden house, body 7
+fill 2569 1885 2601 1894 stone
+fill 2570 1869 2600 1885 wood
+fill 2574 1872 2580 1877 glass
+fill 2590 1872 2596 1877 glass
+fill 2581 1861 2589 1863 wood
+fill 2577 1863 2593 1865 wood
+fill 2573 1865 2597 1867 wood
+fill 2569 1867 2601 1869 wood
+carve 2569 1861 2601 1885
+// tree, body 8
+fill 2625 1871 2656 1881 soil
+fill 2638 1831 2642 1871 wood
+circle 2640 1831 15 leaves
+carve 2625 1816 2656 1871
+// The brick houses are pinned to the ground. Each wooden house and tree hangs
+// on a hinge to its nearest brick house, which also keeps it from merging into
+// the terrain while it waits; the hinge breaks when the water lifts it.
+pin 2 2231 1917
+pin 6 2526 1897
+joint 0 2 2178 1906 hinge 2000
+joint 1 2 2203 1912 hinge 2000
+joint 3 2 2259 1919 hinge 2000
+joint 4 2 2288 1918 hinge 2000
+joint 5 6 2500 1906 hinge 2000
+joint 7 6 2555 1884 hinge 2000
+joint 8 6 2583 1870 hinge 2000
 
 [events]
-at 1: dig 2052 1000 1100
+// Charges set in the water against the foot of the dam go off at tick 1. Set
+// upstream of the concrete and small enough not to reach the air beyond it,
+// they throw the concrete out into the valley as rubble and spray instead of
+// back into the reservoir, and light no fire for the flood to trap. The dam is
+// then gone; no water is deleted.
+at 1: explode 2040 1600 24 220
+at 1: explode 2040 1750 24 220
+at 1: explode 2040 1880 24 220
+at 1: fill 2048 0 2056 2000 air
 
 [camera]
 view 960 540
 scale 2
 sky day
 ambient 0.25 0.25 0.28
-at 0: 2048 1200 zoom=0.24
-at 240: 2600 1500 zoom=0.3
+at 0: 2048 1024 zoom=0.26
+at 150: 2150 1450 zoom=0.55
+at 360: 2250 1680 zoom=0.95
+at 720: 2300 1720 zoom=1.05
+at 1500: 2330 1730 zoom=1.15
