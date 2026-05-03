@@ -1,22 +1,24 @@
 // Foundry: heat capacity and latent heat.
 //
-// A brick crucible taps white-hot metal down a cascade of four firebrick
-// molds. Each mold fills, spills over its lip into the next, and the last one
-// overflows into a deep water quench tank. Because molten metal holds a lot of
-// heat and gives off 300 C of latent heat before it freezes, the pour stays
-// liquid all the way down and the metal sits on its 1300 C freezing plateau,
-// glowing amber, while it crystallises in from the mold walls.
+// A brick crucible over a heater taps white-hot metal through a small hole
+// down a cascade of four firebrick molds. Each mold fills, spills over its
+// lip into the next, and the last one overflows into the dry end of a quench
+// tank, where the metal pools on the floor. Molten metal holds a lot of heat
+// and gives off 300 C of latent heat as it freezes, so the pour stays liquid
+// all the way down and every mold fills before it sets. The castings cool to
+// their 1300 C freezing plateau and sit there, glowing yellow, while they
+// crystallise in from the mold walls.
 //
-// At tick 900 the tap is broken open and the furnace heater shut off, so the
-// rest of the heat surges down the cascade into the tank. The metal sinks
-// through the water and settles as scrap on the floor; water boils where it
-// touches the metal, steadily rather than all at once, because boiling takes
-// 540 C of latent heat. At 1000 sprinklers quench the castings: steam rolls
-// up the cascade and the castings cool from amber through orange and red to
-// grey, crusting over from the top while the brick molds stay hot underneath.
+// At tick 1000 the quench starts. A sprinkler bar rains on each casting, and
+// the tank's sluice gate opens so its water floods over the pool of metal.
+// Water takes 540 C of latent heat to boil, so it boils where it touches hot
+// metal, steadily rather than all at once, and steam rises off the castings.
+// The water freezes the castings from the top down: a crust cools through
+// orange and red to grey while the core below stays on its freezing plateau,
+// and by the end all four castings, and the slab on the tank floor, are grey.
 [scene]
 name = foundry
-description = A crucible pours molten metal down four cascading molds, which fill while still liquid; the overflow sinks and boils steadily in a quench tank, then sprinklers cool the castings from amber to grey.
+description = A crucible pours molten metal down four cascading molds, which all fill while still liquid, and the overflow pools on the floor of a quench tank. Sprinklers and a flooding sluice then quench the metal: the water boils steadily into steam, and the castings cool from the top down through orange and red to grey.
 size = 768 432
 seed = 0xf0d9
 ticks = 2700
@@ -27,17 +29,17 @@ fill 0 0 768 432 stone
 fill 20 40 748 380 air
 fill 0 400 768 432 bedrock
 // Crucible: a brick shell over a heater, full of molten metal, tapped through
-// a small hole low in its right wall. Firebrick under the heater keeps the
-// stone below from melting.
+// a hole low in its right wall.
 fill 40 60 160 172 brick
 fill 50 70 150 160 air
 fill 50 160 150 166 heater
-fill 50 118 150 160 molten_metal
-fill 150 157 160 160 air
-fill 40 172 154 200 brick
-fill 40 200 154 380 stone
+fill 50 128 150 160 molten_metal
+temp 50 128 150 160 2050
+fill 150 156 160 160 air
+fill 40 172 154 380 stone
+fill 154 172 160 186 brick
 // Four firebrick molds, each 40 x 14 and 20 cells below the last. The wall
-// between two molds is topped at the lower mold's lip, so a full mold spills
+// between two molds is topped at the higher mold's lip, so a full mold spills
 // over it into the next.
 fill 154 172 158 200 brick
 fill 154 200 202 206 brick
@@ -48,50 +50,51 @@ fill 246 206 250 246 brick
 fill 246 240 290 246 brick
 fill 290 226 294 266 brick
 fill 290 260 334 266 brick
-fill 334 246 338 336 brick
+fill 334 246 338 308 brick
 fill 154 206 198 380 stone
 fill 202 226 246 380 stone
 fill 250 246 290 380 stone
 fill 294 266 334 380 stone
-// The quench tank: deep enough that sunken metal settles well below the
-// surface. Its right wall is lower than the last mold's lip, so sprinkler
-// runoff spills out to the right instead of backing up over the castings.
-fill 338 330 470 336 brick
-fill 466 250 470 336 brick
-fill 338 266 466 330 water
-fill 338 336 470 380 stone
+// The quench tank. The last mold overflows into its dry left end; a brick
+// sluice gate holds the water in the right end until the quench. The right
+// wall is lower than the last mold's lip, so runoff spills out to the right
+// instead of backing up over the castings.
+fill 338 300 470 308 brick
+fill 466 256 470 308 brick
+fill 338 308 470 380 stone
+fill 402 262 466 300 water
+fill 398 258 402 300 brick
 // A torch on the far wall for a little warm fill light.
 fill 20 120 22 124 torch
 
 [events]
-// Tap out: break the tap open and shut off the heater, so the rest of the
-// heat surges down the cascade into the tank.
-at 900: fill 150 140 160 157 air
-at 900: fill 50 160 150 166 brick
-// The quench: a sprinkler bar over each casting, then shut off.
-at 1000: fill 161 150 189 151 water_source
-at 1000: fill 205 166 233 167 water_source
-at 1000: fill 253 186 281 187 water_source
-at 1000: fill 297 206 325 207 water_source
-at 1500: fill 161 150 189 151 air
-at 1500: fill 205 166 233 167 air
-at 1500: fill 253 186 281 187 air
-at 1500: fill 297 206 325 207 air
+// The crucible is empty: shut the heater off.
+at 800: fill 50 160 150 166 brick
+// The quench: open the sluice gate and turn on a sprinkler bar over each
+// casting, then shut the sprinklers off.
+at 1000: fill 398 258 402 300 air
+at 1000: fill 156 170 188 171 water_source
+at 1000: fill 200 186 232 187 water_source
+at 1000: fill 246 206 278 207 water_source
+at 1000: fill 290 226 322 227 water_source
+at 1150: fill 156 170 188 171 air
+at 1150: fill 200 186 232 187 air
+at 1150: fill 246 206 278 207 air
+at 1150: fill 290 226 322 227 air
 
 [camera]
 view 960 540
 scale 2
 sky cave
-ambient 0.18 0.155 0.14
-exposure 0.6
-// Open on the tap and the stream, follow the pour down the cascade, hold on
-// the molds and tank for the quench, and end on the dulling castings.
-at 0: 178 152 zoom=3
-at 250: 190 165 zoom=3
-at 700: 260 200 zoom=2.3
-at 1000: 300 220 zoom=2.3
-at 1800: 300 220 zoom=2.3
-at 2700: 250 205 zoom=2.8
+ambient 0.55 0.5 0.48
+exposure 0.32
+// Open on the tap and the stream, pan down the cascade as the molds fill,
+// hold on the molds and tank for the quench, and end on the dulling castings.
+at 0: 200 170 zoom=2
+at 300: 210 180 zoom=2
+at 900: 305 215 zoom=2.2
+at 1800: 305 215 zoom=2.2
+at 2700: 305 226 zoom=2.8
 
 [expect]
 // No stone melts into lava anywhere in the hall.
@@ -99,14 +102,23 @@ after 300: count lava in 20 40 748 400 == 0
 after 900: count lava in 20 40 748 400 == 0
 after 1800: count lava in 20 40 748 400 == 0
 after 2700: count lava in 20 40 748 400 == 0
-// Every mold is full of still-liquid metal when the quench starts.
-after 1000: count molten_metal in 158 186 198 200 >= 476
-after 1000: count molten_metal in 202 206 246 220 >= 523
-after 1000: count molten_metal in 250 226 290 240 >= 476
-after 1000: count molten_metal in 294 246 334 260 >= 476
-// Molten metal reaches the tank, and the tank boils off only gradually.
+// When the quench starts every mold is at least 95% full (cavities of 560,
+// 616, 560 and 560 cells; no water has reached them yet, so whatever is not
+// air is metal) and at least 90% of each is still liquid.
+after 1000: count air in 158 186 198 200 <= 28
+after 1000: count air in 202 206 246 220 <= 30
+after 1000: count air in 250 226 290 240 <= 28
+after 1000: count air in 294 246 334 260 <= 28
+after 1000: count molten_metal in 158 186 198 200 >= 504
+after 1000: count molten_metal in 202 206 246 220 >= 555
+after 1000: count molten_metal in 250 226 290 240 >= 504
+after 1000: count molten_metal in 294 246 334 260 >= 504
+// The overflow pools on the tank floor, still liquid, before the flood.
 after 1000: count molten_metal in 338 262 466 300 >= 300
-after 1090: count steam in 20 40 748 380 > 800
-after 1500: count water in 338 262 466 300 >= 3700
-// The castings are fully solid by the end.
+// Steam rises in the quench.
+after 1100: count steam in 20 40 748 380 > 800
+// The tank boils off only gradually: at least 85% of its starting 2432 cells.
+after 1500: count water in 338 262 466 300 >= 2068
+// The tank metal froze in place on the floor, and the castings are solid.
+after 1800: count metal in 338 262 466 300 >= 300
 after 2400: count molten_metal in 158 186 334 260 == 0
