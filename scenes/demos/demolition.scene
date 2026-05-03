@@ -1,18 +1,20 @@
 // Demolition: a 16 x 36 m brick tower with timber floors and glass windows
 // (10 cells per metre), brought down in real time under real gravity.
 //
-// Charges are explode events, not packed explosives. Over about 2.5 s they cut
-// the right wall and the right core on floors 1-3, then the left core on floor
-// 1, then, half a second later, the left wall on floor 1. The right side loses
-// three storeys and the left only one, so once the base is cut the tower comes
-// free as one rigid body, drops onto its left stumps and pivots right. It
-// shatters on the ground: small fragments near the impact, big slabs farther
-// up the tower. A grey dust cloud rolls out over the ground, the oil-soaked
-// timber floors and wooden crates catch fire inside the falling structure, and
-// the scene ends on a smoking, burning pile.
+// The charges are explode events; no explosive is packed in the build. Over
+// about two seconds they cut the right wall and the right core on floors 1-3,
+// then the left core at the floor 2 slab, then, half a second later, the left
+// wall just above the floor 1 slab. Floor 1 on the left stays standing as a
+// stump, while the right half of the tower has nothing under it for three
+// storeys. The tower comes free as one rigid body, drops onto the stump,
+// pivots right on its left wall and takes about six seconds to go over. It
+// shatters when it hits the concrete pad, the pieces tumble against the soil
+// bank on the right, and blast and crack dust puffs up. The timber floors and
+// the wooden crates on floors 2-5 catch fire from the charges, an oil film
+// burns at the foot of the stump, and the scene ends on a burning pile.
 [scene]
 name = demolition
-description = Staggered charges cut a brick tower's base; it tips right on its last wall, shatters into slabs and fragments, and burns in a cloud of dust.
+description = Staggered charges cut a brick tower's base; it pivots right on its last wall, topples in real time, shatters on the ground and burns.
 size = 960 540
 seed = 0xde30
 ticks = 1500
@@ -108,6 +110,7 @@ fill 438 398 468 400 oil
 fill 418 350 428 360 wood
 fill 476 352 486 360 wood
 fill 530 350 540 360 wood
+fill 440 352 450 360 wood
 // floor 4 (slab top y 320)
 fill 412 312 424 320 wood
 fill 468 310 478 320 wood
@@ -118,6 +121,7 @@ fill 416 270 426 280 wood
 fill 470 272 482 280 wood
 fill 492 274 500 280 wood
 fill 528 270 538 280 wood
+fill 440 272 450 280 wood
 
 [events]
 // Right wall and right core on floors 1-3, a quarter second apart. The core
@@ -146,4 +150,7 @@ exposure 1.4
 at 0: 480 280 zoom=1.1
 at 450: 480 280 zoom=1.1
 at 800: 560 315 zoom=1.2
-at 1500: 600 340 zoom=1.35
+at 1500: 650 350 zoom=1.55
+
+[expect]
+after 1500: count burning_wood in 0 0 960 500 >= 100

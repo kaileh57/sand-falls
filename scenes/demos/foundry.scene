@@ -32,7 +32,7 @@ fill 0 400 768 432 bedrock
 fill 40 60 160 172 brick
 fill 50 70 150 160 air
 fill 50 160 150 166 heater
-fill 50 112 150 160 molten_metal
+fill 50 118 150 160 molten_metal
 fill 150 157 160 160 air
 fill 40 172 154 200 brick
 fill 40 200 154 380 stone
@@ -68,15 +68,15 @@ fill 20 120 22 124 torch
 // heat surges down the cascade into the tank.
 at 900: fill 150 140 160 157 air
 at 900: fill 50 160 150 166 brick
-// The quench: a sprinkler over each casting, then shut off.
-at 1000: fill 159 150 175 151 water_source
-at 1000: fill 203 166 219 167 water_source
-at 1000: fill 249 186 265 187 water_source
-at 1000: fill 293 206 309 207 water_source
-at 1500: fill 159 150 175 151 air
-at 1500: fill 203 166 219 167 air
-at 1500: fill 249 186 265 187 air
-at 1500: fill 293 206 309 207 air
+// The quench: a sprinkler bar over each casting, then shut off.
+at 1000: fill 161 150 189 151 water_source
+at 1000: fill 205 166 233 167 water_source
+at 1000: fill 253 186 281 187 water_source
+at 1000: fill 297 206 325 207 water_source
+at 1500: fill 161 150 189 151 air
+at 1500: fill 205 166 233 167 air
+at 1500: fill 253 186 281 187 air
+at 1500: fill 297 206 325 207 air
 
 [camera]
 view 960 540
@@ -86,8 +86,8 @@ ambient 0.18 0.155 0.14
 exposure 0.6
 // Open on the tap and the stream, follow the pour down the cascade, hold on
 // the molds and tank for the quench, and end on the dulling castings.
-at 0: 180 160 zoom=3
-at 250: 190 170 zoom=3
+at 0: 178 152 zoom=3
+at 250: 190 165 zoom=3
 at 700: 260 200 zoom=2.3
 at 1000: 300 220 zoom=2.3
 at 1800: 300 220 zoom=2.3
@@ -105,8 +105,8 @@ after 1000: count molten_metal in 202 206 246 220 >= 523
 after 1000: count molten_metal in 250 226 290 240 >= 476
 after 1000: count molten_metal in 294 246 334 260 >= 476
 // Molten metal reaches the tank, and the tank boils off only gradually.
-after 1000: count molten_metal in 338 262 466 300 >= 250
-after 1100: count steam in 20 40 748 380 > 600
+after 1000: count molten_metal in 338 262 466 300 >= 300
+after 1090: count steam in 20 40 748 380 > 800
 after 1500: count water in 338 262 466 300 >= 3700
 // The castings are fully solid by the end.
 after 2400: count molten_metal in 158 186 334 260 == 0
