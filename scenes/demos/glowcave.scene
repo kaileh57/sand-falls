@@ -1,212 +1,286 @@
 // Glowcave: magma breach.
 //
 // A dark cavern lit only by blue glowshroom clusters, violet crystal spikes
-// and lava. At first it is calm: mist drifts off the shore of a black lake and
-// water drips from the stalactites. At tick 300 the obsidian plug holding back
-// a magma chamber is blown out with a flash, and glowing droplets of lava arc
-// through the dark as particles. The lava pours down a stepped ramp. It holds
-// a lot of heat and gives off latent heat before it freezes, so it stays
-// molten all the way down while its cooling edges dim from yellow to red, and
-// the rock under it heats by conduction. Where it meets the lake the water
-// flashes to steam and the lava crusts over as obsidian. At tick 900 the
-// feeder runs dry and the flow thins. At tick 1100 a blast cuts the
-// neck of a ceiling slab studded with crystals: it falls as a rigid body,
-// its crystals still lighting the cave around it, and crashes into the lake.
+// and lava. At first it is calm: mist drifts off the shore of a black lake
+// and water drips from the stalactites. At tick 290 the obsidian plug that
+// holds back a magma chamber is blown out with a flash, and its red-hot
+// fragments fly out over the cave as glowing particles. The lava pours down
+// a stepped ramp. It holds a lot of heat and gives off latent heat before it
+// freezes, so it stays molten all the way down, and the rock beside it glows
+// where it heats by conduction. Where it runs into the lake the water flashes
+// to steam and the front crusts over as obsidian. The feeder in the chamber
+// roof is cut off at tick 480, so the flow thins and dims from yellow toward
+// red as it cools. At tick 1100 blasts cut the neck of a ceiling slab
+// studded with crystals: it falls as a rigid body, its crystals still lighting
+// the cave around it, and plunges into the lake, throwing the water up over
+// it. In the aftermath a stalactite over the cooling front starts to drip.
+// A light draft carries the steam out over the lake.
 [scene]
 name = glowcave
-description = Magma breaches into a dark cavern lit by glowing fungus and crystals: lava pours down a stepped ramp and boils the lake into orange-lit steam, then a crystal-studded slab breaks from the ceiling and crashes into the water.
+description = Magma breaks into a dark cavern lit by glowing fungus and crystals: the plug blows out in a shower of sparks, lava runs down a stepped ramp and quenches in the lake in steam and obsidian, then a crystal-studded slab breaks from the ceiling and plunges into the water.
 size = 960 576
 seed = 0x91c4
 ticks = 1800
+wind = 2
 
 [build]
 fill 0 0 960 576 stone
-// The cavern: a ragged ceiling, with a bulge of rock and domes cut up into
-// the rock to break up its outline.
-terrain 264 944 128 18 29 air 420
-// Bulges of rock hanging from the ceiling, each centred inside the rock.
-circle 290 102 26 stone
-// Domes cut up into the rock.
-circle 352 118 24 air
-circle 486 112 30 air
-circle 742 110 26 air
-circle 868 114 32 air
-circle 921 200 25 air
+// The cavern: many overlapping hollows of different sizes, so its outline
+// is ragged rather than a few smooth domes.
+circle 352 228 30 air
+circle 395 182 38 air
+circle 452 158 42 air
+circle 520 150 36 air
+circle 566 176 30 air
+circle 742 158 38 air
+circle 800 140 44 air
+circle 858 152 36 air
+circle 905 186 30 air
+circle 330 268 30 air
+circle 392 252 46 air
+circle 470 236 54 air
+circle 548 240 50 air
+circle 626 262 44 air
+circle 700 262 46 air
+circle 774 232 52 air
+circle 846 236 48 air
+circle 910 250 30 air
+circle 440 330 50 air
+circle 520 330 56 air
+circle 600 336 54 air
+circle 680 330 56 air
+circle 760 330 56 air
+circle 840 330 54 air
+circle 905 326 36 air
+circle 470 384 36 air
+circle 540 388 30 air
+circle 610 384 34 air
+circle 680 388 30 air
+circle 750 384 36 air
+circle 820 388 30 air
+circle 880 384 28 air
+circle 920 390 22 air
+circle 486 133 4 air
+circle 512 188 29 air
+circle 836 186 43 air
+circle 777 178 6 air
+circle 588 203 21 air
+circle 725 202 21 air
+circle 431 197 5 air
+circle 878 200 2 air
+circle 428 202 2 air
+circle 426 204 2 air
+circle 805 280 19 air
+circle 509 274 4 air
+circle 433 278 7 air
+circle 573 285 16 air
+circle 744 276 3 air
+circle 481 289 2 air
+circle 475 292 6 air
+circle 402 297 2 air
+circle 929 299 2 air
+circle 896 361 2 air
+circle 642 372 2 air
+circle 646 386 15 air
+circle 712 386 15 air
+circle 787 387 14 air
+circle 573 390 11 air
+circle 852 391 10 air
+circle 507 392 9 air
+circle 714 184 2 air
+// Small bites to roughen the ceiling and walls.
+circle 372 150 16 air
+circle 488 112 20 air
+circle 548 118 14 air
+circle 770 108 18 air
+circle 834 104 14 air
+circle 884 118 18 air
+circle 930 222 12 air
+circle 934 290 10 air
+circle 410 214 18 air
+circle 318 236 14 air
 // Magma chamber in the rock at the upper left, behind an obsidian plug.
-circle 130 255 60 air
-fill 72 255 190 322 air
-fill 190 262 252 318 air
-fill 72 268 252 318 lava
+circle 180 258 46 air
+fill 140 262 252 318 air
+fill 140 268 252 318 lava
 fill 252 262 264 318 obsidian
 // Fresh lava trickles in from the chamber roof and keeps the pool molten.
-fill 114 196 146 198 lava_source
-// Stepped ramp from the plug down to the lake: four treads tilted toward
-// the lake, each about 24 cells below the last, so the lava never falls far.
-fill 264 318 266 576 stone
-fill 266 318 268 576 stone
-fill 268 319 270 576 stone
-fill 270 320 272 576 stone
-fill 272 320 274 576 stone
-fill 274 321 276 576 stone
-fill 276 322 278 576 stone
-fill 278 322 280 576 stone
-fill 280 323 282 576 stone
-fill 282 324 284 576 stone
-fill 284 324 286 576 stone
-fill 286 325 288 576 stone
-fill 288 326 290 576 stone
-fill 290 326 292 576 stone
-fill 292 327 294 576 stone
-fill 294 328 296 576 stone
-fill 296 328 298 576 stone
-fill 298 329 300 576 stone
-fill 300 342 302 576 stone
-fill 302 342 304 576 stone
-fill 304 343 306 576 stone
-fill 306 344 308 576 stone
-fill 308 344 310 576 stone
-fill 310 345 312 576 stone
-fill 312 346 314 576 stone
-fill 314 346 316 576 stone
-fill 316 347 318 576 stone
-fill 318 348 320 576 stone
-fill 320 348 322 576 stone
-fill 322 349 324 576 stone
-fill 324 350 325 576 stone
-fill 325 366 327 576 stone
-fill 327 366 329 576 stone
-fill 329 367 331 576 stone
-fill 331 368 333 576 stone
-fill 333 368 335 576 stone
-fill 335 369 337 576 stone
-fill 337 370 339 576 stone
-fill 339 370 341 576 stone
-fill 341 371 343 576 stone
-fill 343 372 345 576 stone
-fill 345 390 347 576 stone
-fill 347 390 349 576 stone
-fill 349 391 351 576 stone
-fill 351 392 353 576 stone
-fill 353 392 355 576 stone
-fill 355 393 357 576 stone
-fill 357 394 359 576 stone
-fill 359 394 361 576 stone
-fill 361 395 362 576 stone
-// The lake basin, with an uneven floor, and a rocky shore on the right.
-fill 362 420 870 576 stone
-fill 362 420 870 500 air
-terrain 362 870 500 7 29 stone 576
-fill 362 420 870 494 water
+fill 170 214 190 216 lava_source
+// Stepped ramp from the plug down to the lake: three treads tilted toward
+// the lake, each 16 cells below the last, then a slope that runs on under
+// the water, so the lava never falls far.
+fill 252 318 470 576 stone
+fill 264 246 420 318 air
+fill 264 300 288 322 air
+fill 264 322 267 322 air
+fill 267 322 270 322 air
+fill 270 322 273 323 air
+fill 273 322 276 323 air
+fill 276 322 279 324 air
+fill 279 322 282 325 air
+fill 282 322 285 325 air
+fill 285 322 288 326 air
+fill 288 300 312 339 air
+fill 288 339 291 339 air
+fill 291 339 294 339 air
+fill 294 339 297 340 air
+fill 297 339 300 340 air
+fill 300 339 303 341 air
+fill 303 339 306 342 air
+fill 306 339 309 342 air
+fill 309 339 312 343 air
+fill 312 300 336 356 air
+fill 312 356 315 356 air
+fill 315 356 318 356 air
+fill 318 356 321 357 air
+fill 321 356 324 357 air
+fill 324 356 327 358 air
+fill 327 356 330 359 air
+fill 330 356 333 359 air
+fill 333 356 336 360 air
+fill 336 300 420 364 air
+// The lake, with an uneven floor, and a rocky shore on the right.
+fill 470 400 944 576 stone
+fill 336 300 870 420 air
+fill 336 420 870 500 water
+terrain 440 870 500 7 29 stone 576
+// The last tread runs on as a slope under the water.
+fill 336 364 339 576 stone
+fill 339 370 342 576 stone
+fill 342 376 345 576 stone
+fill 345 382 348 576 stone
+fill 348 388 351 576 stone
+fill 351 394 354 576 stone
+fill 354 400 357 576 stone
+fill 357 406 360 576 stone
+fill 360 412 363 576 stone
+fill 363 418 366 576 stone
+fill 366 424 369 576 stone
+fill 369 430 372 576 stone
+fill 372 436 375 576 stone
+fill 375 442 378 576 stone
+fill 378 448 381 576 stone
+fill 381 454 384 576 stone
+fill 384 460 387 576 stone
+fill 387 466 390 576 stone
+fill 390 472 393 576 stone
+fill 393 478 396 576 stone
+fill 396 484 399 576 stone
+fill 399 490 402 576 stone
+fill 402 496 405 576 stone
+fill 405 502 408 576 stone
+fill 408 508 411 576 stone
+fill 411 514 414 576 stone
 fill 870 414 944 576 stone
 circle 904 428 18 stone
+fill 944 0 960 576 stone
 // Ledges: over the breach, a shelf under the ceiling, and high on the right wall.
-fill 264 238 322 246 stone
+fill 264 238 324 246 stone
+circle 300 247 6 stone
 fill 430 182 500 190 stone
-fill 878 300 944 308 stone
-circle 284 250 10 stone
-circle 466 192 9 stone
-circle 906 312 8 stone
-// A column of rock from the ceiling holds up the shelf.
+circle 470 191 6 stone
 fill 456 100 474 160 stone
 fill 460 160 470 182 stone
-// Stalactites, each with a drip at the tip. The two at the left drip onto
-// the lava where it runs into the lake.
-fill 328 60 340 144 stone
-fill 331 144 338 179 stone
-fill 333 179 335 200 stone
-fill 332 200 337 201 rain_cloud
-fill 366 60 378 150 stone
-fill 369 150 376 187 stone
-fill 371 187 373 210 stone
-fill 370 210 375 211 rain_cloud
-fill 533 60 547 144 stone
-fill 536 144 544 179 stone
-fill 539 179 541 200 stone
-fill 538 200 543 201 rain_cloud
-fill 771 60 785 136 stone
-fill 774 136 782 168 stone
-fill 777 168 779 188 stone
-fill 776 188 781 189 rain_cloud
+fill 878 300 944 308 stone
+circle 912 309 6 stone
+// Stalactites over the lake, each with a drip at its tip.
+fill 532 96 548 144 stone
+fill 535 144 545 168 stone
+fill 537 168 543 182 stone
+fill 539 182 542 192 stone
+fill 539 192 542 193 rain_cloud
+fill 783 90 801 140 stone
+fill 786 140 798 165 stone
+fill 789 165 796 180 stone
+fill 791 180 794 190 stone
+fill 791 190 794 191 rain_cloud
+fill 859 100 873 142 stone
+fill 862 142 871 163 stone
+fill 864 163 869 175 stone
+fill 865 175 868 184 stone
+fill 865 184 868 185 rain_cloud
+// A dry stalactite over the shore where the lava will run into the lake.
+fill 384 120 396 176 stone
+fill 387 176 393 200 stone
+fill 389 200 391 214 stone
 // The slab: hung from the ceiling by a 14-cell neck, with an air moat on
 // every side, and crystals growing beneath it.
-fill 596 60 714 150 stone
-fill 596 150 714 236 air
+fill 590 60 720 150 stone
+fill 596 150 714 240 air
 fill 648 150 662 170 stone
 fill 610 170 700 212 stone
 fill 614 212 617 218 crystal
 fill 615 218 616 222 crystal
-fill 624 212 629 224 crystal
-fill 625 224 628 232 crystal
-fill 638 212 641 217 crystal
-fill 639 217 640 221 crystal
-fill 650 212 655 226 crystal
-fill 651 226 654 236 crystal
+fill 624 212 628 222 crystal
+fill 625 222 627 230 crystal
+fill 638 212 641 216 crystal
+fill 639 216 640 220 crystal
+fill 650 212 654 225 crystal
+fill 651 225 653 234 crystal
 fill 664 212 667 219 crystal
 fill 665 219 666 224 crystal
-fill 676 212 680 222 crystal
-fill 677 222 679 230 crystal
-fill 690 212 693 217 crystal
-fill 691 217 692 221 crystal
+fill 676 212 680 221 crystal
+fill 677 221 679 228 crystal
+fill 690 212 693 216 crystal
+fill 691 216 692 220 crystal
 // Crystal spikes on the shore and hanging under the ledges.
 fill 874 409 877 414 crystal
 fill 875 405 876 409 crystal
 fill 879 405 883 414 crystal
 fill 880 398 882 405 crystal
-fill 885 400 890 414 crystal
-fill 886 390 889 400 crystal
-fill 892 407 895 414 crystal
-fill 893 402 894 407 crystal
-fill 914 404 918 414 crystal
-fill 915 396 917 404 crystal
-fill 919 399 924 414 crystal
-fill 920 388 923 399 crystal
-fill 925 407 928 414 crystal
-fill 926 402 927 407 crystal
-fill 935 410 938 414 crystal
-fill 936 406 937 410 crystal
+fill 885 402 889 414 crystal
+fill 886 394 888 402 crystal
+fill 892 408 895 414 crystal
+fill 893 404 894 408 crystal
+fill 915 406 919 414 crystal
+fill 916 400 918 406 crystal
+fill 920 402 924 414 crystal
+fill 921 394 923 402 crystal
+fill 926 408 929 414 crystal
+fill 927 404 928 408 crystal
+fill 936 410 939 414 crystal
+fill 937 407 938 410 crystal
 fill 442 190 445 196 crystal
 fill 443 196 444 200 crystal
-fill 455 190 460 202 crystal
-fill 456 202 459 210 crystal
-fill 482 190 485 197 crystal
-fill 483 197 484 202 crystal
-fill 296 246 300 254 crystal
-fill 297 254 299 260 crystal
-fill 305 246 308 250 crystal
-fill 306 250 307 254 crystal
-fill 893 308 897 317 crystal
-fill 894 317 896 324 crystal
-fill 910 308 913 313 crystal
-fill 911 313 912 317 crystal
+fill 452 190 456 199 crystal
+fill 453 199 455 206 crystal
+fill 486 190 489 197 crystal
+fill 487 197 488 202 crystal
+fill 290 246 293 253 crystal
+fill 291 253 292 258 crystal
+fill 310 246 313 250 crystal
+fill 311 250 312 254 crystal
+fill 892 308 896 316 crystal
+fill 893 316 895 322 crystal
+fill 906 308 909 312 crystal
+fill 907 312 908 316 crystal
+fill 926 308 929 314 crystal
+fill 927 314 928 318 crystal
 // Glowshroom clusters: caps on one-cell stems.
 // Over the breach.
-fill 269 234 270 238 glowshroom
-fill 268 232 271 234 glowshroom
-fill 274 231 275 238 glowshroom
-fill 272 229 277 231 glowshroom
-fill 280 235 281 238 glowshroom
-fill 279 233 282 235 glowshroom
-fill 285 233 286 238 glowshroom
-fill 284 231 287 233 glowshroom
-fill 290 229 291 238 glowshroom
-fill 288 227 293 229 glowshroom
-fill 311 235 312 238 glowshroom
-fill 310 233 313 235 glowshroom
-fill 316 232 317 238 glowshroom
-fill 314 230 319 232 glowshroom
-// Shelf under the ceiling.
-fill 435 179 436 182 glowshroom
-fill 434 177 437 179 glowshroom
-fill 440 175 441 182 glowshroom
-fill 438 173 443 175 glowshroom
-fill 446 178 447 182 glowshroom
-fill 445 176 448 178 glowshroom
-fill 451 180 452 182 glowshroom
-fill 450 178 453 180 glowshroom
-fill 489 176 490 182 glowshroom
-fill 487 174 492 176 glowshroom
-fill 495 179 496 182 glowshroom
-fill 494 177 497 179 glowshroom
+fill 272 234 273 238 glowshroom
+fill 271 232 274 234 glowshroom
+fill 277 231 278 238 glowshroom
+fill 275 229 280 231 glowshroom
+fill 283 235 284 238 glowshroom
+fill 282 233 285 235 glowshroom
+fill 300 233 301 238 glowshroom
+fill 299 231 302 233 glowshroom
+fill 306 229 307 238 glowshroom
+fill 304 227 309 229 glowshroom
+fill 312 234 313 238 glowshroom
+fill 311 232 314 234 glowshroom
+// On the shelf under the ceiling.
+fill 436 179 437 182 glowshroom
+fill 435 177 438 179 glowshroom
+fill 441 175 442 182 glowshroom
+fill 439 173 444 175 glowshroom
+fill 447 178 448 182 glowshroom
+fill 446 176 449 178 glowshroom
+fill 488 176 489 182 glowshroom
+fill 486 174 491 176 glowshroom
+fill 494 179 495 182 glowshroom
+fill 493 177 496 179 glowshroom
 // High on the right wall.
 fill 884 296 885 300 glowshroom
 fill 883 294 886 296 glowshroom
@@ -214,12 +288,10 @@ fill 890 292 891 300 glowshroom
 fill 888 290 893 292 glowshroom
 fill 896 297 897 300 glowshroom
 fill 895 295 898 297 glowshroom
-fill 901 295 902 300 glowshroom
-fill 900 293 903 295 glowshroom
-fill 927 294 928 300 glowshroom
-fill 925 292 930 294 glowshroom
-fill 934 297 935 300 glowshroom
-fill 933 295 936 297 glowshroom
+fill 926 294 927 300 glowshroom
+fill 924 292 929 294 glowshroom
+fill 933 297 934 300 glowshroom
+fill 932 295 935 297 glowshroom
 // On the shore among the crystals.
 fill 897 410 898 414 glowshroom
 fill 896 408 899 410 glowshroom
@@ -227,55 +299,59 @@ fill 903 406 904 414 glowshroom
 fill 901 404 906 406 glowshroom
 fill 909 411 910 414 glowshroom
 fill 908 409 911 411 glowshroom
-fill 929 408 930 414 glowshroom
-fill 927 406 932 408 glowshroom
+fill 930 408 931 414 glowshroom
+fill 928 406 933 408 glowshroom
 fill 940 411 941 414 glowshroom
 fill 939 409 942 411 glowshroom
 // Mist rising off the shore rock just above the waterline.
 scatter 870 408 944 414 mist_source 25
 // A little moss and vine, sparse enough not to outline every surface. They
 // stay off the slab: decorations left behind would pin it once it is cut loose.
-decorate 264 90 594 420 moss 2 ceiling
-decorate 264 90 594 420 vine 1 ceiling
-decorate 264 90 594 420 glowshroom 1 floor
-decorate 716 90 944 420 moss 2 ceiling
-decorate 716 90 944 420 vine 1 ceiling
-decorate 716 90 944 420 glowshroom 1 floor
-decorate 594 238 716 420 moss 2 ceiling
-decorate 594 238 716 420 vine 1 ceiling
-decorate 594 238 716 420 glowshroom 1 floor
+decorate 264 90 588 400 moss 2 ceiling
+decorate 264 90 588 400 vine 1 ceiling
+decorate 722 90 944 400 moss 2 ceiling
+decorate 722 90 944 400 vine 1 ceiling
+decorate 588 244 722 400 moss 2 ceiling
+decorate 588 244 722 400 vine 1 ceiling
 run 60
 
 [events]
-// The breach: the plug is blown out with a flash, and the blasts in the lava
-// behind it throw glowing droplets out into the cave.
-at 300: explode 254 300 9 150
-at 300: fill 252 262 264 318 air
-at 300: explode 245 292 12 255
-at 300: explode 245 308 12 255
-// The feeder runs dry and the flow from the chamber thins.
-at 900: fill 114 196 146 198 stone
-// The slab's neck is blasted through and it falls into the lake.
-at 1100: explode 655 160 9 220
+// The breach: the plug is blown out with a flash, and blasts in the lava
+// behind it throw glowing droplets out into the dark.
+at 290: explode 254 296 14 255
+at 290: explode 254 310 12 255
+at 290: dig 258 303 16
+at 290: fill 250 270 272 318 air
+at 290: explode 250 303 8 120
+at 290: explode 286 298 24 100
+at 290: paint 282 298 9 fire
+// The feeder in the chamber roof is cut off and the flow thins.
+at 480: fill 170 214 190 216 stone
+// Steam condensing on the ceiling starts to drip on the cooling crust.
+at 1250: fill 388 214 391 215 rain_cloud
+// Blasts on either side of the slab's neck cut it, and it falls into the lake.
+at 1100: explode 642 160 10 220
+at 1100: explode 668 160 10 220
 at 1100: dig 655 160 8
+at 1100: paint 638 160 6 fire
+at 1100: paint 672 160 6 fire
 
 [camera]
 view 960 540
 scale 2
 sky cave
-ambient 0.06 0.06 0.08
-exposure 2.0
+ambient 0.12 0.12 0.15
+exposure 1.6
 at 0: 480 300
-at 260: 480 300
-at 310: 300 320 zoom=1.6
-at 470: 320 340 zoom=1.6
-at 600: 430 360 zoom=1.4
-at 700: 520 350 zoom=1.25
-at 1000: 520 350 zoom=1.25
+at 240: 480 300
+at 290: 300 320 zoom=1.6
+at 480: 330 340 zoom=1.6
+at 600: 440 360 zoom=1.3
+at 1000: 470 340 zoom=1.2
 at 1060: 480 300
-at 1300: 480 300
-at 1420: 500 320 zoom=1.1
-at 1800: 500 320 zoom=1.1
+at 1320: 480 300
+at 1450: 440 330 zoom=1.15
+at 1800: 440 330 zoom=1.15
 
 [expect]
 after 302: particles >= 20
