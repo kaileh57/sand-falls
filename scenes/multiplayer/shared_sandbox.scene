@@ -1,55 +1,52 @@
-// Shared sandbox: eight players in one world full of set pieces, each wired
-// to a different system. Beside the spawn a forest burns, sand dunes slide,
-// and a pond sits on a thin cap over a lava pocket. Further out, a water tower
-// on wooden stilts falls as a body and splashes, and a gunpowder fuse under a
-// stone ridge chains on into a brick bridge and a second forest. Only inputs
-// cross the network, so the bandwidth graph stays flat while the screen fills
-// with chaos.
+// Shared sandbox: eight players in one world of set pieces, each wired to a
+// different system. Left to right: a pond on a thin stone cap over a lava
+// pocket, sand dunes beside the spawn, a mill pond, a stone ridge over a
+// gunpowder vein, a brick bridge over a flooded ravine, and a forest.
+//
+// The bots dig, paint, drop crates and blast near the spawn, so the dunes and
+// the ponds are theirs to set off. The world also has its own timeline, which
+// is scene data that every peer runs, so it costs no bandwidth either:
+//   tick 720   the vein is lit; it chains under the ridge to two charges
+//   tick 1200  the charges at the bridge piers go off; the deck drops into
+//              the pool
+//   tick 1500  a charge at the forest's edge goes off and the forest burns
+//   tick 1800  unless a player got there first, the lava cap is cracked and
+//              the pond drains onto the lava
+// Only inputs cross the network, so the bandwidth graph stays flat while the
+// screen fills with chaos.
+//
+// There is no water tower: a body carrying liquid in its own hollow is lifted
+// by that liquid and floats up instead of falling, so a tank on stilts cannot
+// fall and splash until the engine fixes that.
 [scene]
 name = shared sandbox
-description = Eight players set off sand, fire, lava, a falling water tower and a gunpowder chain through a ridge and a bridge; bandwidth stays flat because only inputs cross the network.
+description = Eight players dig into sand dunes and ponds over lava while charges chain through a ridge, a brick bridge and a forest; bandwidth stays flat because only inputs cross the network.
 size = 768 432
 seed = 0x5a4d
 spawn = 200 220
 
 [build]
 // Trees go in before the ground so the soil cuts each trunk at the surface.
-fill 138 226 142 272 wood
-circle 140 222 11 leaves
-circle 132 230 7 leaves
-circle 148 229 7 leaves
-fill 158 212 162 272 wood
-circle 160 208 14 leaves
-circle 149 216 9 leaves
-circle 171 215 9 leaves
-fill 179 232 182 272 wood
-circle 180 228 9 leaves
-circle 174 236 6 leaves
-circle 186 235 6 leaves
-fill 616 222 620 272 wood
-circle 618 218 12 leaves
-circle 609 226 8 leaves
-circle 627 225 8 leaves
-fill 640 210 644 272 wood
-circle 642 206 14 leaves
-circle 631 214 9 leaves
-circle 653 213 9 leaves
-fill 663 228 666 272 wood
-circle 664 224 10 leaves
-circle 657 232 6 leaves
-circle 671 231 6 leaves
-fill 686 214 690 272 wood
-circle 688 210 14 leaves
-circle 677 218 9 leaves
-circle 699 217 9 leaves
-fill 710 224 714 272 wood
-circle 712 220 12 leaves
-circle 703 228 8 leaves
-circle 721 227 8 leaves
-fill 732 232 735 272 wood
-circle 733 228 9 leaves
-circle 727 236 6 leaves
-circle 739 235 6 leaves
+fill 606 226 610 272 wood
+circle 608 222 11 leaves
+circle 600 230 7 leaves
+circle 616 229 7 leaves
+fill 632 212 636 272 wood
+circle 634 208 14 leaves
+circle 623 216 9 leaves
+circle 645 215 9 leaves
+fill 657 228 660 272 wood
+circle 658 224 10 leaves
+circle 651 232 6 leaves
+circle 665 231 6 leaves
+fill 682 214 686 272 wood
+circle 684 210 14 leaves
+circle 673 218 9 leaves
+circle 695 217 9 leaves
+fill 708 226 712 272 wood
+circle 710 222 11 leaves
+circle 701 230 7 leaves
+circle 719 229 7 leaves
 
 // Ground: soil over stone over bedrock.
 fill 0 380 768 432 bedrock
@@ -58,71 +55,81 @@ terrain 0 768 288 6 48 stone 380
 fill 0 0 4 380 bedrock
 fill 764 0 768 380 bedrock
 
-// 1. Sand dunes, piled past their angle of repose, left of the spawn.
-fill 40 244 132 264 sand
-fill 50 226 122 244 sand
-fill 62 210 110 226 sand
-fill 74 196 98 210 sand
+// 1. A pond on a thin stone cap over a lava pocket. There is more water than
+// lava, so when the cap breaks the water boils on the lava and crusts it over
+// as obsidian instead of the lava flooding the surface.
+fill 26 258 114 300 stone
+fill 32 258 108 284 water
+fill 48 289 92 296 lava
+circle 60 300 9 lava
+circle 80 300 9 lava
+circle 70 304 9 lava
 
-// 2. A forest beside the spawn, with undergrowth.
-decorate 130 200 196 266 leaves 35 floor
+// 2. Sand dunes right of the pond, beside the spawn, at their angle of rest.
+fill 118 254 182 264 sand
+fill 124 244 176 254 sand
+fill 130 234 168 244 sand
+fill 137 225 160 234 sand
+fill 143 217 154 225 sand
 
-// 3. A pond on a thin stone cap over a lava pocket, just right of the spawn.
-// Dig through the pond floor and the water meets the lava.
-fill 206 259 298 340 stone
-fill 214 259 290 282 water
-fill 220 288 284 326 lava
-circle 232 312 16 lava
-circle 272 312 16 lava
-circle 252 322 14 lava
+// 3. A mill pond beside the spawn, for crates and players to fall into and
+// for painted lava to quench in.
+fill 264 256 336 280 stone
+fill 268 256 332 276 water
 
-// 4. Water tower: a wooden tank of water on two thin wooden stilts.
-fill 320 214 323 268 wood
-fill 349 214 352 268 wood
-fill 312 210 360 214 wood
-fill 312 174 315 210 wood
-fill 357 174 360 210 wood
-fill 315 178 357 210 water
+// 4. Stone ridge over a gunpowder vein. The vein surfaces left of the ridge
+// and has two TNT charges under it. It ends well short of the bridge fuse,
+// so the two go off separately.
+fill 356 252 424 262 stone
+fill 362 242 418 252 stone
+fill 368 232 412 242 stone
+fill 375 224 405 232 stone
+fill 382 218 398 224 stone
+fill 344 258 352 268 gunpowder
+fill 344 264 416 268 gunpowder
+fill 372 256 380 268 tnt
+fill 400 256 408 268 tnt
 
-// 5. Stone ridge over a gunpowder vein. The vein surfaces left of the ridge
-// and has two TNT charges under it.
-fill 410 252 476 262 stone
-fill 416 242 470 252 stone
-fill 422 232 464 242 stone
-fill 429 224 457 232 stone
-fill 436 218 450 224 stone
-fill 398 258 406 268 gunpowder
-fill 398 264 483 268 gunpowder
-fill 426 256 434 268 tnt
-fill 452 256 460 268 tnt
+// 5. Brick bridge over a ravine with a pool. The deck clears both banks and
+// stands on two piers founded on the ravine floor, so cutting the piers drops
+// it into the pool.
+fill 459 240 580 262 air
+fill 459 262 466 266 soil
+fill 569 262 580 266 soil
+fill 466 262 569 380 air
+fill 466 320 569 380 stone
+fill 466 296 569 320 water
+fill 469 262 566 272 brick
+fill 490 272 497 320 brick
+fill 538 272 545 320 brick
 
-// 6. Brick bridge over a ravine with a pool. The deck stands on two piers,
-// not on the banks, so cutting the piers drops it. The fuse drops down the
-// near bank and runs under the pool to a charge at the foot of each pier,
-// then climbs the far bank.
-fill 476 240 572 262 air
-fill 476 262 483 266 soil
-fill 561 262 572 266 soil
-fill 483 262 561 380 air
-fill 483 320 561 380 stone
-fill 483 300 561 320 water
-fill 484 262 560 272 brick
-fill 504 272 511 320 brick
-fill 533 272 540 320 brick
-fill 478 264 482 330 gunpowder
-fill 478 326 566 330 gunpowder
-fill 562 264 566 330 gunpowder
-fill 503 310 512 328 tnt
-fill 532 310 541 328 tnt
+// 6. A forest across the ravine, with a TNT charge at the edge of it.
+fill 596 258 604 268 tnt
+decorate 590 200 740 266 leaves 30 floor
 
-// 7. The fuse ends under a second forest, across the ravine.
-fill 562 264 602 268 gunpowder
-fill 598 260 606 268 tnt
-decorate 600 200 744 266 leaves 30 floor
+[events]
+// The vein is lit where it surfaces left of the ridge.
+every 2 from 720 to 740: heat 348 259 4 12
+// Charges cut the left pier, then the right one a quarter second later. The
+// explosions do not break brick under water, so the submerged foot of each
+// pier is cut away in the same tick.
+at 1200: explode 493 280 8 220
+at 1200: explode 493 292 7 200
+at 1200: dig 493 304 6
+at 1200: dig 493 315 6
+at 1215: explode 541 280 8 220
+at 1215: explode 541 292 7 200
+at 1215: dig 541 304 6
+at 1215: dig 541 315 6
+// The charge at the forest's edge goes off and the trees catch.
+every 1 from 1500 to 1506: heat 600 263 6 60
+// Backstop for the lava moment if no player has broken the cap yet.
+at 1800: explode 70 286 7 160
+at 1800: dig 70 288 9
 
 [camera]
 view 960 540
 scale 2
 sky day
 ambient 0.25 0.25 0.28
-at 0: 384 198 zoom=1.35
+at 0: 384 216 zoom=1.25
