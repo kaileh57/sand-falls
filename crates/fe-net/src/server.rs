@@ -173,7 +173,10 @@ impl ServerCore {
     fn handle(&mut self, now_us: u64, from: Peer, m: Msg, net: &mut impl Transport) {
         match m {
             Msg::Hello { protocol, name, materials, scene } => {
-                if self.clients.contains_key(&from) {
+                if let Some(c) = self.clients.get(&from) {
+                    // The welcome was lost and the client asked again.
+                    let player = c.player;
+                    self.send(net, from, &Msg::Welcome { player });
                     return;
                 }
                 let reason = if protocol != PROTOCOL {

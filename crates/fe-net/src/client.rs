@@ -32,7 +32,12 @@ pub struct ClientStats {
     pub rtt_us: u64,
     /// Ticks between sampling a local input and the server applying it.
     pub lead_ticks: u64,
+    /// Snapshot data received, in bytes.
+    pub snapshot_bytes: u64,
 }
+
+/// How long a client waits for a welcome before asking again, in microseconds.
+const HELLO_RETRY_US: u64 = 400_000;
 
 /// Connection state.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -80,6 +85,10 @@ pub struct ClientCore {
     predicted: Option<Avatar>,
     started_us: u64,
     last_ping: u64,
+    /// When the join request was last sent.
+    last_hello: u64,
+    /// Id of the last snapshot loaded.
+    loaded: Option<u32>,
     ticks_run: u64,
     /// Counters.
     pub stats: ClientStats,
@@ -117,6 +126,8 @@ impl ClientCore {
             predicted: None,
             started_us: 0,
             last_ping: 0,
+            last_hello: 0,
+            loaded: None,
             ticks_run: 0,
             stats: ClientStats::default(),
         }
@@ -142,6 +153,11 @@ impl ClientCore {
     /// Sends the join request.
     pub fn connect(&mut self, now_us: u64, net: &mut impl Transport) {
         self.started_us = now_us;
+        self.send_hello(now_us, net);
+    }
+
+    fn send_hello(&mut self, now_us: u64, net: &mut impl Transport) {
+        self.last_hello = now_us;
         let hello = Msg::Hello {
             protocol: PROTOCOL,
             name: self.name.clone(),
@@ -180,6 +196,15 @@ impl ClientCore {
             }
             Msg::Reject(r) => self.phase = ClientPhase::Rejected(r),
             Msg::SnapshotPart { id, part, total, data } => {
+                self.stats.snapshot_bytes += data.len() as u64;
+                if self.loaded.is_some_and(|l| id <= l) {
+                    // Our acknowledgement of a snapshot we already loaded was
+                    // lost and the server is still sending it: acknowledge again.
+                    if part == 0 {
+                        self.send(net, &Msg::SnapshotAck { id, missing: Vec::new() });
+                    }
+                    return;
+                }
                 if self.incoming.as_ref().is_none_or(|i| i.id != id) {
                     if self.incoming.as_ref().is_some_and(|i| i.id > id) {
                         return;
@@ -192,6 +217,7 @@ impl ClientCore {
                     let bytes: Vec<u8> = inc.parts.values().flatten().copied().collect();
                     let id = inc.id;
                     self.incoming = None;
+                    self.loaded = Some(id);
                     self.load_snapshot(now_us, &bytes);
                     self.send(net, &Msg::SnapshotAck { id, missing: Vec::new() });
                     self.send_inputs(net);
@@ -305,6 +331,14 @@ impl ClientCore {
     /// Advances: runs confirmed ticks, records the local input, predicts, and sends.
     pub fn tick(&mut self, now_us: u64, net: &mut impl Transport) {
         self.ticks_run += 1;
+        // The join request or the welcome can be lost: ask again until welcomed.
+        if (self.phase == ClientPhase::Connecting
+            || (self.phase != ClientPhase::Playing && self.player.is_none()))
+            && !matches!(self.phase, ClientPhase::Rejected(_))
+            && now_us.saturating_sub(self.last_hello) > HELLO_RETRY_US
+        {
+            self.send_hello(now_us, net);
+        }
         if self.phase != ClientPhase::Playing {
             return;
         }

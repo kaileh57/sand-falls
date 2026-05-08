@@ -73,7 +73,8 @@ pub struct SoakFrame<'a> {
     pub step: u64,
     /// The server.
     pub server: &'a ServerCore,
-    /// Per bot: player id, traffic, round trip in microseconds, lead ticks.
+    /// Per bot: player id, traffic without the join snapshot, round trip in
+    /// microseconds, lead ticks.
     pub bots: Vec<(Option<u8>, crate::Traffic, u64, u64)>,
     /// Simulated network packets dropped so far.
     pub dropped: u64,
@@ -180,11 +181,14 @@ fn bot_input(
 
 fn chaos_input(rng: &mut SeqRng, tick: u64, prev: PlayerInput, materials: &[u16]) -> PlayerInput {
     if !tick.is_multiple_of(20) {
-        // Keep held keys, but tools fire on a single tick.
-        return PlayerInput {
-            use_tool: prev.use_tool && prev.tool != tools::EXPLODE && prev.tool != tools::CRATE,
-            ..prev
+        // Keep held keys, but tools fire on a single tick, and paint is a short
+        // dab rather than a 20-tick stroke that draws long strands in the air.
+        let held = match prev.tool {
+            tools::EXPLODE | tools::CRATE => false,
+            tools::PAINT => tick % 20 < 4,
+            _ => true,
         };
+        return PlayerInput { use_tool: prev.use_tool && held, ..prev };
     }
     let roll = rng.below(100);
     let (tool, param, use_tool) = match roll {
@@ -195,11 +199,17 @@ fn chaos_input(rng: &mut SeqRng, tick: u64, prev: PlayerInput, materials: &[u16]
         50..=54 => (tools::HEAT, 0, true),
         _ => (tools::NONE, 0, false),
     };
+    let move_x = rng.range_i32(-1, 1) as i8;
+    let jump = rng.below(4) == 0;
+    let aim_x = rng.range_i32(-30, 30) as i16;
+    let aim_y = rng.range_i32(-20, 25) as i16;
+    // Painting bots stay on the ground and paint at or below their feet.
+    let painting = tool == tools::PAINT;
     PlayerInput {
-        move_x: rng.range_i32(-1, 1) as i8,
-        jump: rng.below(4) == 0,
-        aim_x: rng.range_i32(-30, 30) as i16,
-        aim_y: rng.range_i32(-20, 25) as i16,
+        move_x,
+        jump: jump && !painting,
+        aim_x,
+        aim_y: if painting { aim_y.abs().max(4) } else { aim_y },
         tool,
         param,
         use_tool,
@@ -300,12 +310,12 @@ pub fn run_soak_observed(
             bots: bots
                 .iter()
                 .map(|b| {
-                    (
-                        b.client.player,
-                        b.client.stats.traffic,
-                        b.client.stats.rtt_us,
-                        b.client.stats.lead_ticks,
-                    )
+                    // Steady-state traffic: the join snapshot is left out, so a
+                    // bandwidth graph shows the flat input stream.
+                    let mut traffic = b.client.stats.traffic;
+                    traffic.received =
+                        traffic.received.saturating_sub(b.client.stats.snapshot_bytes);
+                    (b.client.player, traffic, b.client.stats.rtt_us, b.client.stats.lead_ticks)
                 })
                 .collect(),
             dropped: net.dropped,
@@ -322,7 +332,6 @@ pub fn run_soak_observed(
     let server_tick = server.tick_count();
     let mut passed = true;
     let mut reports = Vec::new();
-    let clients = server.clients();
     for b in &bots {
         let c = &b.client;
         let mut checkpoints = 0;
@@ -340,7 +349,7 @@ pub fn run_soak_observed(
             && c.sim().map(fe_engine::Simulation::hash) == Some(final_server);
         let playing = c.phase == ClientPhase::Playing;
         passed &= playing && final_match;
-        let snapshot_bytes = clients.iter().find(|ci| Some(ci.player) == c.player).map_or(0, |_| 0);
+        let snapshot_bytes = c.stats.snapshot_bytes;
         reports.push(BotReport {
             player: c.player.unwrap_or(255),
             up_bytes_per_s: c.stats.traffic.sent as f64 / secs,
