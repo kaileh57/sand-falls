@@ -247,10 +247,17 @@ impl Simulation {
         }
     }
 
-    /// Applies one command now.
+    /// Applies one command now. An explosion it sets off pushes rigid bodies
+    /// only when the command runs inside [`Simulation::step`].
     pub fn apply(&mut self, cmd: &Command) {
+        self.apply_collect(cmd, &mut Vec::new());
+    }
+
+    /// Applies one command, adding the blasts of any explosion it sets off to `blasts`.
+    fn apply_collect(&mut self, cmd: &Command, blasts: &mut Vec<Blast>) {
         match *cmd {
             Command::Paint { x, y, radius, material, replace } => {
+                let mut painted = Vec::new();
                 self.disc(x, y, radius, |sim, p| {
                     let c = sim.world.get(p);
                     let m = sim.world.materials().get(c.material());
@@ -262,8 +269,10 @@ impl Simulation {
                         if let Some(Event::SupportLost(q)) = sim.world.set(p, n) {
                             sim.seed_support(q);
                         }
+                        painted.push(p);
                     }
                 });
+                self.check_painted_support(&painted, material);
             }
             Command::FillRect { rect, material } => {
                 self.load_rect(rect);
@@ -288,7 +297,7 @@ impl Simulation {
                 });
             }
             Command::Explode { x, y, radius, power } => {
-                self.run_explosion(CellPos::new(x, y), radius, power, &mut Vec::new());
+                self.run_explosion(CellPos::new(x, y), radius, power, blasts);
             }
             Command::Heat { x, y, radius, delta } => {
                 self.disc(x, y, radius, |sim, p| {
@@ -352,6 +361,38 @@ impl Simulation {
                     f(self, CellPos::new(x + dx, y + dy));
                 }
             }
+        }
+    }
+
+    /// Structure painted in mid-air, touching no other structure, has nothing
+    /// holding it up: queue a support check so it falls. Paint that touches
+    /// existing structure is assumed to hang on it, which keeps the check cheap.
+    fn check_painted_support(&mut self, painted: &[CellPos], material: MaterialId) {
+        let m = self.world.materials().get(material);
+        if painted.is_empty() || m.state != State::Static || !m.structural {
+            return;
+        }
+        let mut sorted = painted.to_vec();
+        sorted.sort_unstable();
+        for &p in painted {
+            for (dx, dy) in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
+                let q = CellPos::new(p.x + dx, p.y + dy);
+                if sorted.binary_search(&q).is_ok() {
+                    continue;
+                }
+                let c = self.world.get(q);
+                if c.material() == MaterialId::BOUNDARY || c.has(Cell::FLAG_IN_BODY) {
+                    return;
+                }
+                let cm = self.world.materials().get(c.material());
+                if !c.is_air() && cm.state == State::Static && (cm.structural || cm.anchored) {
+                    return;
+                }
+            }
+        }
+        // The seed's neighbors are painted cells, so the check starts inside the blob.
+        for &p in painted {
+            self.seed_support(p);
         }
     }
 
@@ -424,15 +465,17 @@ impl Simulation {
         let tick = self.world.tick();
 
         let t = Instant::now();
+        // Scene events and player tools that explode push bodies like any blast.
+        let mut blasts = Vec::new();
         for c in commands {
-            self.apply(c);
+            self.apply_collect(c, &mut blasts);
         }
         let avatars = self.avatars.clone();
         for a in &avatars {
             let input = inputs.get(&a.id).copied().unwrap_or_default();
             let prev = self.last_inputs.get(&a.id).copied().unwrap_or_default();
             for c in self.tool_commands(a, &input, &prev) {
-                self.apply(&c);
+                self.apply_collect(&c, &mut blasts);
             }
         }
         times.commands = us(t);
@@ -443,7 +486,6 @@ impl Simulation {
         times.cells = us(t);
 
         let t = Instant::now();
-        let mut blasts = Vec::new();
         let mut pending: Vec<(CellPos, u8, u8)> = Vec::new();
         for e in &events {
             match *e {

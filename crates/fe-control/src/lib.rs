@@ -454,7 +454,25 @@ pub fn render_settings(cam: &fe_scene::Camera) -> RenderSettings {
 }
 
 /// Camera center and zoom at a tick, interpolated between keyframes.
+///
+/// The view is kept inside `bounds`, so a key near the edge of the world never
+/// shows the void beyond it; a world smaller than the view is centered.
 pub fn camera_at(cam: &fe_scene::Camera, tick: u64, bounds: IRect) -> (f32, f32, f32) {
+    let (x, y, zoom) = camera_key_at(cam, tick, bounds);
+    let z = zoom.max(0.05);
+    let clamp = |c: f32, lo: i32, hi: i32, view: u32| {
+        let half = view as f32 / z / 2.0;
+        let (lo, hi) = (lo as f32 + half, hi as f32 - half);
+        if lo > hi { f32::midpoint(lo, hi) } else { c.clamp(lo, hi) }
+    };
+    (
+        clamp(x, bounds.min.x, bounds.max.x, cam.view.0),
+        clamp(y, bounds.min.y, bounds.max.y, cam.view.1),
+        zoom,
+    )
+}
+
+fn camera_key_at(cam: &fe_scene::Camera, tick: u64, bounds: IRect) -> (f32, f32, f32) {
     let center =
         ((bounds.min.x + bounds.max.x) as f32 / 2.0, (bounds.min.y + bounds.max.y) as f32 / 2.0);
     let Some(first) = cam.keys.first() else { return (center.0, center.1, 1.0) };

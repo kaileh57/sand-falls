@@ -126,7 +126,7 @@ A material sets its `state` (static, powder, liquid, gas or fire), `density`, `c
 - Damage: `hp`, `debris`, `fracture`, `anchored`, `structural`, `indestructible`.
 - Emission: `spawn = { into, chance, dir }`.
 
-Reactions are `a` touching `b` becomes `into_a` and `into_b` with a `chance`. The world uses 10 cells per meter and 60 ticks per second, and everything falls at 9.84 m/s^2.
+Reactions are `a` touching `b` becomes `into_a` and `into_b` with a `chance`, and optionally a `temp`: the lowest temperature in degrees C the products start at. The world uses 10 cells per meter and 60 ticks per second, and everything falls at 9.84 m/s^2.
 
 ## Crates
 
