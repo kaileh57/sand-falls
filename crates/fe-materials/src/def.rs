@@ -191,4 +191,8 @@ pub struct ReactionDef {
     pub into_b: String,
     /// Chance per tick of contact.
     pub chance: String,
+    /// Lowest temperature in degrees C the products start at. Products start
+    /// at the reactants' mixed temperature, or at this if it is hotter, so
+    /// water quenching an ember flashes into steam hot enough to rise.
+    pub temp: Option<i32>,
 }

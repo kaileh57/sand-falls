@@ -155,18 +155,21 @@ density = -10
 spread = 3
 temp = 120
 cooling = 5
-opacity = 30
-freeze = { at = 90, into = "water" }
-colors = ["#c8d4e0", "#bfcbd8", "#d2dde8"]
+conductivity = 20
+opacity = 90
+heat_capacity = 6
+freeze = { at = 90, into = "water", latent = 150 }
+colors = ["#e4eaf0", "#dae2ea", "#eef2f6"]
 
 [[material]]
 name = "smoke"
 state = "gas"
 density = -5
 spread = 2
-lifetime = [40, 140]
-opacity = 70
-colors = ["#3a3634", "#33302e", "#423d3a"]
+lifetime = [200, 255]
+lifetime_rate = "40%"
+opacity = 80
+colors = ["#5a5450", "#4e4945", "#645d58"]
 
 [[material]]
 name = "acid_gas"
@@ -196,6 +199,7 @@ hp = 30
 debris = "splinters"
 fracture = 260
 conductivity = 20
+glow = false
 ignite = { at = 280, chance = "3%", into = "burning_wood" }
 colors = ["#7a5230", "#714b2b", "#835935", "#6b4628"]
 
@@ -209,9 +213,9 @@ conductivity = 30
 lifetime = [140, 250]
 decay = "smoke"
 hold_temp = 650
-light = "#ff5a14"
+light = "#b84410"
 spawn = { into = "fire", chance = "22%", dir = "any" }
-residue = { into = "ash", chance = "10%" }
+residue = { into = "charcoal", chance = "35%" }
 colors = ["#b0401a", "#8a3010", "#d05020"]
 
 [[material]]
@@ -229,6 +233,7 @@ density = 30
 structural = false
 hp = 4
 conductivity = 40
+glow = false
 ignite = { at = 160, chance = "30%", into = "burning_leaves" }
 colors = ["#3f7a2e", "#356b27", "#4a8a35", "#2f6022"]
 
@@ -498,7 +503,7 @@ state = "gas"
 density = -1
 spread = 2
 lifetime = [120, 220]
-opacity = 10
+opacity = 16
 colors = ["#b8c8d8", "#c4d2e0", "#aebfcf"]
 
 [[material]]
@@ -513,6 +518,7 @@ colors = ["#5a5e66"]
 [[material]]
 name = "ember"
 state = "fire"
+density = 3
 temp = 700
 lifetime = [30, 70]
 decay = "smoke"
@@ -532,7 +538,7 @@ conductivity = 60
 lifetime = [40, 90]
 decay = "smoke"
 hold_temp = 600
-light = "#ff7018"
+light = "#c85414"
 spawn = { into = "fire", chance = "35%", dir = "any" }
 residue = { into = "ember", chance = "8%" }
 colors = ["#ff8a20", "#e05a10", "#ffb040", "#c04008"]
@@ -545,10 +551,29 @@ name = "dust"
 state = "gas"
 density = 1
 spread = 3
-opacity = 60
+opacity = 100
 lifetime = [200, 255]
-lifetime_rate = "50%"
-colors = ["#8c847a", "#7a7268", "#9a9286"]
+lifetime_rate = "30%"
+colors = ["#a89e90", "#988e80", "#b4aa9c"]
+
+# Charcoal: what is left of a burnt trunk or beam once the flames have passed.
+# It smoulders for about fifteen seconds, dim red, giving off smoke, and slowly
+# crumbles to smoke and a little ash, so a burned forest ends in smoking black
+# stumps. Water puts it out and leaves coal.
+[[material]]
+name = "charcoal"
+state = "static"
+density = 50
+hp = 8
+debris = "ember"
+lifetime = [200, 255]
+lifetime_rate = "20%"
+decay = "smoke"
+residue = { into = "ash", chance = "15%" }
+hold_temp = 330
+light = "#3a0e02"
+spawn = { into = "smoke", chance = "3%", dir = "up" }
+colors = ["#1c1412", "#241815", "#3a1a10", "#2a1612"]
 
 # ---------------------------------------------------------------- reactions
 
@@ -572,13 +597,15 @@ b = "fire"
 into_a = "steam"
 into_b = "air"
 chance = "60%"
+temp = 150
 
 [[reaction]]
 a = "water"
 b = "burning_wood"
 into_a = "steam"
 into_b = "wood"
-chance = "15%"
+chance = "40%"
+temp = 130
 
 [[reaction]]
 a = "water"
@@ -593,6 +620,23 @@ b = "ember"
 into_a = "steam"
 into_b = "air"
 chance = "60%"
+temp = 150
+
+[[reaction]]
+a = "water"
+b = "burning_leaves"
+into_a = "steam"
+into_b = "leaves"
+chance = "50%"
+temp = 130
+
+[[reaction]]
+a = "water"
+b = "charcoal"
+into_a = "steam"
+into_b = "coal"
+chance = "30%"
+temp = 120
 
 [[reaction]]
 a = "water"

@@ -189,6 +189,8 @@ pub struct Reaction {
     pub into_other: MaterialId,
     /// Chance per tick out of [`CHANCE_ONE`].
     pub chance: u32,
+    /// Lowest temperature the products start at, on the 8-bit scale; 0 for none.
+    pub min_temp: u8,
 }
 
 /// A compiled material set: flat tables indexed by material id.
@@ -322,10 +324,11 @@ impl MaterialSet {
             let ia = lookup(&r.into_a, &ctx)?;
             let ib = lookup(&r.into_b, &ctx)?;
             let c = chance(&r.chance, &ctx)?;
-            reactions.push(Reaction { into_self: ia, into_other: ib, chance: c });
+            let min_temp = r.temp.map_or(0, celsius_to_temp);
+            reactions.push(Reaction { into_self: ia, into_other: ib, chance: c, min_temp });
             table[a.index() * n + b.index()] = reactions.len() as u32;
             if a != b {
-                reactions.push(Reaction { into_self: ib, into_other: ia, chance: c });
+                reactions.push(Reaction { into_self: ib, into_other: ia, chance: c, min_temp });
                 table[b.index() * n + a.index()] = reactions.len() as u32;
             }
         }
@@ -454,6 +457,7 @@ impl MaterialSet {
                 h.write_u64(i as u64);
                 h.write_u32(u32::from(r.into_self.0) | u32::from(r.into_other.0) << 16);
                 h.write_u32(r.chance);
+                h.write_u32(u32::from(r.min_temp));
             }
         }
         h.finish()
