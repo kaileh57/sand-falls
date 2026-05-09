@@ -107,6 +107,12 @@ pub(crate) fn soften(light: &[[f32; 3]], w: usize, h: usize) -> Vec<[f32; 3]> {
     box_blur(&box_blur(light, w, h, 2), w, h, 2)
 }
 
+/// A wide blur, about six cells each way: thin gas into a cloud, and the light
+/// that bounces into the rock around a lit space.
+pub(crate) fn wide(src: &[[f32; 3]], w: usize, h: usize) -> Vec<[f32; 3]> {
+    box_blur(&box_blur(src, w, h, 4), w, h, 4)
+}
+
 /// Adds a soft glow around bright areas.
 pub(crate) fn bloom(hdr: &mut [[f32; 3]], w: usize, h: usize) {
     let bright: Vec<[f32; 3]> = hdr

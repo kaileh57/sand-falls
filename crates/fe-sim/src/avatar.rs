@@ -107,7 +107,7 @@ impl Avatar {
 
     /// Advances the character by one tick. Reads the world, never writes it.
     pub fn step(&mut self, world: &World, input: &PlayerInput) {
-        self.in_liquid = Self::overlaps(world, self.x, self.y, |s| s == State::Liquid);
+        self.in_liquid = Self::submerged(world, self.x, self.y);
         let target = WALK * i32::from(input.move_x.signum());
         let accel = if self.on_ground { ACCEL_GROUND } else { ACCEL_AIR };
         self.vx = approach(self.vx, target, accel);
@@ -204,17 +204,23 @@ impl Avatar {
         false
     }
 
-    fn overlaps(world: &World, x: Fx, y: Fx, f: impl Fn(State) -> bool) -> bool {
+    /// True when at least a quarter of the character's box is liquid. A few
+    /// drops of spray or rain in the air do not make it swim.
+    fn submerged(world: &World, x: Fx, y: Fx) -> bool {
         let (x0, y0, x1, y1) = Self::box_cells(x, y);
+        let mut wet = 0;
         for cy in y0..=y1 {
             for cx in x0..=x1 {
                 let c = world.get(CellPos::new(cx, cy));
-                if !c.is_air() && f(world.materials().get(c.material()).state) {
-                    return true;
+                if !c.is_air()
+                    && !c.has(Cell::FLAG_IN_BODY)
+                    && world.materials().get(c.material()).state == State::Liquid
+                {
+                    wet += 1;
                 }
             }
         }
-        false
+        wet * 4 >= (x1 - x0 + 1) * (y1 - y0 + 1)
     }
 }
 
