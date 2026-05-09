@@ -65,6 +65,10 @@ pub struct PixelBody {
     /// Fracture strength: the body shatters when one tick's change in velocity,
     /// apart from gravity, exceeds `fracture / 32` m/s. 0 never shatters.
     pub fracture: u16,
+    /// A liquid or powder held the body up on the last tick. Recomputed every
+    /// tick before it is read, so it is not saved.
+    #[serde(skip)]
+    pub(crate) wet: bool,
 }
 
 fn cell_mass(world: &World, c: Cell) -> f32 {
@@ -167,6 +171,7 @@ impl PixelBody {
             last_pose: [0; 4],
             rest_ticks: 0,
             fracture: 0,
+            wet: false,
         }
     }
 
@@ -206,14 +211,18 @@ impl PixelBody {
     /// body, id, velocity, sleep state and rest time: new mass properties, hull,
     /// fracture strength and collider, and a translation shifted so the remaining
     /// cells stay where they are.
-    pub(crate) fn refresh_shape(&mut self, world: &World, rapier: &mut PhysicsWorld) {
+    ///
+    /// Returns how far the center of mass moved in the body's own frame, in
+    /// meters, so joint anchors on the body can be moved by the same amount.
+    pub(crate) fn refresh_shape(&mut self, world: &World, rapier: &mut PhysicsWorld) -> Vector {
         let old_com = self.com;
         let (mass, inertia) = self.refresh_props(world);
         let shape = self.compound_shape();
         if let Some(col) = rapier.colliders.get_mut(self.collider) {
             col.set_shape(shape);
         }
-        let Some(rb) = rapier.bodies.get_mut(self.handle) else { return };
+        let shift = Vector::new((self.com.0 - old_com.0) * S, (self.com.1 - old_com.1) * S);
+        let Some(rb) = rapier.bodies.get_mut(self.handle) else { return shift };
         let sleeping = rb.is_sleeping();
         rb.set_additional_mass_properties(MassProperties::new(Vector::ZERO, mass, inertia), false);
         let mut pose = *rb.position();
@@ -231,6 +240,7 @@ impl PixelBody {
         }
         // Force a restamp so the lost cells' slots are written fresh.
         self.last_pose = [u32::MAX; 4];
+        shift
     }
 
     /// The mass-weighted mean fracture strength of the cells that can shatter, or
@@ -382,6 +392,11 @@ impl PixelBody {
     /// Number of solid cells.
     pub fn cell_count(&self) -> usize {
         self.cells.iter().filter(|c| !c.is_air()).count()
+    }
+
+    /// Center of mass in local cell coordinates.
+    pub const fn com(&self) -> (f32, f32) {
+        self.com
     }
 
     /// Local grid size in cells.
@@ -566,12 +581,20 @@ impl PixelBody {
     }
 
     /// Applies buoyancy and drag from liquids and powders around the body.
-    pub(crate) fn apply_fluid_forces(&self, rapier: &mut PhysicsWorld, world: &World) {
+    ///
+    /// Only liquid or powder outside the body counts. Water in a tank the body
+    /// carries, or an oil film on one of its floors, moves with it: it adds
+    /// weight through the cells it rests on, not lift or drag. A few loose
+    /// grains do not count either; the medium has to be a real pool or heap.
+    pub(crate) fn apply_fluid_forces(&mut self, rapier: &mut PhysicsWorld, world: &World) {
+        self.wet = false;
         let Some(rb) = rapier.bodies.get_mut(self.handle) else { return };
         rb.reset_forces(false);
         if self.stamped.is_empty() {
             return;
         }
+        let mut cavity = self.cavity.clone();
+        cavity.sort_unstable();
         // Group the body's footprint (cells and hull cavity) by world column.
         let mut cols: BTreeMap<i32, Vec<(i32, bool)>> = BTreeMap::new();
         for &(p, _) in &self.stamped {
@@ -580,14 +603,30 @@ impl PixelBody {
         for &p in &self.cavity {
             cols.entry(p.x).or_default().push((p.y, false));
         }
-        let fluid = |p: CellPos| -> Option<(i16, u8)> {
+        let is_fluid = |p: CellPos| {
             let c = world.get(p);
-            if c.is_air() || c.has(Cell::FLAG_IN_BODY) {
+            !c.is_air()
+                && !c.has(Cell::FLAG_IN_BODY)
+                && matches!(
+                    world.materials().get(c.material()).state,
+                    State::Liquid | State::Powder
+                )
+        };
+        let fluid = |p: CellPos| -> Option<(i16, u8)> {
+            if !is_fluid(p) || cavity.binary_search(&p).is_ok() {
                 return None;
             }
-            let m = world.materials().get(c.material());
-            matches!(m.state, State::Liquid | State::Powder)
-                .then_some((m.density, m.viscosity.max(40)))
+            // A pool or heap, not a speck: at least four of the eight cells
+            // around it are liquid or powder too.
+            let mut around = 0;
+            for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)] {
+                around += u32::from(is_fluid(CellPos::new(p.x + dx, p.y + dy)));
+            }
+            if around < 4 {
+                return None;
+            }
+            let m = world.materials().get(world.get(p).material());
+            Some((m.density, m.viscosity.max(40)))
         };
         let (mut force, mut n, mut visc) = (0.0f32, 0u32, 0u32);
         for (x, mut entries) in cols {
@@ -631,6 +670,7 @@ impl PixelBody {
             let avg_visc = visc as f32 / n as f32;
             rb.set_linear_damping(frac * avg_visc / 8.0);
             rb.set_angular_damping(frac * avg_visc / 6.0);
+            self.wet = true;
         } else {
             rb.set_linear_damping(0.0);
             rb.set_angular_damping(0.05);
@@ -671,17 +711,57 @@ impl PixelBody {
         parts
     }
 
-    /// Splits the body into Voronoi shards seeded from `seed`, each split again into connected parts.
-    pub(crate) fn shards(&self, seed: u64) -> Vec<Vec<(i32, i32, Cell)>> {
+    /// The local cell on the side of the body facing `dir` (local frame): where
+    /// an impact pushing the body along `-dir` struck it.
+    pub(crate) fn contact_cell(&self, dir: (f32, f32)) -> Option<(i32, i32)> {
+        let w = self.w as usize;
+        let mut best: Option<(f32, usize)> = None;
+        for (i, c) in self.cells.iter().enumerate() {
+            if c.is_air() {
+                continue;
+            }
+            let ox = (i % w) as f32 + 0.5 - self.com.0;
+            let oy = (i / w) as f32 + 0.5 - self.com.1;
+            let d = ox * dir.0 + oy * dir.1;
+            if best.is_none_or(|b| d > b.0) {
+                best = Some((d, i));
+            }
+        }
+        best.map(|(_, i)| ((i % w) as i32, (i / w) as i32))
+    }
+
+    /// Splits the body into Voronoi shards seeded from `seed`, each split again
+    /// into connected parts. With a `contact` cell the sites crowd around it, so
+    /// the body breaks into small pieces where it was hit and large slabs far away.
+    pub(crate) fn shards(
+        &self,
+        seed: u64,
+        contact: Option<(i32, i32)>,
+    ) -> Vec<Vec<(i32, i32, Cell)>> {
         let w = i32::from(self.w);
         let solid: Vec<(i32, i32)> = (0..self.cells.len())
             .filter(|&i| !self.cells[i].is_air())
             .map(|i| (i as i32 % w, i as i32 / w))
             .collect();
-        let k = (2 + solid.len() / 200).min(32);
+        let k = (2 + solid.len() / 150).min(40);
         let mut rng = SeqRng::new(seed);
-        let sites: Vec<(i32, i32)> =
-            (0..k).map(|_| solid[rng.below(solid.len() as u32) as usize]).collect();
+        let mut sites: Vec<(i32, i32)> = Vec::with_capacity(k);
+        for s in 0..k {
+            let mut p = solid[rng.below(solid.len() as u32) as usize];
+            // Three sites in four are the nearest to the contact of a few draws.
+            if let Some((cx, cy)) = contact
+                && s % 4 != 3
+            {
+                for _ in 0..3 {
+                    let q = solid[rng.below(solid.len() as u32) as usize];
+                    let d = |a: (i32, i32)| (a.0 - cx).pow(2) + (a.1 - cy).pow(2);
+                    if d(q) < d(p) {
+                        p = q;
+                    }
+                }
+            }
+            sites.push(p);
+        }
         let mut groups: Vec<Vec<(i32, i32, Cell)>> = vec![Vec::new(); k];
         for &(x, y) in &solid {
             let best = (0..k)
