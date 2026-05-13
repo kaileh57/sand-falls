@@ -337,7 +337,14 @@ fn update_cell(
                 SpawnDir::Down => (0, 1),
                 SpawnDir::Any => DIRS4[(r1 >> 16) as usize & 3],
             };
-            if nb.get(lx + dx, ly + dy).is_air() {
+            // Emitters push through gas, so a sprinkler or a chimney keeps
+            // going in the steam or smoke it made.
+            let t = nb.get(lx + dx, ly + dy);
+            if t.is_air()
+                || (!t.has(Cell::FLAG_IN_BODY)
+                    && ctx.f(t).state == State::Gas
+                    && ctx.mats.get(s.into).state != State::Gas)
+            {
                 let spawned = new_cell(ctx.mats, s.into, None, r1 >> 8).with_parity(ctx.tick);
                 nb.set(lx + dx, ly + dy, spawned);
                 nb.mark(lx + dx, ly + dy);
@@ -357,11 +364,19 @@ fn update_cell(
                 // Both products start at the reactants' mixed temperature, so
                 // water on lava gives hot steam and glowing obsidian, and water on
                 // a burning plank leaves wood too cool to catch again.
-                let (ca, cb) = (u32::from(f.heat_cap), u32::from(ctx.f(n).heat_cap));
+                // A reaction can also set a floor, so water quenching an ember
+                // flashes into steam hot enough to rise.
+                let fnb = ctx.f(n);
+                let (ca, cb) = (u32::from(f.heat_cap), u32::from(fnb.heat_cap));
                 let mix = (ca * u32::from(cell.temp) + cb * u32::from(n.temp)) / (ca + cb);
-                let mix = Some(mix as u8);
-                let me = new_cell(ctx.mats, rx.into_self, mix, r2);
-                let other = new_cell(ctx.mats, rx.into_other, mix, r2 >> 7);
+                let mix = Some((mix as u8).max(rx.min_temp));
+                // A liquid that reacts into a solid follows the freezing rule: the
+                // obsidian skin where water meets lava crumbles to gravel and sinks
+                // unless it rests on lava or rock, so the contact keeps renewing.
+                let into_self = freeze_into(nb, ctx, lx, ly, cell, f, rx.into_self);
+                let into_other = freeze_into(nb, ctx, lx + dx, ly + dy, n, fnb, rx.into_other);
+                let me = new_cell(ctx.mats, into_self, mix, r2);
+                let other = new_cell(ctx.mats, into_other, mix, r2 >> 7);
                 transform(nb, ctx, out, lx + dx, ly + dy, wx + dx, wy + dy, n, other);
                 transform(nb, ctx, out, lx, ly, wx, wy, c, me);
                 return;
@@ -459,7 +474,9 @@ fn freeze_into(
     } else {
         match ctx.f(below).state {
             State::Gas | State::Fire | State::Empty => true,
-            State::Liquid | State::Powder => below.material() != cell.material(),
+            // Its own melt holds a crust only while that melt is at rest: a drop
+            // freezing on top of another falling drop is not resting on anything.
+            State::Liquid | State::Powder => below.material() != cell.material() || below.value > 0,
             State::Static => false,
         }
     };
@@ -644,6 +661,20 @@ enum FallResult {
     Hover,
 }
 
+/// Fastest a cell sinks through a liquid, in 1/16 cells per tick (1.5 cells
+/// per tick before the 50% chance of each swap).
+const SINK_SPEED: u32 = 24;
+
+/// True if `t` is a free liquid lighter than `m`, which `m` sinks through.
+#[inline]
+fn sinks_through(ctx: &RuleCtx<'_>, m: Fast, t: Cell) -> bool {
+    if t.is_air() || t.has(Cell::FLAG_IN_BODY) {
+        return false;
+    }
+    let tm = ctx.f(t);
+    tm.state == State::Liquid && tm.density < m.density
+}
+
 /// Fall speed a cell keeps when `below` stops it: a falling powder or liquid
 /// cell carries the stream along at its own speed, anything else stops it dead.
 #[inline]
@@ -679,6 +710,16 @@ fn fall(
         SPEED_UNITS
     };
     if !can_enter(ctx, m, below, true, r) {
+        if has_speed && sinks_through(ctx, m, below) {
+            // A lighter liquid below only slows the cell down: it keeps its speed,
+            // up to the speed it sinks at, and tries again next tick instead of
+            // spreading out over the surface. Molten metal poured into water
+            // sinks while it is still liquid instead of skating across the top.
+            cell.value = v.min(SINK_SPEED) as u8;
+            nb.set(lx, ly, *cell);
+            nb.mark(lx, ly);
+            return FallResult::Hover;
+        }
         if has_speed {
             // Riding on a falling cell: accelerate with it, never past it.
             let v = blocked_speed(ctx, v, below);
@@ -725,8 +766,16 @@ fn fall(
         let t = nb.get(lx, y + 1);
         if !can_enter(ctx, m, t, true, r >> (8 + i as u32 % 16)) {
             blocked = true;
-            stop = blocked_speed(ctx, v, t);
+            stop = if sinks_through(ctx, m, t) {
+                v.min(SINK_SPEED) as u8
+            } else {
+                blocked_speed(ctx, v, t)
+            };
             break;
+        }
+        if !t.is_air() && ctx.f(t).state == State::Liquid {
+            // Drag: nothing sinks through a liquid faster than SINK_SPEED.
+            v = v.min(SINK_SPEED);
         }
         let up = if t.is_air() { t } else { t.with_parity(ctx.tick) };
         if up != stored {
@@ -888,6 +937,17 @@ fn move_gas(
 ) -> bool {
     let r = ctx.rand(wx, wy, 3);
     let side = ctx.side(r);
+    // Gas caught in a liquid bubbles up through it, whatever its density, so
+    // dust from a blast under water washes out instead of hanging in the water.
+    let above = nb.get(lx, ly - 1);
+    if !above.is_air()
+        && !above.has(Cell::FLAG_IN_BODY)
+        && ctx.f(above).state == State::Liquid
+        && (r >> 5) & 1 == 0
+    {
+        swap_to(nb, ctx, lx, ly, lx, ly - 1, cell);
+        return true;
+    }
     // Buoyancy: the further a gas's density is from air's, the more often it
     // moves vertically, up if lighter and down if heavier. Steam (-10) always
     // rises, smoke (-5) on 62% of ticks, mist (-1) on 12%, so mist lingers and
@@ -928,6 +988,17 @@ fn move_fire(
         return false;
     }
     let side = ctx.side(r >> 3);
+    if ctx.f(cell).density > 0 {
+        // Heavy sparks such as embers fall instead, drifting downwind, so they
+        // can land on fuel, or in water, which puts them out.
+        for (dx, dy) in [(0, 1), (side, 1), (side, 0)] {
+            if nb.get(lx + dx, ly + dy).is_air() {
+                swap_to(nb, ctx, lx, ly, lx + dx, ly + dy, cell);
+                return true;
+            }
+        }
+        return false;
+    }
     // Wind tilts some flames, more the stronger it blows; the rest rise straight.
     let gust = ctx.wind != 0 && ((r >> 12) & 3) < ctx.wind.unsigned_abs();
     let order =

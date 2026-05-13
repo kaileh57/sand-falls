@@ -79,6 +79,45 @@ fn search(world: &World, start: CellPos, limit: usize, seen: &mut PosSet) -> Sea
     Search::Detached(order)
 }
 
+/// How far, in cells, decorations on a falling piece go with it.
+const DECORATION_REACH: u16 = 24;
+
+/// Moss, fungus, vines and leaves: static but not structure. They hold
+/// nothing up, and they belong to whatever they grow on.
+fn is_decoration(world: &World, c: Cell) -> bool {
+    if c.has(Cell::FLAG_IN_BODY) || c.is_air() || c.material() == MaterialId::BOUNDARY {
+        return false;
+    }
+    let m = world.materials().get(c.material());
+    m.state == State::Static && !m.structural && !m.anchored && !m.indestructible
+}
+
+/// Adds the decorations growing on a detached piece, up to
+/// [`DECORATION_REACH`] cells out, so they fall with it instead of staying
+/// behind as static cells that pin the new body in mid-air.
+fn take_decorations(world: &World, cells: &mut Vec<CellPos>, claimed: &mut PosSet) {
+    let n = cells.len();
+    let mut depth = vec![0u16; n];
+    let mut head = 0;
+    while head < cells.len() {
+        let p = cells[head];
+        let d = depth[head];
+        head += 1;
+        if d >= DECORATION_REACH {
+            continue;
+        }
+        for (dx, dy) in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
+            let q = CellPos::new(p.x + dx, p.y + dy);
+            if claimed.contains(q) || !is_decoration(world, world.get(q)) {
+                continue;
+            }
+            claimed.insert(q);
+            cells.push(q);
+            depth.push(d + 1);
+        }
+    }
+}
+
 /// Checks the neighbors of each seed and returns structure that no longer reaches an anchor.
 ///
 /// `seeds` must be in canonical order. Seeds whose search hit the size limit are
@@ -112,10 +151,11 @@ pub fn check_support(
                         retry.push(SupportSeed { pos: seed.pos, retries: seed.retries - 1 });
                     }
                 }
-                Search::Detached(cells) => {
+                Search::Detached(mut cells) => {
                     for &p in &cells {
                         claimed.insert(p);
                     }
+                    take_decorations(world, &mut cells, &mut claimed);
                     detached.push(Detached { cells });
                 }
             }
