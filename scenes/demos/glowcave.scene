@@ -8,16 +8,20 @@
 // a stepped ramp. It holds a lot of heat and gives off latent heat before it
 // freezes, so it stays molten all the way down, and the rock beside it glows
 // where it heats by conduction. Where it runs into the lake the water flashes
-// to steam and the front crusts over as obsidian. The feeder in the chamber
+// to steam; the obsidian skin crumbles to gravel and sinks, so fresh lava
+// keeps reaching the water and the steam plume keeps rising. The feeder in the chamber
 // roof is cut off at tick 480, so the flow thins and dims from yellow toward
 // red as it cools. At tick 1100 blasts cut the neck of a ceiling slab
 // studded with crystals: it falls as a rigid body, its crystals still lighting
 // the cave around it, and plunges into the lake, throwing the water up over
-// it. In the aftermath a stalactite over the cooling front starts to drip.
+// it. At tick 720 a flooded fissure in the roof over the ramp cracks open,
+// and a waterfall pours onto the lava, boiling off in a column of steam while
+// the lava under it crusts black. In the aftermath a stalactite over the cooling
+// front starts to drip.
 // A light draft carries the steam out over the lake.
 [scene]
 name = glowcave
-description = Magma breaks into a dark cavern lit by glowing fungus and crystals: the plug blows out in a shower of sparks, lava runs down a stepped ramp and quenches in the lake in steam and obsidian, then a crystal-studded slab breaks from the ceiling and plunges into the water.
+description = Magma breaks into a dark cavern lit by glowing fungus and crystals: the plug blows out in a shower of sparks, lava runs down a stepped ramp and quenches in the lake in a rising steam plume, its crust crumbling to gravel, then a crystal-studded slab breaks from the ceiling and plunges into the water.
 size = 960 576
 seed = 0x91c4
 ticks = 1800
@@ -327,6 +331,12 @@ at 290: explode 286 298 24 100
 at 290: paint 282 298 9 fire
 // The feeder in the chamber roof is cut off and the flow thins.
 at 480: fill 170 214 190 216 stone
+// A flooded fissure in the roof over the ramp cracks open: a waterfall pours
+// onto the lava, flashing into a column of steam, and the lava under it
+// crusts black. It dries up three seconds later.
+at 718: explode 364 136 8 140
+at 720: fill 354 134 374 136 water_source
+at 900: fill 354 134 374 136 stone
 // Steam condensing on the ceiling starts to drip on the cooling crust.
 at 1250: fill 388 214 391 215 rain_cloud
 // Blasts on either side of the slab's neck cut it, and it falls into the lake.
@@ -356,5 +366,6 @@ at 1800: 440 330 zoom=1.15
 [expect]
 after 302: particles >= 20
 after 600: count lava in 345 380 940 576 >= 300
-after 1000: count obsidian in 345 380 940 576 >= 150
+// The quench crust crumbles to gravel and sinks, so the front keeps boiling.
+after 1000: count gravel in 345 380 940 576 >= 150
 after 1150: bodies >= 1

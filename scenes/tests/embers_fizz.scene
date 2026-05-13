@@ -1,0 +1,23 @@
+// Embers are heavy sparks: they fall instead of rising, and the ones that land
+// in water go out with a puff of steam hot enough to rise. Smoke from a
+// burning plank hangs around for seconds.
+[scene]
+name = embers fizz
+size = 128 128
+seed = 21
+
+[build]
+fill 0 120 128 128 bedrock
+fill 0 100 4 120 bedrock
+fill 124 100 128 120 bedrock
+fill 4 100 124 120 water
+fill 30 86 90 90 ember
+fill 10 60 14 64 burning_wood
+
+[expect]
+// The embers fell: none are left up where they started.
+after 30: count ember in 0 0 128 91 < 120
+after 60: count steam in 0 0 128 100 > 100
+after 240: count ember in 0 0 128 128 == 0
+// Smoke from the plank is still about well after a fire cell's own life.
+after 400: count smoke in 0 0 128 128 > 20
