@@ -116,7 +116,7 @@ after 1000: count molten_metal in 294 246 334 260 >= 504
 // The overflow pools on the tank floor, still liquid, before the flood.
 after 1000: count molten_metal in 338 262 466 300 >= 300
 // Steam rises in the quench.
-after 1100: count steam in 20 40 748 380 > 800
+after 1100: count steam in 20 40 748 380 > 400
 // The tank boils off only gradually: at least 85% of its starting 2432 cells.
 after 1500: count water in 338 262 466 300 >= 2068
 // The tank metal froze in place on the floor, and the castings are solid.

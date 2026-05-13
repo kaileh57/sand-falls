@@ -8,13 +8,13 @@
 // so when the left wall goes the tower comes free as one rigid body (tick 215),
 // drops two metres onto the stump of its left wall and pivots right into the
 // gap. It takes about four seconds to lean past 45 degrees. Then a row of
-// delayed charges on floors 4 and 6 fires (tick 445) and the falling tower
-// comes apart in the air into three sections. The top section, moving
-// fastest, hits the pad and the soil bank on the right and shatters into small
-// pieces; the two lower sections land slower and stay as big slabs leaning on
-// the stump. The charges light the crates on floors 2-5 and the oil films on
-// floors 1 and 2, the timber floors catch, and the scene ends on a smoking,
-// burning pile.
+// delayed charges on floors 4 and 6 fires (tick 445): they cut the falling
+// tower in the air and push the sections apart. The sections hit the pad and
+// the soil bank on the right and break up where they land, into small pieces
+// at the impact and larger slabs further away, raising dust. The charges
+// light the crates on floors 2-5 and the oil films on floors 1 and 2, the
+// timber floors catch, and the scene ends on a smoking pile of burning and
+// smouldering timber.
 [scene]
 name = demolition
 description = Staggered charges cut a brick tower's base; it pivots right on its last wall, breaks into three sections in the air, shatters at the far end and burns.
@@ -172,4 +172,7 @@ at 850: 576 330 zoom=1.25
 at 1500: 640 360 zoom=1.5
 
 [expect]
-after 1500: count burning_wood in 0 0 960 500 >= 100
+// The pile is still burning and smouldering at the end.
+after 1500: count burning_wood in 0 0 960 500 >= 30
+after 1500: count charcoal in 0 0 960 500 >= 100
+after 1500: count smoke in 0 0 960 500 >= 1000

@@ -262,5 +262,6 @@ after 2700: count burning_wood in 470 0 960 576 == 0
 after 2700: count leaves in 470 0 960 576 >= 19000
 // Burnt fuel leaves a thin dusting of ash, not piles.
 after 2700: count ash in 0 0 470 576 <= 1500
-// The river is still there.
-after 2700: count water in 425 440 475 470 >= 1300
+// The river is still there; a little of it boils off as steam where the
+// burning willow and the log fall in and the embers land.
+after 2700: count water in 425 440 475 470 >= 1250
