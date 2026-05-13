@@ -12,10 +12,12 @@ fill 4 95 124 120 water
 fill 50 20 78 40 lava
 
 [expect]
-// Lava that touches water reacts into obsidian; lava that freezes while it
-// falls or floats on the water crumbles to rubble and sinks. Boiling uses up
-// some water as steam.
+// Water and lava react into steam and obsidian. Obsidian that forms over water
+// is not resting on anything, so it crumbles to gravel and sinks, and fresh
+// lava keeps reaching the water; lava that freezes while it falls crumbles to
+// rubble. Boiling uses up some water as steam, which hangs over the tank.
 after 600: count lava in 0 0 128 128 < 100
-after 600: count obsidian in 0 0 128 128 >= 150
+after 600: count gravel in 0 0 128 128 >= 150
 after 600: count rubble in 0 0 128 128 >= 100
+after 600: count steam in 0 0 128 128 >= 300
 after 600: count water in 0 0 128 128 < 3000

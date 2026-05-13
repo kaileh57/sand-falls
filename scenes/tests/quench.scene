@@ -1,6 +1,8 @@
 // A red-hot metal casting dropped into a tank of water cools by conduction and
 // boiling. Water has twice the heat capacity of air per cell, and boiling it
 // takes 540 C of latent heat, so the tank loses only a little water as steam.
+// The steam gives up 150 C of latent heat before it condenses, so it hangs over
+// the tank for a moment before it rains back.
 [scene]
 name = quench
 size = 80 100
@@ -18,5 +20,5 @@ temp 30 66 50 86 1250
 [expect]
 after 30: count water in 10 40 70 92 >= 1350
 after 40: temp metal in 30 66 50 86 < 900
-after 120: count water in 10 40 70 92 >= 1350
+after 120: count water in 10 40 70 92 >= 1150
 after 140: temp metal in 30 66 50 86 < 500
