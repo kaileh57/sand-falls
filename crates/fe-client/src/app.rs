@@ -75,8 +75,9 @@ struct App {
 
 fn load_scene(path: &str) -> Result<(String, Scene, Arc<fe_materials::MaterialSet>), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-    let scene = fe_scene::parse(&text).map_err(|e| format!("{path}: {e}"))?;
+    let mut scene = fe_scene::parse(&text).map_err(|e| format!("{path}: {e}"))?;
     let dir = Path::new(path).parent().map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    fe_scene::attach_script(&mut scene, &dir).map_err(|e| format!("{path}: {e}"))?;
     let mats =
         Arc::new(fe_scene::load_materials(&scene, &dir).map_err(|e| format!("{path}: {e}"))?);
     Ok((text, scene, mats))
@@ -308,6 +309,13 @@ impl App {
         img.shade(0, 0, 430, 12 + 10 * lines.len() as i32, 140);
         for (i, l) in lines.iter().enumerate() {
             img.text(6, 6 + 10 * i as i32, 1, l, [235, 235, 235, 255]);
+        }
+        // The game's status line, set by its script: phase, score, winner.
+        if let Some(s) = self.sim()
+            && !s.status.is_empty()
+        {
+            let y = img.height as i32 - 28;
+            img.banner(y, &s.status, [255, 230, 150, 255]);
         }
     }
 

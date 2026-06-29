@@ -60,6 +60,26 @@ To host a scene and join it from another machine, run the server on one machine 
 ./target/release/fe-client connect SERVER_ADDRESS:7777 --scene scenes/multiplayer/chaos_soak.scene
 ```
 
+## Play Siege builder
+
+Game rules and mods are integer-only WebAssembly modules that run inside the deterministic tick, so their state is hashed, saved in snapshots and checked like the rest of the world. A scene names its script with `script = PATH`. See Scripting in [docs/DESIGN.md](docs/DESIGN.md).
+
+The first game is Siege builder, in `scenes/games/siege`. Two teams each build a fort from a cell budget, then bombard each other until a team's crystal core is gone. Its rules are a `no_std` Rust crate in `mods/siege`; `ci/build_mods.sh` rebuilds `siege.wasm`, which is committed so you do not need a wasm toolchain. To host it and join it, run:
+
+```bash
+./target/release/fe-server host scenes/games/siege/siege.scene --port 7777
+```
+
+```bash
+./target/release/fe-client connect SERVER_ADDRESS:7777 --scene scenes/games/siege/siege.scene
+```
+
+To soak-test it with bots that play Siege, run:
+
+```bash
+./target/release/fe-server soak --scene scenes/games/siege/siege.scene --style siege --ticks 3600 --players 4 --latency 150 --loss 2
+```
+
 ## Render the demos
 
 The showcase scenes are in `scenes/demos`: `glowcave`, `firestorm`, `foundry`, `demolition` and `dam_break`. To render one to video, run:
@@ -142,6 +162,7 @@ Reactions are `a` touching `b` becomes `into_a` and `into_b` with a `chance`, an
 | `fe-control` | JSON-RPC control API |
 | `fe-mcp` | MCP server over the control API |
 | `fe-net` | Lockstep protocol, server and client cores, simulated network, soak harness |
+| `fe-script` | WebAssembly game scripts on wasmi, with floats off, fuel limits and saved state |
 | `fe`, `fe-client`, `fe-server` | Command-line tool, windowed client, dedicated server |
 
 ## License
