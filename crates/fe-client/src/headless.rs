@@ -16,8 +16,9 @@ pub(crate) fn bot(args: &[String]) -> Result<(), String> {
     let ticks: u64 = opt(args, "--ticks").and_then(|v| v.parse().ok()).unwrap_or(1200);
     let name = opt(args, "--name").unwrap_or("bot");
     let text = std::fs::read_to_string(scene_path).map_err(|e| format!("{scene_path}: {e}"))?;
-    let scene = fe_scene::parse(&text).map_err(|e| e.to_string())?;
+    let mut scene = fe_scene::parse(&text).map_err(|e| e.to_string())?;
     let dir = Path::new(scene_path).parent().map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    fe_scene::attach_script(&mut scene, &dir).map_err(|e| e.to_string())?;
     let mats = Arc::new(fe_scene::load_materials(&scene, &dir).map_err(|e| e.to_string())?);
     let mut net = UdpTransport::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
     let server_addr = std::net::ToSocketAddrs::to_socket_addrs(addr.as_str())

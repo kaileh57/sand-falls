@@ -168,7 +168,24 @@ pub struct Session {
     scene_text: String,
     scene_dir: PathBuf,
     hashes: Vec<(u64, u64)>,
+    /// Set by `snapshot_load`: the run no longer follows from the scene, so a
+    /// replay cannot reproduce it.
+    replaced: bool,
     default_threads: usize,
+}
+
+/// Most cells `read_region` and `count` look at in one call.
+const MAX_REGION_CELLS: i64 = 400_000;
+/// Largest radius a command may use.
+const MAX_RADIUS: i32 = 256;
+/// Largest rectangle a command may fill or carve, in cells.
+const MAX_RECT_CELLS: i64 = 4_000_000;
+
+/// Area of a rectangle in cells, without overflow.
+fn area(r: &IRect) -> i64 {
+    let w = (i64::from(r.max.x) - i64::from(r.min.x)).max(0);
+    let h = (i64::from(r.max.y) - i64::from(r.min.y)).max(0);
+    w.saturating_mul(h)
 }
 
 impl Session {
@@ -180,6 +197,7 @@ impl Session {
             scene_text: String::new(),
             scene_dir: PathBuf::from("."),
             hashes: Vec::new(),
+            replaced: false,
             default_threads: threads.max(1),
         }
     }
@@ -203,12 +221,12 @@ impl Session {
                 let mats = self.mats()?;
                 let cmd = parse_command(params.get("command").unwrap_or(&Value::Null), &mats)?;
                 let r = self.runner()?;
-                r.sim.apply(&cmd);
+                r.apply_command(&cmd);
                 Ok(json!({"applied": true, "hash": format!("{:#018x}", r.sim.hash())}))
             }
             "read_region" => {
                 let rect = parse_rect(params.get("rect"))?;
-                if rect.width() * rect.height() > 400_000 {
+                if area(&rect) > MAX_REGION_CELLS {
                     return Err(RpcError::invalid("rect too large; keep it under 400,000 cells"));
                 }
                 let r = self.runner()?;
@@ -244,6 +262,9 @@ impl Session {
             }
             "count" => {
                 let rect = parse_rect(params.get("rect"))?;
+                if area(&rect) > MAX_REGION_CELLS {
+                    return Err(RpcError::invalid("rect too large; keep it under 400,000 cells"));
+                }
                 let mats = self.mats()?;
                 let name = params.get("material").and_then(Value::as_str).unwrap_or("");
                 let id = mats
@@ -313,12 +334,20 @@ impl Session {
                 let sim = fe_engine::Simulation::restore(&bytes, mats, threads)
                     .map_err(|e| RpcError::state(e.to_string()))?;
                 let r = self.runner()?;
-                r.sim = sim;
-                Ok(json!({"tick": r.sim.tick(), "hash": format!("{:#018x}", r.sim.hash())}))
+                r.replace_sim(sim).map_err(|e| RpcError::state(e.to_string()))?;
+                let out = json!({"tick": r.sim.tick(), "hash": format!("{:#018x}", r.sim.hash())});
+                self.replaced = true;
+                self.hashes.clear();
+                Ok(out)
             }
             "replay_save" => {
                 let path = string(params, "path")?;
-                let frames = self.runner()?.recorded().to_vec();
+                if self.replaced {
+                    return Err(RpcError::state(
+                        "snapshot_load replaced the simulation, so a replay of the scene cannot reproduce it; load the scene again to record a replay",
+                    ));
+                }
+                let frames = self.runner()?.recorded();
                 let replay = Replay {
                     format: Replay::FORMAT,
                     scene: self.scene_text.clone(),
@@ -353,7 +382,8 @@ impl Session {
         } else {
             return Err(RpcError::invalid("give 'path' or 'text'"));
         };
-        let scene = fe_scene::parse(&text).map_err(|e| RpcError::invalid(e.to_string()))?;
+        let mut scene = fe_scene::parse(&text).map_err(|e| RpcError::invalid(e.to_string()))?;
+        fe_scene::attach_script(&mut scene, &dir).map_err(|e| RpcError::invalid(e.to_string()))?;
         let mats = Arc::new(
             fe_scene::load_materials(&scene, &dir).map_err(|e| RpcError::invalid(e.to_string()))?,
         );
@@ -370,6 +400,7 @@ impl Session {
         self.scene_text = text;
         self.scene_dir = dir;
         self.hashes.clear();
+        self.replaced = false;
         Ok(info)
     }
 
@@ -451,6 +482,7 @@ pub fn render_settings(cam: &fe_scene::Camera) -> RenderSettings {
         exposure: cam.exposure,
         ..RenderSettings::default()
     }
+    .clamped()
 }
 
 /// Camera center and zoom at a tick, interpolated between keyframes.
@@ -499,6 +531,7 @@ fn report_json(r: &Runner) -> Value {
         "bodies": r.sim.physics.bodies().len(),
         "particles": r.sim.particles.len(),
         "finished": r.finished(),
+        "status": r.sim.status,
     })
 }
 
@@ -546,7 +579,23 @@ pub fn parse_command(v: &Value, mats: &MaterialSet) -> Result<Command, RpcError>
             v["rect"] = json!({"min": {"x": n[0], "y": n[1]}, "max": {"x": n[2], "y": n[3]}});
         }
     }
-    serde_json::from_value(v).map_err(|e| RpcError::invalid(format!("bad command: {e}")))
+    let cmd: Command =
+        serde_json::from_value(v).map_err(|e| RpcError::invalid(format!("bad command: {e}")))?;
+    match &cmd {
+        Command::Paint { radius, .. }
+        | Command::Dig { radius, .. }
+        | Command::Heat { radius, .. }
+            if !(0..=MAX_RADIUS).contains(radius) =>
+        {
+            Err(RpcError::invalid(format!("radius must be 0 to {MAX_RADIUS}")))
+        }
+        Command::FillRect { rect, .. } | Command::CarveBody { rect }
+            if area(rect) > MAX_RECT_CELLS =>
+        {
+            Err(RpcError::invalid("rect too large; keep it under 4,000,000 cells"))
+        }
+        _ => Ok(cmd),
+    }
 }
 
 /// Parses a player input object, accepting tool names and material names as `param`.
@@ -681,6 +730,69 @@ mod tests {
         call(&mut s, "step", json!({"ticks": 10}));
         call(&mut s, "snapshot_load", json!({"path": snap.display().to_string()}));
         assert_eq!(call(&mut s, "hash", json!({}))["hash"], h1);
+    }
+
+    fn call_err(s: &mut Session, method: &str, params: Value) -> String {
+        let line =
+            json!({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).to_string();
+        let reply: Value = handle_line(s, &line)
+            .and_then(|r| serde_json::from_str(&r).ok())
+            .unwrap_or(Value::Null);
+        reply["error"]["message"].as_str().unwrap_or_default().to_string()
+    }
+
+    #[test]
+    fn huge_areas_and_radii_are_refused() {
+        let mut s = Session::new(1);
+        call(&mut s, "load_scene", json!({"text": SCENE}));
+        let e = call_err(&mut s, "read_region", json!({"rect": [0, 0, 65536, 65536]}));
+        assert!(e.contains("too large"), "{e}");
+        let big = json!([-2_000_000_000, -2_000_000_000, 2_000_000_000, 2_000_000_000]);
+        let e = call_err(&mut s, "count", json!({"material": "sand", "rect": big}));
+        assert!(e.contains("too large"), "{e}");
+        let e = call_err(
+            &mut s,
+            "command",
+            json!({"command": {"op": "dig", "x": 0, "y": 0, "radius": 1_000_000_000}}),
+        );
+        assert!(e.contains("radius"), "{e}");
+        let e = call_err(
+            &mut s,
+            "step",
+            json!({"commands": [{"op": "fill_rect", "rect": big, "material": "sand"}]}),
+        );
+        assert!(e.contains("too large"), "{e}");
+    }
+
+    #[test]
+    fn replay_reproduces_commands_applied_between_steps() {
+        let mut s = Session::new(1);
+        call(&mut s, "load_scene", json!({"text": SCENE}));
+        call(&mut s, "step", json!({"ticks": 5}));
+        call(
+            &mut s,
+            "command",
+            json!({"command": {"op": "paint", "x": 64, "y": 20, "radius": 3, "material": "sand"}}),
+        );
+        call(&mut s, "step", json!({"ticks": 10}));
+        let want = s.runner.as_ref().map(|r| r.sim.hash());
+        let dir = std::env::temp_dir().join(format!("fe-control-replay-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("r.json");
+        call(&mut s, "replay_save", json!({"path": path.display().to_string()}));
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        let replay = Replay::from_json(&text).unwrap_or_else(|e| panic!("{e}"));
+        let mut r =
+            replay.runner(Arc::new(fe_materials::base_set()), 1).unwrap_or_else(|e| panic!("{e}"));
+        for _ in 0..15 {
+            r.step();
+        }
+        assert_eq!(Some(r.sim.hash()), want);
+        let snap = dir.join("s.snap");
+        call(&mut s, "snapshot_save", json!({"path": snap.display().to_string()}));
+        call(&mut s, "snapshot_load", json!({"path": snap.display().to_string()}));
+        let e = call_err(&mut s, "replay_save", json!({"path": path.display().to_string()}));
+        assert!(e.contains("snapshot_load"), "{e}");
     }
 
     #[test]
