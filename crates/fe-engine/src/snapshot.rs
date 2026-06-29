@@ -2,14 +2,15 @@
 
 use crate::sim::{SimConfig, Simulation, StreamConfig};
 use crate::worldgen::WorldGen;
-use fe_core::{Cell, ChunkPos, LocalRect};
+use fe_core::{Cell, ChunkPos, IRect, LocalRect};
 use fe_materials::MaterialSet;
 use fe_physics::Physics;
 use fe_sim::{Avatar, Particles, PlayerInput, SupportSeed};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-const FORMAT_VERSION: u32 = 2;
+/// Bumped to 6 when bodies began saving their hull envelope and fluid state.
+const FORMAT_VERSION: u32 = 6;
 
 #[derive(Serialize, Deserialize)]
 struct ChunkData {
@@ -36,6 +37,10 @@ struct SnapshotData {
     worldgen: WorldGen,
     stream: Option<StreamConfig>,
     stored: Vec<(ChunkPos, Vec<u32>)>,
+    tool_masks: Vec<(u8, u16)>,
+    tool_zones: Vec<(u8, IRect)>,
+    status: String,
+    script_state: Vec<u8>,
 }
 
 /// An error from loading a snapshot.
@@ -102,6 +107,10 @@ impl Simulation {
             worldgen: &self.worldgen,
             stream: self.stream,
             stored: self.stored.iter().map(|(k, v)| (*k, v.clone())).collect(),
+            tool_masks: self.tool_masks.iter().map(|(k, v)| (*k, *v)).collect(),
+            tool_zones: self.tool_zones.iter().map(|(k, v)| (*k, *v)).collect(),
+            status: &self.status,
+            script_state: &self.script_state,
         };
         let raw = postcard::to_allocvec(&data).unwrap_or_default();
         zstd::encode_all(raw.as_slice(), 3).unwrap_or(raw)
@@ -150,6 +159,10 @@ impl Simulation {
         sim.support_seeds = d.support_seeds;
         sim.last_inputs = d.last_inputs.into_iter().collect();
         sim.stored = d.stored.into_iter().collect();
+        sim.tool_masks = d.tool_masks.into_iter().collect();
+        sim.tool_zones = d.tool_zones.into_iter().collect();
+        sim.status = d.status;
+        sim.script_state = d.script_state;
         Ok(sim)
     }
 }
@@ -171,4 +184,8 @@ struct SnapshotDataRef<'a> {
     worldgen: &'a WorldGen,
     stream: Option<StreamConfig>,
     stored: Vec<(ChunkPos, Vec<u32>)>,
+    tool_masks: Vec<(u8, u16)>,
+    tool_zones: Vec<(u8, IRect)>,
+    status: &'a str,
+    script_state: &'a [u8],
 }

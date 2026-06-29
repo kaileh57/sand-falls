@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::worldgen::WorldGen;
-use fe_core::{Cell, CellPos, ChunkPos, IRect, MaterialId, StableHasher, isqrt};
+use fe_core::{Cell, CellPos, ChunkPos, IRect, LocalRect, MaterialId, StableHasher, isqrt};
 use fe_materials::{MaterialSet, State};
 use fe_physics::Physics;
 use fe_sim::{
@@ -28,6 +28,14 @@ pub mod tools {
     pub const FREEZE: u8 = 5;
     /// Drops a wooden crate once per press.
     pub const CRATE: u8 = 6;
+
+    /// Tool-mask bit for a tool number.
+    pub const fn bit(tool: u8) -> u16 {
+        if tool < 16 { 1 << tool } else { 0 }
+    }
+
+    /// A mask that allows every tool. Players have it unless a game sets another.
+    pub const ALL: u16 = u16::MAX;
 }
 
 /// Chunk streaming around player characters.
@@ -119,8 +127,29 @@ pub struct HashParts {
     pub bodies: u64,
     /// Characters.
     pub avatars: u64,
+    /// Game state: tool masks and zones, status text, and script state.
+    pub game: u64,
     /// The full [`Simulation::hash`].
     pub total: u64,
+}
+
+/// One chunk's cells and scheduling state, as sent by network repair.
+///
+/// The scheduling state is part of the deterministic state: visiting a cell
+/// rewrites its parity flag, so two copies of a chunk with the same cells but
+/// different pending rects drift apart.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChunkState {
+    /// Chunk position.
+    pub pos: ChunkPos,
+    /// The 4,096 cells as packed bits, row-major.
+    pub cells: Vec<u32>,
+    /// Cells visited on the tick that just ran.
+    pub dirty: LocalRect,
+    /// Cells marked for the next tick.
+    pub next: LocalRect,
+    /// A static cell changed since terrain colliders were last rebuilt.
+    pub solid_changed: bool,
 }
 
 /// The whole deterministic simulation.
@@ -138,23 +167,73 @@ pub struct Simulation {
     pub(crate) worldgen: WorldGen,
     pub(crate) stream: Option<StreamConfig>,
     pub(crate) stored: BTreeMap<ChunkPos, Vec<u32>>,
+    pub(crate) tool_masks: BTreeMap<u8, u16>,
+    pub(crate) tool_zones: BTreeMap<u8, IRect>,
+    /// Text a game shows in its HUD, such as the phase and score. Set by game scripts.
+    pub status: String,
+    /// Saved state of the game script, kept here so hashes and snapshots cover it.
+    /// The engine never reads it.
+    pub script_state: Vec<u8>,
     report: TickReport,
 }
 
-/// Adds an explosion to this tick's list, merging it into an earlier one that is
-/// close enough. A block of explosive cells then makes one large blast instead of
-/// many overlapping small ones.
-fn merge_blast(list: &mut Vec<(CellPos, u8, u8)>, pos: CellPos, radius: u8, power: u8) {
-    for b in list.iter_mut() {
-        let (dx, dy) = (i64::from(b.0.x - pos.x), i64::from(b.0.y - pos.y));
-        let reach = i64::from(b.1.max(radius)) / 2;
-        if dx * dx + dy * dy <= reach * reach {
-            b.1 = b.1.max(radius).saturating_add(1).min(48);
-            b.2 = b.2.max(power).saturating_add(6);
-            return;
-        }
+/// Explosions set off on one tick, merged where they overlap.
+#[derive(Clone, Copy)]
+struct Pending {
+    /// Sum of the merged cells' positions, for their center.
+    sum: (i64, i64),
+    cells: i64,
+    radius: u8,
+    power: u8,
+}
+
+impl Pending {
+    fn center(&self) -> CellPos {
+        let n = self.cells.max(1);
+        CellPos::new(self.sum.0.div_euclid(n) as i32, self.sum.1.div_euclid(n) as i32)
     }
-    list.push((pos, radius, power));
+
+    fn overlaps(&self, at: CellPos, radius: u8) -> bool {
+        let c = self.center();
+        let (dx, dy) = (i64::from(c.x - at.x), i64::from(c.y - at.y));
+        let reach = i64::from(self.radius.max(radius)) / 2;
+        dx * dx + dy * dy <= reach * reach
+    }
+
+    /// Grows by another charge: a block of explosive cells makes one large
+    /// blast at its middle instead of many overlapping small ones.
+    fn absorb(&mut self, o: &Self) {
+        self.sum = (self.sum.0 + o.sum.0, self.sum.1 + o.sum.1);
+        self.cells += o.cells;
+        let grow = u8::try_from(o.cells).unwrap_or(u8::MAX);
+        self.radius = self.radius.max(o.radius).saturating_add(grow).min(48);
+        self.power = self.power.max(o.power).saturating_add(grow.saturating_mul(6));
+    }
+}
+
+/// Adds an explosion to this tick's list, merging it into one that overlaps.
+fn merge_blast(list: &mut Vec<Pending>, pos: CellPos, radius: u8, power: u8) {
+    let new = Pending { sum: (i64::from(pos.x), i64::from(pos.y)), cells: 1, radius, power };
+    match list.iter_mut().find(|b| b.overlaps(pos, radius)) {
+        Some(b) => b.absorb(&new),
+        None => list.push(new),
+    }
+}
+
+/// Merges blasts that grew to overlap each other, until none do.
+fn settle_blasts(list: &mut Vec<Pending>) {
+    let mut i = 0;
+    while i < list.len() {
+        let Some(j) =
+            (i + 1..list.len()).find(|&j| list[i].overlaps(list[j].center(), list[j].radius))
+        else {
+            i += 1;
+            continue;
+        };
+        let o = list.remove(j);
+        list[i].absorb(&o);
+        i = 0;
+    }
 }
 
 fn us(t: Instant) -> u64 {
@@ -174,7 +253,43 @@ impl Simulation {
             worldgen: cfg.worldgen,
             stream: cfg.stream,
             stored: BTreeMap::new(),
+            tool_masks: BTreeMap::new(),
+            tool_zones: BTreeMap::new(),
+            status: String::new(),
+            script_state: Vec::new(),
             report: TickReport::default(),
+        }
+    }
+
+    /// The tools a player may use, one bit per tool number ([`tools::bit`]).
+    pub fn tool_mask(&self, player: u8) -> u16 {
+        self.tool_masks.get(&player).copied().unwrap_or(tools::ALL)
+    }
+
+    /// Sets the tools a player may use. [`tools::ALL`] restores the default.
+    pub fn set_tool_mask(&mut self, player: u8, mask: u16) {
+        if mask == tools::ALL {
+            self.tool_masks.remove(&player);
+        } else {
+            self.tool_masks.insert(player, mask);
+        }
+    }
+
+    /// The area a player's tools are limited to, if any.
+    pub fn tool_zone(&self, player: u8) -> Option<IRect> {
+        self.tool_zones.get(&player).copied()
+    }
+
+    /// Limits where a player's tools take effect: a tool aimed outside the zone
+    /// does nothing. `None` removes the limit.
+    pub fn set_tool_zone(&mut self, player: u8, zone: Option<IRect>) {
+        match zone {
+            Some(z) => {
+                self.tool_zones.insert(player, z);
+            }
+            None => {
+                self.tool_zones.remove(&player);
+            }
         }
     }
 
@@ -227,16 +342,17 @@ impl Simulation {
         let mut chunk = fe_sim::Chunk::new(pos, Cell::AIR);
         chunk.load_cells(&cells);
         self.world.grid.insert(chunk);
-        // Wake the neighbors' facing edges so material can flow across the new border.
-        let o = pos.origin();
-        for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
-            let n = ChunkPos::new(pos.x + dx, pos.y + dy);
-            if self.world.grid.contains(n) {
-                let edge = CellPos::new(
-                    o.x + dx.max(0) * 63 - dx.min(0),
-                    o.y + dy.max(0) * 63 - dy.min(0),
-                );
-                self.world.grid.mark(edge);
+        // Wake each neighbor's whole facing edge so material can flow across the new border.
+        let last = (fe_core::CHUNK_SIZE - 1) as u8;
+        for (dx, dy, a, b) in [
+            (-1, 0, (last, 0), (last, last)),
+            (1, 0, (0, 0), (0, last)),
+            (0, -1, (0, last), (last, last)),
+            (0, 1, (0, 0), (last, 0)),
+        ] {
+            if let Some(n) = self.world.grid.chunk(ChunkPos::new(pos.x + dx, pos.y + dy)) {
+                n.mark(a.0, a.1);
+                n.mark(b.0, b.1);
             }
         }
     }
@@ -247,14 +363,16 @@ impl Simulation {
         }
     }
 
-    /// Applies one command now. An explosion it sets off pushes rigid bodies
-    /// only when the command runs inside [`Simulation::step`].
+    /// Applies one command now. An explosion it sets off pushes rigid bodies at once.
     pub fn apply(&mut self, cmd: &Command) {
-        self.apply_collect(cmd, &mut Vec::new());
+        let mut blasts = Vec::new();
+        self.apply_with(cmd, &mut blasts);
+        self.physics.apply_blasts(&blasts);
     }
 
-    /// Applies one command, adding the blasts of any explosion it sets off to `blasts`.
-    fn apply_collect(&mut self, cmd: &Command, blasts: &mut Vec<Blast>) {
+    /// Applies one command, adding any explosion's blast to `blasts` so the
+    /// caller decides when it pushes bodies.
+    fn apply_with(&mut self, cmd: &Command, blasts: &mut Vec<Blast>) {
         match *cmd {
             Command::Paint { x, y, radius, material, replace } => {
                 let mut painted = Vec::new();
@@ -310,7 +428,11 @@ impl Simulation {
                 });
             }
             Command::CarveBody { rect } => {
-                self.physics.carve_body(&mut self.world, rect);
+                let mut lost = Vec::new();
+                self.physics.carve_body(&mut self.world, rect, &mut lost);
+                for q in lost {
+                    self.seed_support(q);
+                }
             }
             Command::Impulse { body, vx, vy } => {
                 self.physics.push_body(body, vx, vy);
@@ -341,16 +463,12 @@ impl Simulation {
             .map(|&p| (p, self.world.get(p)))
             .filter(|&(_, c)| fe_physics::is_body_material(&self.world, c))
             .collect();
-        if picked.len() < fe_physics::MIN_BODY_CELLS {
-            return None;
+        let mut lost = Vec::new();
+        let id = self.physics.carve_cells(&mut self.world, &picked, &mut lost);
+        for q in lost {
+            self.seed_support(q);
         }
-        for &(p, _) in &picked {
-            self.world.grid.set(p, Cell::AIR);
-            if let Some(ch) = self.world.grid.chunk(p.chunk()) {
-                ch.flag_solid_changed();
-            }
-        }
-        self.physics.create_body(&self.world, &picked, (0.0, 0.0), 0.0)
+        id
     }
 
     fn disc(&mut self, x: i32, y: i32, radius: i32, mut f: impl FnMut(&mut Self, CellPos)) {
@@ -418,10 +536,13 @@ impl Simulation {
         input: &PlayerInput,
         prev: &PlayerInput,
     ) -> Vec<Command> {
-        if !input.use_tool {
+        if !input.use_tool || self.tool_mask(avatar.id) & tools::bit(input.tool) == 0 {
             return Vec::new();
         }
         let t = avatar.aim_target(input);
+        if self.tool_zone(avatar.id).is_some_and(|z| !z.contains(t)) {
+            return Vec::new();
+        }
         let pressed = !prev.use_tool || prev.tool != input.tool;
         match input.tool {
             tools::DIG => {
@@ -446,12 +567,40 @@ impl Simulation {
             }],
             tools::HEAT => vec![Command::Heat { x: t.x, y: t.y, radius: 4, delta: 6 }],
             tools::FREEZE => vec![Command::Heat { x: t.x, y: t.y, radius: 4, delta: -6 }],
-            tools::CRATE if pressed => {
-                let Some(wood) = self.material("wood") else { return Vec::new() };
-                let rect = IRect::from_size(t.x - 6, t.y - 6, 12, 12);
-                vec![Command::FillRect { rect, material: wood }, Command::CarveBody { rect }]
-            }
             _ => Vec::new(),
+        }
+    }
+
+    /// The crate tool: fills the air in a 12x12 square with wood and carves it out
+    /// as a body. It never overwrites other cells and never loads chunks, so it
+    /// cannot cut indestructible terrain or grow a fixed world.
+    fn drop_crate(&mut self, avatar: &Avatar, input: &PlayerInput, prev: &PlayerInput) {
+        let pressed = !prev.use_tool || prev.tool != input.tool;
+        if !input.use_tool || input.tool != tools::CRATE || !pressed {
+            return;
+        }
+        let Some(wood) = self.material("wood") else { return };
+        let t = avatar.aim_target(input);
+        let rect = IRect::from_size(t.x - 6, t.y - 6, 12, 12);
+        let (a, b) = rect.chunk_range();
+        let loaded = (a.y..b.y)
+            .all(|cy| (a.x..b.x).all(|cx| self.world.grid.contains(ChunkPos::new(cx, cy))));
+        if !loaded {
+            return;
+        }
+        for y in rect.min.y..rect.max.y {
+            for x in rect.min.x..rect.max.x {
+                let p = CellPos::new(x, y);
+                if self.world.get(p).is_air() {
+                    let c = self.world.make_cell(wood, p);
+                    let _ = self.world.set(p, c);
+                }
+            }
+        }
+        let mut lost = Vec::new();
+        self.physics.carve_body(&mut self.world, rect, &mut lost);
+        for q in lost {
+            self.seed_support(q);
         }
     }
 
@@ -463,20 +612,22 @@ impl Simulation {
         let t_total = Instant::now();
         let mut times = PhaseTimes::default();
         let tick = self.world.tick();
+        self.physics.begin_tick();
 
         let t = Instant::now();
-        // Scene events and player tools that explode push bodies like any blast.
+        // Blasts from commands and tools push bodies along with the cell explosions below.
         let mut blasts = Vec::new();
         for c in commands {
-            self.apply_collect(c, &mut blasts);
+            self.apply_with(c, &mut blasts);
         }
         let avatars = self.avatars.clone();
         for a in &avatars {
             let input = inputs.get(&a.id).copied().unwrap_or_default();
             let prev = self.last_inputs.get(&a.id).copied().unwrap_or_default();
             for c in self.tool_commands(a, &input, &prev) {
-                self.apply_collect(&c, &mut blasts);
+                self.apply_with(&c, &mut blasts);
             }
+            self.drop_crate(a, &input, &prev);
         }
         times.commands = us(t);
 
@@ -486,7 +637,7 @@ impl Simulation {
         times.cells = us(t);
 
         let t = Instant::now();
-        let mut pending: Vec<(CellPos, u8, u8)> = Vec::new();
+        let mut pending: Vec<Pending> = Vec::new();
         for e in &events {
             match *e {
                 Event::Explosion { pos, radius, power } => {
@@ -495,9 +646,10 @@ impl Simulation {
                 Event::SupportLost(p) => self.seed_support(p),
             }
         }
+        settle_blasts(&mut pending);
         let explosions = pending.len() as u32;
-        for (pos, radius, power) in pending {
-            self.run_explosion(pos, radius, power, &mut blasts);
+        for b in pending {
+            self.run_explosion(b.center(), b.radius, b.power, &mut blasts);
         }
         times.explosions = us(t);
 
@@ -587,6 +739,13 @@ impl Simulation {
             .filter(|p| {
                 centers.iter().all(|c| (p.x - c.x).abs() > keep || (p.y - c.y).abs() > keep)
             })
+            // A chunk under a rigid body stays loaded: storing its stamped cells
+            // would destroy the body and leave cells no body owns.
+            .filter(|p| {
+                self.world.grid.chunk(*p).is_some_and(|c| {
+                    (0..fe_core::CHUNK_AREA).all(|i| !c.get(i).has(Cell::FLAG_IN_BODY))
+                })
+            })
             .collect();
         for p in far {
             self.unload_chunk(p);
@@ -613,6 +772,37 @@ impl Simulation {
             h.write_u32(u32::from(i.use_tool) | u32::from(i.tool) << 8);
         }
         h.write_u64(self.stored.len() as u64);
+        // Game state only enters the hash when a game set some, so scenes without a
+        // script keep the hashes they had before game state existed.
+        if self.has_game_state() {
+            h.write_u64(self.game_hash());
+        }
+        h.finish()
+    }
+
+    fn has_game_state(&self) -> bool {
+        !self.tool_masks.is_empty()
+            || !self.tool_zones.is_empty()
+            || !self.status.is_empty()
+            || !self.script_state.is_empty()
+    }
+
+    fn game_hash(&self) -> u64 {
+        let mut h = StableHasher::new();
+        h.write_u64(self.tool_masks.len() as u64);
+        for (p, m) in &self.tool_masks {
+            h.write_u32(u32::from(*p) | u32::from(*m) << 8);
+        }
+        h.write_u64(self.tool_zones.len() as u64);
+        for (p, z) in &self.tool_zones {
+            h.write_u32(u32::from(*p));
+            h.write_i32(z.min.x);
+            h.write_i32(z.min.y);
+            h.write_i32(z.max.x);
+            h.write_i32(z.max.y);
+        }
+        h.write_bytes(self.status.as_bytes());
+        h.write_bytes(&self.script_state);
         h.finish()
     }
 
@@ -631,22 +821,36 @@ impl Simulation {
             particles: p.finish(),
             bodies: b.finish(),
             avatars: a.finish(),
+            game: if self.has_game_state() { self.game_hash() } else { 0 },
             total: self.hash(),
         }
     }
 
-    /// Replaces the cells of loaded chunks, used by network repair. Each entry is
-    /// a chunk position and its 4,096 cells as packed bits.
-    pub fn replace_chunks(&mut self, chunks: &[(ChunkPos, Vec<u32>)]) {
-        for (pos, bits) in chunks {
-            if bits.len() != fe_core::CHUNK_AREA {
+    /// Replaces chunks with copies from another run of the same simulation, used by
+    /// network repair. Restores each chunk's scheduling state along with its cells.
+    pub fn replace_chunks(&mut self, chunks: &[ChunkState]) {
+        for c in chunks {
+            if c.cells.len() != fe_core::CHUNK_AREA {
                 continue;
             }
-            let cells: Vec<Cell> = bits.iter().copied().map(Cell::from_bits).collect();
-            let mut chunk = fe_sim::Chunk::new(*pos, Cell::AIR);
+            let cells: Vec<Cell> = c.cells.iter().copied().map(Cell::from_bits).collect();
+            let mut chunk = fe_sim::Chunk::new(c.pos, Cell::AIR);
             chunk.load_cells(&cells);
+            chunk.set_schedule(c.dirty, c.next);
+            chunk.set_solid_changed(c.solid_changed);
             self.world.grid.insert(chunk);
         }
+    }
+
+    /// A loaded chunk's cells and scheduling state, for [`Simulation::replace_chunks`].
+    pub fn chunk_state(&self, pos: ChunkPos) -> Option<ChunkState> {
+        self.world.grid.chunk(pos).map(|c| ChunkState {
+            pos,
+            cells: c.to_vec().into_iter().map(Cell::to_bits).collect(),
+            dirty: c.dirty(),
+            next: c.pending(),
+            solid_changed: c.solid_changed(),
+        })
     }
 
     /// Packed cells of a loaded chunk.
