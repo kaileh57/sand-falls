@@ -6,8 +6,8 @@
 //! acknowledged yet. It never waits for a slow client.
 
 use crate::{
-    HASH_INTERVAL, Msg, PROTOCOL, Peer, SNAPSHOT_PART, Traffic, Transport, decode, encode,
-    pack_chunk,
+    HASH_INTERVAL, Msg, PROTOCOL, Peer, RepairChunk, SNAPSHOT_PART, Traffic, Transport, decode,
+    encode,
 };
 use fe_core::ChunkPos;
 use fe_engine::{Command, HashParts, PlayerInput};
@@ -25,6 +25,17 @@ const TIMEOUT_US: u64 = 5_000_000;
 const MAX_FRAMES: u64 = 120;
 /// Mismatched hash reports in a row before a full resync.
 const RESYNC_AFTER: u32 = 3;
+/// Ticks a client's frames stop short of a repair's tick after the repair is
+/// sent, so the repair arrives before the frames that reach that tick.
+const REPAIR_HOLD: u64 = 6;
+/// Furthest ahead of the server an input run may be, in ticks.
+const MAX_LEAD: u64 = 2 * HISTORY;
+/// Most input runs read from one packet.
+const MAX_RUNS_PER_PACKET: usize = 512;
+/// Most input runs kept per client.
+const MAX_RUNS_STORED: usize = 4096;
+/// Frames packets stop adding ticks past this many bytes of runs and commands.
+const FRAMES_BUDGET: usize = 1200;
 
 /// Server counters.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +74,15 @@ struct ClientState {
     mismatches: u32,
     last_seen: u64,
     traffic: Traffic,
+    /// Checkpoint tick whose chunk hashes the server asked this client for.
+    asked_chunks: Option<u64>,
+    /// Chunk hashes received for a checkpoint, repaired at the end of the next tick.
+    repair_due: Option<(u64, Vec<(ChunkPos, u64)>)>,
+    /// `(repair tick, server tick)`: until the server tick, frames stop short of
+    /// the repair tick.
+    hold: Option<(u64, u64)>,
+    /// Server tick of the last repair sent.
+    last_repair: Option<u64>,
 }
 
 /// One connected client, as seen by the server.
@@ -90,6 +110,7 @@ pub struct ServerCore {
     pending: Vec<Command>,
     materials: u64,
     scene: u64,
+    mods: u64,
     spawns: Vec<(i32, i32)>,
     max_players: u8,
     next_snapshot: u32,
@@ -107,6 +128,7 @@ impl ServerCore {
             spawns.push((i32::midpoint(b.min.x, b.max.x), b.min.y + 16));
         }
         let materials = runner.sim.materials().hash();
+        let mods = runner.mods_hash();
         Self {
             runner,
             clients: BTreeMap::new(),
@@ -115,6 +137,7 @@ impl ServerCore {
             pending: Vec::new(),
             materials,
             scene: scene_hash,
+            mods,
             spawns,
             max_players: max_players.clamp(1, 64),
             next_snapshot: 1,
@@ -172,9 +195,9 @@ impl ServerCore {
 
     fn handle(&mut self, now_us: u64, from: Peer, m: Msg, net: &mut impl Transport) {
         match m {
-            Msg::Hello { protocol, name, materials, scene } => {
+            Msg::Hello { protocol, name, materials, scene, mods } => {
                 if let Some(c) = self.clients.get(&from) {
-                    // The welcome was lost and the client asked again.
+                    // The client did not get its welcome: send it again.
                     let player = c.player;
                     self.send(net, from, &Msg::Welcome { player });
                     return;
@@ -185,6 +208,12 @@ impl ServerCore {
                     Some("material set differs from the server's".to_string())
                 } else if scene != self.scene {
                     Some("scene differs from the server's".to_string())
+                } else if mods != self.mods {
+                    Some(format!(
+                        "game script differs from the server's (client mods hash {mods:016x}, \
+                         server {:016x})",
+                        self.mods
+                    ))
                 } else if self.clients.len() >= self.max_players as usize {
                     Some("server is full".to_string())
                 } else {
@@ -209,6 +238,10 @@ impl ServerCore {
                         mismatches: 0,
                         last_seen: now_us,
                         traffic: Traffic::default(),
+                        asked_chunks: None,
+                        repair_due: None,
+                        hold: None,
+                        last_repair: None,
                     },
                 );
                 self.stats.joins += 1;
@@ -219,16 +252,29 @@ impl ServerCore {
                 self.send(net, from, &Msg::Welcome { player });
             }
             Msg::Inputs { upto: _, runs, ack } => {
-                let Some(c) = self.clients.get_mut(&from) else { return };
-                for (t, i) in runs {
+                let now = self.runner.sim.tick();
+                let Some(c) = self.clients.get_mut(&from) else {
+                    Self::reject_unknown(from, net);
+                    return;
+                };
+                for (t, i) in runs.into_iter().take(MAX_RUNS_PER_PACKET) {
+                    // Runs far in the future would never be pruned.
+                    if t > now.saturating_add(MAX_LEAD)
+                        || (c.runs.len() >= MAX_RUNS_STORED && !c.runs.contains_key(&t))
+                    {
+                        continue;
+                    }
                     c.runs.insert(t, i);
                 }
                 if c.synced {
-                    c.ack = c.ack.max(ack);
+                    c.ack = c.ack.max(ack.min(now));
                 }
             }
             Msg::SnapshotAck { id, missing } => {
-                let Some(c) = self.clients.get_mut(&from) else { return };
+                let Some(c) = self.clients.get_mut(&from) else {
+                    Self::reject_unknown(from, net);
+                    return;
+                };
                 let Some(out) = c.snapshot.as_mut() else { return };
                 if out.id != id {
                     return;
@@ -243,9 +289,13 @@ impl ServerCore {
                 }
             }
             Msg::HashReport { tick, parts } => {
+                let now = self.runner.sim.tick();
+                let Some(c) = self.clients.get_mut(&from) else {
+                    Self::reject_unknown(from, net);
+                    return;
+                };
                 self.stats.reports += 1;
                 let Some(&(mine, _)) = self.checkpoints.get(&tick) else { return };
-                let Some(c) = self.clients.get_mut(&from) else { return };
                 if mine == parts {
                     c.mismatches = 0;
                     return;
@@ -254,43 +304,75 @@ impl ServerCore {
                 c.mismatches += 1;
                 let only_cells = mine.particles == parts.particles
                     && mine.bodies == parts.bodies
-                    && mine.avatars == parts.avatars;
+                    && mine.avatars == parts.avatars
+                    && mine.game == parts.game;
                 if c.mismatches >= RESYNC_AFTER || !only_cells {
                     c.want_snapshot = true;
                     c.synced = false;
                     c.mismatches = 0;
                     self.stats.resyncs += 1;
-                } else {
+                } else if c.last_repair.is_none_or(|t| now >= t + HASH_INTERVAL) {
+                    c.asked_chunks = Some(tick);
                     self.send(net, from, &Msg::NeedChunkHashes(tick));
                 }
             }
             Msg::ChunkHashes { tick, hashes } => {
-                let Some((_, mine)) = self.checkpoints.get(&tick) else { return };
-                let theirs: BTreeMap<ChunkPos, u64> = hashes.into_iter().collect();
-                let mut bad = BTreeSet::new();
-                for (p, h) in mine {
-                    if theirs.get(p) != Some(h) {
-                        for dy in -1..=1 {
-                            for dx in -1..=1 {
-                                bad.insert(ChunkPos::new(p.x + dx, p.y + dy));
-                            }
-                        }
-                    }
+                let Some(c) = self.clients.get_mut(&from) else {
+                    Self::reject_unknown(from, net);
+                    return;
+                };
+                // Only answer the request this client was sent, once.
+                if c.asked_chunks != Some(tick) || !self.checkpoints.contains_key(&tick) {
+                    return;
                 }
-                let now = self.runner.sim.tick();
-                let chunks: Vec<(ChunkPos, Vec<u8>)> = bad
-                    .into_iter()
-                    .filter_map(|p| self.runner.sim.chunk_bits(p).map(|b| (p, pack_chunk(&b))))
-                    .collect();
-                for batch in chunks.chunks(6) {
-                    self.send(net, from, &Msg::Repair { tick: now, chunks: batch.to_vec() });
-                }
-                self.stats.repairs += 1;
+                c.asked_chunks = None;
+                c.repair_due = Some((tick, hashes));
             }
             Msg::Ping(t) => self.send(net, from, &Msg::Pong(t)),
             Msg::Bye => self.drop_client(from),
             _ => {}
         }
+    }
+
+    /// Tells a peer that is not connected (it timed out, or never joined) so it
+    /// stops waiting for frames.
+    fn reject_unknown(peer: Peer, net: &mut impl Transport) {
+        net.send(peer, &encode(&Msg::Reject("not connected".into())));
+    }
+
+    /// Sends a client the chunks that differed at the checkpoint it reported,
+    /// as they are now, before any frames that reach this tick.
+    fn send_repair(&mut self, peer: Peer, now: u64, net: &mut impl Transport) {
+        let Some(c) = self.clients.get_mut(&peer) else { return };
+        let Some((tick, hashes)) = c.repair_due.take() else { return };
+        if !c.synced || c.want_snapshot {
+            return;
+        }
+        let Some((_, mine)) = self.checkpoints.get(&tick) else { return };
+        let theirs: BTreeMap<ChunkPos, u64> = hashes.into_iter().collect();
+        let mut bad = BTreeSet::new();
+        for (p, h) in mine {
+            if theirs.get(p) != Some(h) {
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        bad.insert(ChunkPos::new(p.x + dx, p.y + dy));
+                    }
+                }
+            }
+        }
+        let chunks: Vec<RepairChunk> = bad
+            .into_iter()
+            .filter_map(|p| self.runner.sim.chunk_state(p).map(|s| RepairChunk::pack(&s)))
+            .collect();
+        if chunks.is_empty() {
+            return;
+        }
+        c.hold = Some((now, now + REPAIR_HOLD));
+        c.last_repair = Some(now);
+        for batch in chunks.chunks(6) {
+            self.send(net, peer, &Msg::Repair { tick: now, chunks: batch.to_vec() });
+        }
+        self.stats.repairs += 1;
     }
 
     fn drop_client(&mut self, peer: Peer) {
@@ -347,6 +429,7 @@ impl ServerCore {
 
         let peers: Vec<Peer> = self.clients.keys().copied().collect();
         for peer in peers {
+            self.send_repair(peer, now, net);
             self.send_updates(peer, now, false, net);
         }
     }
@@ -362,7 +445,16 @@ impl ServerCore {
 
     fn send_updates(&mut self, peer: Peer, now: u64, force: bool, net: &mut impl Transport) {
         let Some(c) = self.clients.get_mut(&peer) else { return };
+        let first_kept = self.history.keys().next().copied();
+        if c.synced && first_kept.is_some_and(|k| k > c.ack) {
+            // The client fell behind the confirmed history: frames can never catch it up.
+            c.want_snapshot = true;
+            self.stats.resyncs += 1;
+        }
         if c.want_snapshot {
+            c.asked_chunks = None;
+            c.repair_due = None;
+            c.hold = None;
             let bytes = self.runner.sim.snapshot();
             self.stats.snapshot_bytes += bytes.len() as u64;
             let parts: Vec<Vec<u8>> = bytes.chunks(SNAPSHOT_PART).map(<[u8]>::to_vec).collect();
@@ -397,35 +489,61 @@ impl ServerCore {
             }
             return;
         }
-        if !c.synced || (!force && !now.is_multiple_of(2) && now > c.ack + 1) {
+        if !c.synced || (!force && !now.is_multiple_of(2) && now > c.ack.saturating_add(1)) {
             return;
         }
-        let from = c.ack.max(self.history.keys().next().copied().unwrap_or(0));
-        if from >= now {
+        let mut cap = now;
+        if let Some((repair_tick, until)) = c.hold {
+            if now < until {
+                cap = cap.min(repair_tick.saturating_sub(1));
+            } else {
+                c.hold = None;
+            }
+        }
+        let from = c.ack.max(first_kept.unwrap_or(0));
+        if from >= cap {
             return;
         }
-        let upto = now.min(from + MAX_FRAMES);
+        let end = cap.min(from + MAX_FRAMES);
+        let mut upto = from;
         let mut runs = Vec::new();
-        let mut last: BTreeMap<u8, PlayerInput> = BTreeMap::new();
+        let mut last: BTreeMap<u8, Option<PlayerInput>> = BTreeMap::new();
         let mut commands = Vec::new();
-        for (t, (inputs, cmds)) in self.history.range(from..upto) {
+        let mut bytes = 0;
+        for (t, (inputs, cmds)) in self.history.range(from..end) {
+            let mut tick_runs = Vec::new();
             for (p, i) in inputs {
-                if last.get(p) != Some(i) {
-                    runs.push((*p, *t, *i));
-                    last.insert(*p, *i);
+                if last.get(p) != Some(&Some(*i)) {
+                    tick_runs.push((*p, *t, Some(*i)));
                 }
             }
-            // A player with no input this tick is idle; record that as a run too.
-            let gone: Vec<u8> = last.keys().filter(|p| !inputs.contains_key(p)).copied().collect();
-            for p in gone {
-                if last.get(&p) != Some(&PlayerInput::default()) {
-                    runs.push((p, *t, PlayerInput::default()));
-                    last.insert(p, PlayerInput::default());
+            // A player with no input from this tick on gets a run that says so.
+            for (p, i) in &last {
+                if i.is_some() && !inputs.contains_key(p) {
+                    tick_runs.push((*p, *t, None));
                 }
             }
-            for cmd in cmds {
-                commands.push((*t, serde_json_string(cmd)));
+            let tick_cmds: Vec<(u64, String)> =
+                cmds.iter().map(|c| (*t, serde_json_string(c))).collect();
+            let size = tick_runs
+                .iter()
+                .map(|r| postcard::to_allocvec(r).map_or(24, |v| v.len()))
+                .chain(tick_cmds.iter().map(|(_, j)| j.len() + 12))
+                .sum::<usize>();
+            // Keep the datagram small; a client far behind gets the rest next time.
+            if upto > from && bytes + size > FRAMES_BUDGET {
+                break;
             }
+            bytes += size;
+            for r in tick_runs {
+                last.insert(r.0, r.2);
+                runs.push(r);
+            }
+            commands.extend(tick_cmds);
+            upto = t + 1;
+        }
+        if upto == from {
+            return;
         }
         self.send(net, peer, &Msg::Frames { from, upto, runs, commands });
     }
@@ -434,3 +552,7 @@ impl ServerCore {
 fn serde_json_string(c: &Command) -> String {
     serde_json::to_string(c).unwrap_or_default()
 }
+
+#[cfg(test)]
+#[path = "server_tests.rs"]
+mod tests;

@@ -19,12 +19,12 @@ mod transport;
 
 pub use transport::{Peer, SimNet, SimNetConfig, Transport, UdpTransport};
 
-use fe_core::ChunkPos;
-use fe_engine::{HashParts, PlayerInput};
+use fe_core::{ChunkPos, LocalRect};
+use fe_engine::{ChunkState, HashParts, PlayerInput};
 use serde::{Deserialize, Serialize};
 
 /// Wire protocol version. Peers with a different version are rejected.
-pub const PROTOCOL: u16 = 1;
+pub const PROTOCOL: u16 = 3;
 /// Ticks between hash checks.
 pub const HASH_INTERVAL: u64 = 30;
 /// Bytes of snapshot data per packet.
@@ -47,6 +47,8 @@ pub enum Msg {
         materials: u64,
         /// Hash of the client's scene text.
         scene: u64,
+        /// [`fe_script::mod_hash`] of the scene's game script, 0 if it has none.
+        mods: u64,
     },
     /// Client input as runs: each entry is the input from its tick until the next entry.
     Inputs {
@@ -106,8 +108,10 @@ pub enum Msg {
         from: u64,
         /// One past the last tick covered.
         upto: u64,
-        /// `(player, first tick, input)` runs.
-        runs: Vec<(u8, u64, PlayerInput)>,
+        /// `(player, first tick, input)` runs. `None` means the player has no input
+        /// from that tick on, which differs from idle input: scene timeline input
+        /// applies only to players with no input.
+        runs: Vec<(u8, u64, Option<PlayerInput>)>,
         /// `(tick, command as JSON)` in apply order.
         commands: Vec<(u64, String)>,
     },
@@ -117,11 +121,50 @@ pub enum Msg {
     Repair {
         /// Apply after this many ticks have run.
         tick: u64,
-        /// `(chunk, zstd-compressed little-endian cell bits)`.
-        chunks: Vec<(ChunkPos, Vec<u8>)>,
+        /// The chunks.
+        chunks: Vec<RepairChunk>,
     },
     /// Echo of a [`Msg::Ping`].
     Pong(u64),
+}
+
+/// One chunk in a [`Msg::Repair`]: its cells and scheduling state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RepairChunk {
+    /// Chunk position.
+    pub pos: ChunkPos,
+    /// Cell bits packed with [`pack_chunk`].
+    pub cells: Vec<u8>,
+    /// Cells visited on the tick that just ran.
+    pub dirty: LocalRect,
+    /// Cells marked for the next tick.
+    pub next: LocalRect,
+    /// The chunk's solid-changed flag.
+    pub solid_changed: bool,
+}
+
+impl RepairChunk {
+    /// Packs a chunk for the wire.
+    pub fn pack(c: &ChunkState) -> Self {
+        Self {
+            pos: c.pos,
+            cells: pack_chunk(&c.cells),
+            dirty: c.dirty,
+            next: c.next,
+            solid_changed: c.solid_changed,
+        }
+    }
+
+    /// Reverses [`RepairChunk::pack`]. Returns `None` if the cells do not unpack.
+    pub fn unpack(&self) -> Option<ChunkState> {
+        Some(ChunkState {
+            pos: self.pos,
+            cells: unpack_chunk(&self.cells)?,
+            dirty: self.dirty,
+            next: self.next,
+            solid_changed: self.solid_changed,
+        })
+    }
 }
 
 /// A message that could not be decoded.
@@ -191,7 +234,7 @@ mod tests {
     #[test]
     fn messages_round_trip() {
         let msgs = vec![
-            Msg::Hello { protocol: PROTOCOL, name: "a".into(), materials: 1, scene: 2 },
+            Msg::Hello { protocol: PROTOCOL, name: "a".into(), materials: 1, scene: 2, mods: 3 },
             Msg::Inputs {
                 upto: 9,
                 runs: vec![(3, PlayerInput { move_x: -1, jump: true, ..Default::default() })],
@@ -200,12 +243,18 @@ mod tests {
             Msg::Frames {
                 from: 1,
                 upto: 5,
-                runs: vec![(0, 1, PlayerInput::default())],
+                runs: vec![(0, 1, Some(PlayerInput::default())), (1, 3, None)],
                 commands: vec![(4, "{}".into())],
             },
             Msg::Repair {
                 tick: 7,
-                chunks: vec![(ChunkPos::new(-1, 2), pack_chunk(&vec![5; fe_core::CHUNK_AREA]))],
+                chunks: vec![RepairChunk {
+                    pos: ChunkPos::new(-1, 2),
+                    cells: pack_chunk(&vec![5; fe_core::CHUNK_AREA]),
+                    dirty: LocalRect::EMPTY,
+                    next: LocalRect::FULL,
+                    solid_changed: true,
+                }],
             },
             Msg::Pong(77),
         ];
