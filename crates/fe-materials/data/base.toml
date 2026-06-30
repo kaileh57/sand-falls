@@ -80,7 +80,7 @@ spread = 10
 conductivity = 60
 opacity = 50
 viscosity = 20
-freeze = { at = -10, into = "ice" }
+freeze = { at = -10, into = "ice", latent = 80 }
 melt = { at = 100, into = "steam", latent = 540 }
 heat_capacity = 42
 colors = ["#2f6fcf", "#2c69c6", "#3374d6"]
@@ -92,7 +92,7 @@ density = 80
 spread = 7
 opacity = 140
 viscosity = 60
-ignite = { at = 200, chance = "15%", into = "fire" }
+ignite = { at = 200, chance = "15%", into = "burning_oil" }
 colors = ["#3b2a17", "#362614", "#402e1a"]
 
 [[material]]
@@ -360,7 +360,7 @@ fracture = 120
 conductivity = 50
 temp = -20
 opacity = 60
-melt = { at = 10, into = "water" }
+melt = { at = 10, into = "water", latent = 160 }
 colors = ["#a9d6f0", "#9fcde8", "#b3def5"]
 
 [[material]]
@@ -369,7 +369,7 @@ state = "powder"
 density = 40
 slide = "20%"
 temp = -10
-melt = { at = 10, into = "water" }
+melt = { at = 10, into = "water", latent = 160 }
 colors = ["#eef4fa", "#e4ecf4"]
 
 # ---------------------------------------------------------------- explosives
@@ -575,6 +575,39 @@ light = "#3a0e02"
 spawn = { into = "smoke", chance = "3%", dir = "up" }
 colors = ["#1c1412", "#241815", "#3a1a10", "#2a1612"]
 
+# Flash: the white-hot core of a large blast. It lasts a few ticks and turns
+# into the fireball. Blasts of radius 12 and up fill their inner third with it,
+# and the renderer spreads its light far, so a big charge lights the whole room.
+# Appended last so existing material ids stay the same.
+[[material]]
+name = "flash"
+state = "fire"
+temp = 1500
+hold_temp = 1500
+lifetime = [2, 5]
+decay = "fire"
+light = "#fff0c8"
+colors = ["#fffbe8", "#fff6d0", "#ffeeb8"]
+
+# Burning oil: oil that has caught fire stays a liquid and burns where it lies,
+# throwing flames up and heating the oil next to it, so a slick or a spill
+# burns across instead of flashing once and going out. It floats on water.
+[[material]]
+name = "burning_oil"
+state = "liquid"
+density = 80
+spread = 7
+opacity = 140
+viscosity = 60
+conductivity = 24
+hold_temp = 420
+lifetime = [100, 200]
+lifetime_rate = "50%"
+decay = "smoke"
+light = "#ff5a14"
+spawn = { into = "fire", chance = "25%", dir = "up" }
+colors = ["#d2501a", "#b8400e", "#e86420"]
+
 # ---------------------------------------------------------------- reactions
 
 [[reaction]]
@@ -714,3 +747,11 @@ b = "concrete"
 into_a = "air"
 into_b = "acid_gas"
 chance = "2%"
+
+# A torch under water goes out and is left a wooden stick.
+[[reaction]]
+a = "water"
+b = "torch"
+into_a = "water"
+into_b = "wood"
+chance = "3%"

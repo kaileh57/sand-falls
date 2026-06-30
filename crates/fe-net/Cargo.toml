@@ -11,6 +11,7 @@ publish.workspace = true
 fe-core.workspace = true
 fe-engine.workspace = true
 fe-scene.workspace = true
+fe-script.workspace = true
 fe-materials.workspace = true
 fe-sim.workspace = true
 serde.workspace = true

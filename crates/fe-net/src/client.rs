@@ -1,11 +1,9 @@
 //! The client core: follows confirmed ticks, predicts its own character, and
 //! checks its state against the server's.
 
-use crate::{
-    HASH_INTERVAL, Msg, PROTOCOL, Peer, TICK_US, Traffic, Transport, decode, encode, unpack_chunk,
-};
+use crate::{HASH_INTERVAL, Msg, PROTOCOL, Peer, TICK_US, Traffic, Transport, decode, encode};
 use fe_core::ChunkPos;
-use fe_engine::{Avatar, Command, HashParts, PlayerInput, Simulation};
+use fe_engine::{Avatar, ChunkState, Command, HashParts, PlayerInput, Simulation};
 use fe_materials::MaterialSet;
 use fe_scene::{Runner, Scene};
 use serde::{Deserialize, Serialize};
@@ -16,6 +14,12 @@ use std::sync::Arc;
 const MAX_CATCH_UP: u32 = 12;
 /// Checkpoints kept for answering chunk-hash requests.
 const KEEP_CHECKPOINTS: usize = 12;
+/// Checkpoint hashes kept in [`ClientCore::hashes`].
+const KEEP_HASHES: usize = 4096;
+/// Time between join requests until the server answers, in microseconds.
+const HELLO_RETRY_US: u64 = 500_000;
+/// Silence from the server after which the client gives up, in microseconds.
+const SERVER_TIMEOUT_US: u64 = 10_000_000;
 
 /// Client counters.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,9 +40,6 @@ pub struct ClientStats {
     pub snapshot_bytes: u64,
 }
 
-/// How long a client waits for a welcome before asking again, in microseconds.
-const HELLO_RETRY_US: u64 = 400_000;
-
 /// Connection state.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientPhase {
@@ -48,7 +49,7 @@ pub enum ClientPhase {
     Loading,
     /// Following confirmed ticks.
     Playing,
-    /// Refused by the server.
+    /// Refused by the server, or the server stopped answering.
     Rejected(String),
 }
 
@@ -62,6 +63,7 @@ struct Incoming {
 pub struct ClientCore {
     scene: Scene,
     scene_hash: u64,
+    mods_hash: u64,
     mats: Arc<MaterialSet>,
     threads: usize,
     server: Peer,
@@ -78,17 +80,20 @@ pub struct ClientCore {
     known_upto: u64,
     local: BTreeMap<u64, PlayerInput>,
     last_local: PlayerInput,
-    repairs: BTreeMap<u64, Vec<(ChunkPos, Vec<u32>)>>,
+    repairs: BTreeMap<u64, Vec<ChunkState>>,
     chunk_hashes: BTreeMap<u64, Vec<(ChunkPos, u64)>>,
-    /// Hashes at each checkpoint this client reached.
+    /// Hashes at recent checkpoints this client reached, up to 4,096 of them.
     pub hashes: BTreeMap<u64, HashParts>,
+    /// Id of the last snapshot loaded.
+    loaded_snapshot: Option<u32>,
+    /// A part of an already loaded snapshot arrived, so the server missed the ack.
+    ack_again: bool,
+    connected: bool,
+    last_hello: u64,
+    last_heard: u64,
     predicted: Option<Avatar>,
     started_us: u64,
     last_ping: u64,
-    /// When the join request was last sent.
-    last_hello: u64,
-    /// Id of the last snapshot loaded.
-    loaded: Option<u32>,
     ticks_run: u64,
     /// Counters.
     pub stats: ClientStats,
@@ -105,6 +110,7 @@ impl ClientCore {
         threads: usize,
     ) -> Self {
         Self {
+            mods_hash: fe_scene::mods_hash(&scene),
             scene,
             scene_hash: crate::scene_hash(scene_text),
             mats,
@@ -123,11 +129,14 @@ impl ClientCore {
             repairs: BTreeMap::new(),
             chunk_hashes: BTreeMap::new(),
             hashes: BTreeMap::new(),
+            loaded_snapshot: None,
+            ack_again: false,
+            connected: false,
+            last_hello: 0,
+            last_heard: 0,
             predicted: None,
             started_us: 0,
             last_ping: 0,
-            last_hello: 0,
-            loaded: None,
             ticks_run: 0,
             stats: ClientStats::default(),
         }
@@ -150,9 +159,11 @@ impl ClientCore {
         net.send(self.server, &bytes);
     }
 
-    /// Sends the join request.
+    /// Sends the join request. [`ClientCore::tick`] repeats it until the server answers.
     pub fn connect(&mut self, now_us: u64, net: &mut impl Transport) {
         self.started_us = now_us;
+        self.connected = true;
+        self.last_heard = now_us;
         self.send_hello(now_us, net);
     }
 
@@ -163,6 +174,7 @@ impl ClientCore {
             name: self.name.clone(),
             materials: self.mats.hash(),
             scene: self.scene_hash,
+            mods: self.mods_hash,
         };
         self.send(net, &hello);
     }
@@ -180,6 +192,7 @@ impl ClientCore {
             }
             self.stats.traffic.received += bytes.len() as u64;
             self.stats.traffic.packets_received += 1;
+            self.last_heard = now_us;
             if let Ok(m) = decode(&bytes) {
                 self.handle(now_us, m, net);
             }
@@ -197,12 +210,9 @@ impl ClientCore {
             Msg::Reject(r) => self.phase = ClientPhase::Rejected(r),
             Msg::SnapshotPart { id, part, total, data } => {
                 self.stats.snapshot_bytes += data.len() as u64;
-                if self.loaded.is_some_and(|l| id <= l) {
-                    // Our acknowledgement of a snapshot we already loaded was
-                    // lost and the server is still sending it: acknowledge again.
-                    if part == 0 {
-                        self.send(net, &Msg::SnapshotAck { id, missing: Vec::new() });
-                    }
+                if self.loaded_snapshot.is_some_and(|l| id <= l) {
+                    // Already loaded: the server is resending because an ack was lost.
+                    self.ack_again = true;
                     return;
                 }
                 if self.incoming.as_ref().is_none_or(|i| i.id != id) {
@@ -217,7 +227,7 @@ impl ClientCore {
                     let bytes: Vec<u8> = inc.parts.values().flatten().copied().collect();
                     let id = inc.id;
                     self.incoming = None;
-                    self.loaded = Some(id);
+                    self.loaded_snapshot = Some(id);
                     self.load_snapshot(now_us, &bytes);
                     self.send(net, &Msg::SnapshotAck { id, missing: Vec::new() });
                     self.send_inputs(net);
@@ -234,16 +244,16 @@ impl ClientCore {
                 if from > have || upto <= have {
                     return;
                 }
-                let mut per_player: BTreeMap<u8, Vec<(u64, PlayerInput)>> = BTreeMap::new();
+                let mut per_player: BTreeMap<u8, Vec<(u64, Option<PlayerInput>)>> = BTreeMap::new();
                 for (p, t, i) in runs {
                     per_player.entry(p).or_default().push((t, i));
                 }
                 for t in have..upto {
+                    // Idle input stays in the map, as on the server: it overrides scene
+                    // timeline input, which applies only to players with no input.
                     let mut tick_inputs = BTreeMap::new();
                     for (p, list) in &per_player {
-                        if let Some((_, i)) = list.iter().rev().find(|(s, _)| *s <= t)
-                            && *i != PlayerInput::default()
-                        {
+                        if let Some((_, Some(i))) = list.iter().rev().find(|(s, _)| *s <= t) {
                             tick_inputs.insert(*p, *i);
                         }
                     }
@@ -264,10 +274,8 @@ impl ClientCore {
                 }
             }
             Msg::Repair { tick, chunks } => {
-                let unpacked: Vec<(ChunkPos, Vec<u32>)> = chunks
-                    .into_iter()
-                    .filter_map(|(p, d)| unpack_chunk(&d).map(|b| (p, b)))
-                    .collect();
+                let unpacked: Vec<ChunkState> =
+                    chunks.iter().filter_map(crate::RepairChunk::unpack).collect();
                 self.repairs.entry(tick).or_default().extend(unpacked);
             }
             Msg::Pong(t) => {
@@ -281,19 +289,19 @@ impl ClientCore {
 
     fn load_snapshot(&mut self, now_us: u64, bytes: &[u8]) {
         let Ok(sim) = Simulation::restore(bytes, self.mats.clone(), self.threads) else { return };
-        let runner = match self.runner.take() {
-            Some(mut r) => {
-                r.sim = sim;
-                r
-            }
+        let mut runner = match self.runner.take() {
+            Some(r) => r,
             None => match Runner::new(self.scene.clone(), self.mats.clone(), self.threads) {
-                Ok(mut r) => {
-                    r.sim = sim;
-                    r
-                }
+                Ok(r) => r,
                 Err(_) => return,
             },
         };
+        // The snapshot carries the game script's saved state; restore the script
+        // from it so it continues exactly where the server's is.
+        if let Err(e) = runner.replace_sim(sim) {
+            self.phase = ClientPhase::Rejected(format!("cannot restore the game script: {e}"));
+            return;
+        }
         let t = runner.sim.tick();
         self.runner = Some(runner);
         self.frames = self.frames.split_off(&t);
@@ -331,13 +339,23 @@ impl ClientCore {
     /// Advances: runs confirmed ticks, records the local input, predicts, and sends.
     pub fn tick(&mut self, now_us: u64, net: &mut impl Transport) {
         self.ticks_run += 1;
-        // The join request or the welcome can be lost: ask again until welcomed.
-        if (self.phase == ClientPhase::Connecting
-            || (self.phase != ClientPhase::Playing && self.player.is_none()))
-            && !matches!(self.phase, ClientPhase::Rejected(_))
-            && now_us.saturating_sub(self.last_hello) > HELLO_RETRY_US
+        if !self.connected || matches!(self.phase, ClientPhase::Rejected(_)) {
+            return;
+        }
+        if now_us.saturating_sub(self.last_heard) > SERVER_TIMEOUT_US {
+            self.phase = ClientPhase::Rejected("the server stopped answering".into());
+            return;
+        }
+        // Until the welcome arrives, a lost hello or welcome would stall the join.
+        if (self.phase == ClientPhase::Connecting || self.player.is_none())
+            && now_us.saturating_sub(self.last_hello) >= HELLO_RETRY_US
         {
             self.send_hello(now_us, net);
+        }
+        if std::mem::take(&mut self.ack_again)
+            && let Some(id) = self.loaded_snapshot
+        {
+            self.send(net, &Msg::SnapshotAck { id, missing: Vec::new() });
         }
         if self.phase != ClientPhase::Playing {
             return;
@@ -359,6 +377,9 @@ impl ClientCore {
                 if now.is_multiple_of(HASH_INTERVAL) {
                     let parts = r.sim.hash_parts();
                     self.hashes.insert(now, parts);
+                    while self.hashes.len() > KEEP_HASHES {
+                        self.hashes.pop_first();
+                    }
                     self.chunk_hashes.insert(now, r.sim.chunk_hashes());
                     while self.chunk_hashes.len() > KEEP_CHECKPOINTS {
                         self.chunk_hashes.pop_first();
