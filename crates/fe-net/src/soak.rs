@@ -49,7 +49,7 @@ pub enum BotStyle {
     /// Walk, jump, dig, paint, and blow things up at random.
     #[default]
     Chaos,
-    /// Even players bombard toward the right, odd players toward the left.
+    /// Even players build and bombard toward the right, odd players toward the left.
     Siege,
     /// Dig channels and drop crates.
     Flood,
@@ -149,9 +149,25 @@ fn bot_input(
         BotStyle::Chaos => chaos_input(rng, tick, prev, materials),
         BotStyle::Siege => {
             if !tick.is_multiple_of(45) {
-                return PlayerInput { use_tool: false, ..prev };
+                // Painting is held; explosions fire once per press.
+                return PlayerInput {
+                    use_tool: prev.use_tool && prev.tool == tools::PAINT,
+                    ..prev
+                };
             }
             let dir = if player.is_multiple_of(2) { 1 } else { -1 };
+            if rng.below(2) == 0 {
+                // Build: paint a wall segment near the character.
+                return PlayerInput {
+                    move_x: 0,
+                    jump: false,
+                    aim_x: (dir * rng.range_i32(8, 50)) as i16,
+                    aim_y: rng.range_i32(-40, 0) as i16,
+                    tool: tools::PAINT,
+                    param: materials.get(3).copied().unwrap_or(0),
+                    use_tool: true,
+                };
+            }
             PlayerInput {
                 move_x: rng.range_i32(-1, 1) as i8,
                 jump: rng.below(6) == 0,
@@ -226,7 +242,8 @@ pub fn run_soak_observed(
     cfg: &SoakConfig,
     observe: &mut dyn FnMut(&SoakFrame<'_>),
 ) -> Result<SoakReport, String> {
-    let scene = fe_scene::parse(&cfg.scene_text).map_err(|e| e.to_string())?;
+    let mut scene = fe_scene::parse(&cfg.scene_text).map_err(|e| e.to_string())?;
+    fe_scene::attach_script(&mut scene, &cfg.scene_dir).map_err(|e| e.to_string())?;
     let mats =
         Arc::new(fe_scene::load_materials(&scene, &cfg.scene_dir).map_err(|e| e.to_string())?);
     let runner =
@@ -412,8 +429,60 @@ mod tests {
         c.corrupt_at = Some(200);
         let r = run_soak(&c).unwrap_or_else(|e| panic!("{e}"));
         assert!(r.desyncs >= 1, "{r:#?}");
-        assert!(r.repairs >= 1 || r.resyncs >= 1, "{r:#?}");
+        // The chunk repair alone must fix it, without falling back to a snapshot.
+        assert!(r.repairs >= 1, "{r:#?}");
+        assert_eq!(r.resyncs, 0, "{r:#?}");
         assert!(r.bots.iter().all(|b| b.final_match), "{r:#?}");
+    }
+
+    /// The siege game: a script switches tools on and off by phase and counts
+    /// cores. A bot joins during the battle phase and must match the server,
+    /// which only works if the script state travels in the snapshot.
+    #[test]
+    fn siege_script_state_reaches_late_joiners() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes/games/siege");
+        let text =
+            std::fs::read_to_string(dir.join("siege.scene")).unwrap_or_else(|e| panic!("{e}"));
+        let mut c = cfg(3, 2100, 80, 1);
+        c.scene_text = text;
+        c.scene_dir = dir;
+        c.style = BotStyle::Siege;
+        c.late_join_at = 1900;
+        let r = run_soak(&c).unwrap_or_else(|e| panic!("{e}"));
+        assert!(r.passed, "{r:#?}");
+        let late = r.bots.last().unwrap_or_else(|| panic!("no bots"));
+        assert!(late.final_match && late.checkpoints > 0, "{r:#?}");
+    }
+
+    #[test]
+    fn mismatched_mods_are_rejected() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes/games/siege");
+        let text =
+            std::fs::read_to_string(dir.join("siege.scene")).unwrap_or_else(|e| panic!("{e}"));
+        let mut scene = fe_scene::parse(&text).unwrap_or_else(|e| panic!("{e}"));
+        fe_scene::attach_script(&mut scene, &dir).unwrap_or_else(|e| panic!("{e}"));
+        let mats = Arc::new(fe_materials::base_set());
+        let runner = Runner::new(scene.clone(), mats.clone(), 1).unwrap_or_else(|e| panic!("{e}"));
+        let mut server = ServerCore::new(runner, crate::scene_hash(&text), 4);
+        // Same scene text, different script bytes.
+        let mut other = scene;
+        other.script_wasm = Some(fe_scene::ScriptBytes(vec![0u8, 97, 115, 109].into()));
+        let mut net = SimNet::new(SimNetConfig { rtt_ms: 0, jitter_ms: 0, loss_pct: 0, seed: 1 });
+        let mut client = ClientCore::new(&text, other, mats, Peer(0), "modded", 1);
+        for step in 0..20 {
+            let now = step * TICK_US;
+            net.advance_to(now);
+            if step == 0 {
+                client.connect(now, &mut net.endpoint(Peer(1)));
+            }
+            server.poll(now, &mut net.endpoint(Peer(0)));
+            server.tick(now, &mut net.endpoint(Peer(0)));
+            client.poll(now, &mut net.endpoint(Peer(1)));
+        }
+        match &client.phase {
+            ClientPhase::Rejected(r) => assert!(r.contains("game script differs"), "{r}"),
+            p => panic!("expected a rejection, got {p:?}"),
+        }
     }
 
     #[test]
