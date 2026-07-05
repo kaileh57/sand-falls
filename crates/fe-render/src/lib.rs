@@ -68,6 +68,21 @@ impl Sky {
     }
 }
 
+/// Largest view width or height, in cells.
+const MAX_VIEW: u32 = 8192;
+/// Largest pixels per cell.
+const MAX_SCALE: u32 = 16;
+/// Most cells the renderer looks at in one frame, before the light margin.
+const MAX_CELLS: u32 = 16 * 1024 * 1024;
+
+/// The zoom actually used: at least 0.05, and high enough that the visible
+/// area stays within [`MAX_CELLS`], since zooming out widens every buffer.
+fn clamp_zoom(zoom: f32, view_w: u32, view_h: u32) -> f32 {
+    let min_zoom = (view_w as f32 * view_h as f32 / MAX_CELLS as f32).sqrt();
+    let zoom = if zoom.is_finite() { zoom } else { 1.0 };
+    zoom.max(0.05).max(min_zoom)
+}
+
 /// How a frame is rendered.
 #[derive(Clone, Debug)]
 pub struct RenderSettings {
@@ -91,6 +106,21 @@ pub struct RenderSettings {
     pub haze: bool,
     /// Draw chunk borders and dirty rects.
     pub overlay: bool,
+}
+
+impl RenderSettings {
+    /// The settings with the view at least 1x1 and at most [`MAX_VIEW`] cells
+    /// on a side, and the scale between 1 and [`MAX_SCALE`]. Frames are always
+    /// rendered with clamped settings, so use these to size video output.
+    #[must_use]
+    pub fn clamped(&self) -> Self {
+        Self {
+            view_w: self.view_w.clamp(1, MAX_VIEW),
+            view_h: self.view_h.clamp(1, MAX_VIEW),
+            scale: self.scale.clamp(1, MAX_SCALE),
+            ..self.clone()
+        }
+    }
 }
 
 impl Default for RenderSettings {
@@ -138,6 +168,11 @@ struct MatLook {
     fades: bool,
     /// Burning solids (wood, leaves, charcoal): their light flickers.
     flicker: bool,
+    /// Longest lifetime in ticks, for materials that burn down: a flying
+    /// ember's light fades with what is left of it.
+    life: Option<u8>,
+    /// A blast's flash: its light is spread far, like a spark's.
+    flash: bool,
 }
 
 /// Cached per-material render data.
@@ -227,6 +262,8 @@ impl Renderer {
                 water: m.name == "water",
                 fades: m.state == State::Gas && m.lifetime.is_some(),
                 flicker: m.state == State::Static && m.lifetime.is_some() && m.light != [0; 3],
+                life: m.lifetime.map(|(_, max)| max),
+                flash: m.name == "flash",
             })
             .collect();
         Self { looks }
@@ -256,6 +293,21 @@ impl Renderer {
         e
     }
 
+    /// Light a flying particle gives off: its glow by temperature, so a molten
+    /// speck fades from white through orange to dull red as it cools, and for
+    /// a material that burns down, such as an ember, light that fades as it
+    /// burns out.
+    fn particle_emission(&self, c: Cell) -> [f32; 3] {
+        let e = self.emission(c);
+        match self.look(c.material()).life {
+            Some(max) if max > 0 => {
+                let k = 0.15 + 0.85 * (f32::from(c.value) / f32::from(max)).min(1.0);
+                [e[0] * k, e[1] * k, e[2] * k]
+            }
+            _ => e,
+        }
+    }
+
     /// Renders one frame. `frame` animates haze and liquid shimmer.
     pub fn render(&self, sim: &Simulation, view: View, s: &RenderSettings, frame: u64) -> Image {
         self.render_with(sim, view, s, frame, &sim.avatars)
@@ -271,7 +323,8 @@ impl Renderer {
         frame: u64,
         avatars: &[fe_sim::Avatar],
     ) -> Image {
-        let zoom = view.zoom.max(0.05);
+        let s = &s.clamped();
+        let zoom = clamp_zoom(view.zoom, s.view_w, s.view_h);
         let vis_w = s.view_w as f32 / zoom;
         let vis_h = s.view_h as f32 / zoom;
         let x0 = (view.cx - vis_w / 2.0).floor() as i32;
@@ -292,6 +345,7 @@ impl Renderer {
             buf.light = light::soften(&buf.light, bw, bh);
             buf.shaft = light::soften(&buf.shaft, bw, bh);
             buf.bounce = light::wide(&light::wide(&buf.light, bw, bh), bw, bh);
+            self.broad_light(sim, &cells, &mut buf, bx, by);
         }
         // How open each cell's surroundings are: 1 deep in air, 0 deep in rock.
         let open_mask: Vec<[f32; 3]> =
@@ -339,6 +393,71 @@ impl Renderer {
             draw_overlay(sim, &mut img, fx0, fy0, px_per_cell);
         }
         img
+    }
+
+    /// Adds the light of many small, bright sources: sparks in flight and a
+    /// blast's flash. The light field keeps only the brightest source at each
+    /// cell, so a hundred sparks would light the ground no more than one; here
+    /// their light is summed on a coarse grid and spread with a gentle falloff,
+    /// so a burst of fireworks lights the roofs below it and a large charge
+    /// lights the whole room for a moment.
+    fn broad_light(&self, sim: &Simulation, cells: &[Cell], buf: &mut Buffers, bx: i32, by: i32) {
+        const BLOCK: usize = 8;
+        /// Distance in cells at which a source's light falls to half.
+        const REACH: f32 = 48.0;
+        const GAIN: f32 = 0.004;
+        let (bw, bh) = (buf.w, buf.h);
+        let (gw, gh) = (bw.div_ceil(BLOCK), bh.div_ceil(BLOCK));
+        let mut src = vec![[0.0f32; 3]; gw * gh];
+        let mut add = |x: i32, y: i32, e: [f32; 3]| {
+            if x >= 0 && y >= 0 && (x as usize) < bw && (y as usize) < bh {
+                let s = &mut src[(y as usize / BLOCK) * gw + x as usize / BLOCK];
+                *s = [s[0] + e[0], s[1] + e[1], s[2] + e[2]];
+            }
+        };
+        for p in sim.particles.iter() {
+            add(p.x.floor() - bx, p.y.floor() - by, self.particle_emission(p.cell));
+        }
+        for (i, c) in cells.iter().enumerate() {
+            if self.look(c.material()).flash {
+                add((i % bw) as i32, (i / bw) as i32, buf.emit[i]);
+            }
+        }
+        let sources: Vec<(f32, f32, [f32; 3])> = src
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e[0] + e[1] + e[2] > 0.5)
+            .map(|(i, e)| ((i % gw) as f32, (i / gw) as f32, *e))
+            .collect();
+        if sources.is_empty() {
+            return;
+        }
+        let reach = REACH / BLOCK as f32;
+        let mut coarse = vec![[0.0f32; 3]; gw * gh];
+        coarse.par_iter_mut().enumerate().for_each(|(i, c)| {
+            let (gx, gy) = ((i % gw) as f32, (i / gw) as f32);
+            for &(sx, sy, e) in &sources {
+                let d = ((gx - sx) * (gx - sx) + (gy - sy) * (gy - sy)).sqrt();
+                let k = GAIN * reach / (reach + d);
+                *c = [c[0] + e[0] * k, c[1] + e[1] * k, c[2] + e[2] * k];
+            }
+        });
+        buf.broad.par_chunks_mut(bw).enumerate().for_each(|(y, row)| {
+            // Bilinear between block centers.
+            let fy = ((y as f32 + 0.5) / BLOCK as f32 - 0.5).clamp(0.0, (gh - 1) as f32);
+            let (y0, ty) = (fy.floor() as usize, fy.fract());
+            let y1 = (y0 + 1).min(gh - 1);
+            for (x, l) in row.iter_mut().enumerate() {
+                let fx = ((x as f32 + 0.5) / BLOCK as f32 - 0.5).clamp(0.0, (gw - 1) as f32);
+                let (x0, tx) = (fx.floor() as usize, fx.fract());
+                let x1 = (x0 + 1).min(gw - 1);
+                for k in 0..3 {
+                    let top = coarse[y0 * gw + x0][k] * (1.0 - tx) + coarse[y0 * gw + x1][k] * tx;
+                    let bot = coarse[y1 * gw + x0][k] * (1.0 - tx) + coarse[y1 * gw + x1][k] * tx;
+                    l[k] += top * (1.0 - ty) + bot * ty;
+                }
+            }
+        });
     }
 
     #[expect(clippy::too_many_arguments, reason = "internal helper over shared buffers")]
@@ -427,6 +546,11 @@ impl Renderer {
         // How far open air may carry the sky in under each cell's cover (see
         // `reach_sky`): further under a rigid body than under rock.
         let mut reach = vec![0u16; bw * bh];
+        let inside = if s.sky == Sky::Cave {
+            vec![false; bw * bh]
+        } else {
+            body_insides(sim, |m| self.look(m).state == State::Liquid, bx, by, bw, bh)
+        };
         if s.sky != Sky::Cave {
             for x in 0..bw {
                 let mut k = 1.0f32;
@@ -442,8 +566,13 @@ impl Renderer {
                     // Air under an overhang is handed back to the sky afterwards
                     // if open air connects it to the sky (see `reach_sky`).
                     // Glass ends it too: a room behind a window is indoors.
+                    // A rigid body is an object in front of the background, not
+                    // part of it: under a ship's yard or a bridge deck the sky
+                    // goes on, and only the body's shadow falls there. The air a
+                    // body encloses, such as a ship's hold, shows its dark inside.
                     let boundary = cells[i].material() == MaterialId::BOUNDARY;
-                    if !boundary && self.look(cells[i].material()).structural {
+                    let body = cells[i].has(Cell::FLAG_IN_BODY);
+                    if !boundary && !body && self.look(cells[i].material()).structural {
                         open = false;
                         under_rock |= !cells[i].has(Cell::FLAG_IN_BODY);
                     }
@@ -452,7 +581,7 @@ impl Renderer {
                         buf.sky[i] = 1.0;
                         continue;
                     }
-                    buf.sky[i] = if open { 1.0 } else { 0.0 };
+                    buf.sky[i] = if open && !inside[i] { 1.0 } else { 0.0 };
                     if k < 0.02 {
                         continue;
                     }
@@ -472,28 +601,54 @@ impl Renderer {
             }
         }
         if s.sky != Sky::Cave {
+            // A body's dark inside stays dark: the sky does not spread into it.
             let pass: Vec<bool> = cells
                 .iter()
-                .map(|&c| {
-                    c.is_air()
-                        || (!c.has(Cell::FLAG_IN_BODY)
-                            && matches!(self.look(c.material()).state, State::Gas | State::Fire))
+                .zip(&inside)
+                .map(|(&c, &held)| {
+                    !held
+                        && (c.is_air()
+                            || (!c.has(Cell::FLAG_IN_BODY)
+                                && matches!(
+                                    self.look(c.material()).state,
+                                    State::Gas | State::Fire
+                                )))
                 })
                 .collect();
             reach_sky(&mut buf.sky, &pass, &reach, bw, bh);
         }
-        // Particles and characters draw over the cells.
+        // Particles and characters draw over the cells. A glowing particle
+        // also leaves a fading streak back along its path, so sparks read as
+        // short trails of light rather than single specks.
         for p in sim.particles.iter() {
+            let e = self.particle_emission(p.cell);
             let (x, y) = (p.x.floor() - bx, p.y.floor() - by);
             if x >= 0 && y >= 0 && (x as usize) < bw && (y as usize) < bh {
                 let i = y as usize * bw + x as usize;
                 let look = self.look(p.cell.material());
                 buf.albedo[i] = look.colors[0];
-                let e = self.emission(p.cell);
                 buf.emit[i] = e;
                 buf.light[i] =
                     [buf.light[i][0] + e[0], buf.light[i][1] + e[1], buf.light[i][2] + e[2]];
                 buf.solid_override[i] = true;
+            }
+            if e[0] + e[1] + e[2] < 0.05 {
+                continue;
+            }
+            let (vx, vy) = (p.vx.0 as f32 / 65536.0, p.vy.0 as f32 / 65536.0);
+            let len = ((vx * vx + vy * vy).sqrt() * 2.0).min(10.0);
+            let steps = len.ceil() as i32;
+            for k in 1..=steps {
+                let f = k as f32 / steps as f32;
+                let tx = (p.x.0 as f32 / 65536.0 - vx * 2.0 * f).floor() as i32 - bx;
+                let ty = (p.y.0 as f32 / 65536.0 - vy * 2.0 * f).floor() as i32 - by;
+                if tx < 0 || ty < 0 || tx as usize >= bw || ty as usize >= bh {
+                    continue;
+                }
+                let i = ty as usize * bw + tx as usize;
+                let w = 0.6 * (1.0 - f) * (1.0 - f);
+                let g = &mut buf.glow[i];
+                *g = [g[0] + e[0] * w, g[1] + e[1] * w, g[2] + e[2] * w];
             }
         }
         for a in avatars {
@@ -559,6 +714,11 @@ impl Renderer {
                 // light from elsewhere, or a white-hot pour and one about to freeze
                 // would both saturate to the same yellow.
                 let l = [(l[0] - e[0]).max(0.0), (l[1] - e[1]).max(0.0), (l[2] - e[2]).max(0.0)];
+                // The broad light of sparks and flashes falls on surfaces and
+                // smoke; the sky behind them stays dark.
+                let sky_l = l;
+                let wide = buf.broad[i];
+                let l = [l[0] + wide[0], l[1] + wide[1], l[2] + wide[2]];
                 let lit = |k: f32| {
                     [
                         a[0] * (amb[0] + l[0] * k),
@@ -569,6 +729,7 @@ impl Renderer {
                 let gas = buf.gas_density[i][0];
                 let is_gas = look.state == State::Gas && !c.is_air();
                 let open = c.is_air() || (look.state == State::Static && look.opacity < 0.02);
+                let glow = buf.glow[i];
                 row[x] = if buf.solid_override[i] {
                     let v = lit(1.0);
                     [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
@@ -576,9 +737,9 @@ impl Renderer {
                     let sh = buf.shaft[i];
                     // Open sky, plus dust lit by light passing through.
                     let open_back = [
-                        sky_bg[0] + l[0] * 0.012 + sh[0] * 0.09,
-                        sky_bg[1] + l[1] * 0.012 + sh[1] * 0.09,
-                        sky_bg[2] + l[2] * 0.012 + sh[2] * 0.09,
+                        sky_bg[0] + sky_l[0] * 0.012 + sh[0] * 0.09,
+                        sky_bg[1] + sky_l[1] * 0.012 + sh[1] * 0.09,
+                        sky_bg[2] + sky_l[2] * 0.012 + sh[2] * 0.09,
                     ];
                     let back = if skyness >= 1.0 {
                         open_back
@@ -664,6 +825,7 @@ impl Renderer {
                         }
                     }
                 };
+                row[x] = [row[x][0] + glow[0], row[x][1] + glow[1], row[x][2] + glow[2]];
             }
         });
         out
@@ -690,6 +852,11 @@ struct Buffers {
     gas_density: Vec<[f32; 3]>,
     /// Blurred gas color weighted by density.
     gas_color: Vec<[f32; 3]>,
+    /// Light added on top of everything: the streaks behind sparks.
+    glow: Vec<[f32; 3]>,
+    /// Light from many small bright sources, summed and spread wide; it
+    /// lights surfaces and smoke but not the sky (see `broad_light`).
+    broad: Vec<[f32; 3]>,
 }
 
 impl Buffers {
@@ -709,6 +876,8 @@ impl Buffers {
             open: vec![1.0; n],
             gas_density: vec![[0.0; 3]; n],
             gas_color: vec![[0.0; 3]; n],
+            glow: vec![[0.0; 3]; n],
+            broad: vec![[0.0; 3]; n],
         }
     }
 }
@@ -788,6 +957,66 @@ fn relief(x: i32, y: i32) -> f32 {
     let strata = ((y as f32 * 0.18 + broad * 5.0).sin() * 0.5 + 0.5) * 0.12;
     0.5 + broad * 0.55 + fine * 0.15 + strata
 }
+
+/// Cells of the buffer in the air a body closes in, such as a ship's sealed
+/// hold, which draws as the body's dark inside rather than as sky. So does air
+/// under the body under deep liquid, such as a pocket left in a sunken hull:
+/// there is no sky behind it. Puddles are too thin to count, and air right
+/// under liquid with no body between, such as under spray a blast throws
+/// over a ship, is the sky behind the spray.
+fn body_insides(
+    sim: &Simulation,
+    liquid: impl Fn(MaterialId) -> bool,
+    bx: i32,
+    by: i32,
+    bw: usize,
+    bh: usize,
+) -> Vec<bool> {
+    let mut inside = vec![false; bw * bh];
+    let mut mark = |x: i32, y: i32| {
+        let (x, y) = (x - bx, y - by);
+        if x >= 0 && y >= 0 && (x as usize) < bw && (y as usize) < bh {
+            inside[y as usize * bw + x as usize] = true;
+        }
+    };
+    for b in sim.physics.bodies() {
+        for p in &b.hollow {
+            mark(p.x, p.y);
+        }
+        let mut cells = b.stamped.iter().map(|s| s.0);
+        let Some(first) = cells.next() else { continue };
+        let (mut x0, mut y0, mut x1, mut y1) = (first.x, first.y, first.x, first.y);
+        for p in cells {
+            (x0, y0, x1, y1) = (x0.min(p.x), y0.min(p.y), x1.max(p.x), y1.max(p.y));
+        }
+        // Keep to the part of the footprint in view, and start a little above
+        // it so a sea over a sunken body is seen.
+        let (x0, x1) = (x0.max(bx), x1.min(bx + bw as i32 - 1));
+        let (y1, top) = (y1.min(by + bh as i32 - 1), y0.max(by) - DEEP_LIQUID);
+        for x in x0..=x1 {
+            let (mut run, mut deep, mut under) = (0, false, false);
+            for y in top..=y1 {
+                let c = sim.world.get(CellPos::new(x, y));
+                if c.has(Cell::FLAG_IN_BODY) {
+                    run = 0;
+                    under |= deep;
+                } else if liquid(c.material()) {
+                    run += 1;
+                    deep |= run >= DEEP_LIQUID;
+                } else {
+                    run = 0;
+                    if under && c.is_air() {
+                        mark(x, y);
+                    }
+                }
+            }
+        }
+    }
+    inside
+}
+
+/// Liquid this many cells deep hides the sky from the air under it.
+const DEEP_LIQUID: i32 = 8;
 
 /// Reads a rectangle of cells, chunk by chunk.
 fn sample_cells(sim: &Simulation, bx: i32, by: i32, bw: usize, bh: usize) -> Vec<Cell> {
@@ -904,5 +1133,193 @@ mod tests {
         let (cool, hot) = (px(32), px(160));
         assert!(hot[2] > cool[2] + 40, "cool {cool:?} hot {hot:?}");
         assert!(hot[1] >= cool[1], "cool {cool:?} hot {hot:?}");
+    }
+
+    fn pixel(img: &Image, x: u32, y: u32) -> [u8; 3] {
+        let i = ((y * img.width + x) * 4) as usize;
+        [img.rgba[i], img.rgba[i + 1], img.rgba[i + 2]]
+    }
+
+    fn dark_world() -> (Arc<MaterialSet>, Simulation) {
+        let mats = Arc::new(fe_materials::base_set());
+        let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+        sim.load_rect(IRect::new(0, 0, 128, 128));
+        (mats, sim)
+    }
+
+    fn spark(sim: &mut Simulation, name: &str, celsius: i32, x: i32, vx: i32) {
+        let id = sim.material(name).unwrap_or_default();
+        let c = Cell::new(id, fe_core::celsius_to_temp(celsius), 0);
+        let (fx, fy) = (fe_core::Fx::from_int(x), fe_core::Fx::from_int(64));
+        sim.particles.spawn(fx, fy, fe_core::Fx::from_int(vx), fe_core::Fx::ZERO, c);
+    }
+
+    #[test]
+    fn a_cooling_spark_fades_from_white_gold_to_dull_red() {
+        // A molten speck as it leaves the burst, as scrap after it froze, and
+        // nearly cold, each alone in the dark.
+        let look = |name: &str, celsius: i32| {
+            let (mats, mut sim) = dark_world();
+            spark(&mut sim, name, celsius, 64, 0);
+            let r = Renderer::new(&mats);
+            let s =
+                RenderSettings { view_w: 128, view_h: 128, scale: 1, ..RenderSettings::default() };
+            pixel(&r.render(&sim, View { cx: 64.0, cy: 64.0, zoom: 1.0 }, &s, 0), 64, 64)
+        };
+        let (hot, warm, dull) =
+            (look("molten_metal", 1900), look("scrap", 1000), look("scrap", 600));
+        // White-gold: bright in every channel.
+        assert!(hot.iter().all(|&c| c > 200), "hot {hot:?}");
+        // Orange: red stays high, blue is gone, green falls.
+        assert!(warm[0] > 200 && warm[1] < hot[1] && warm[2] < 60, "warm {warm:?}");
+        // Dull red: dimmer still, red well above green.
+        assert!(dull[0] < warm[0] && dull[0] > dull[1] * 2, "dull {dull:?}");
+    }
+
+    #[test]
+    fn a_fast_spark_leaves_a_streak_behind_it() {
+        let (mats, mut sim) = dark_world();
+        spark(&mut sim, "molten_metal", 1800, 64, 3);
+        let r = Renderer::new(&mats);
+        let s = RenderSettings {
+            view_w: 128,
+            view_h: 128,
+            scale: 1,
+            bloom: false,
+            ..RenderSettings::default()
+        };
+        let img = r.render(&sim, View { cx: 64.0, cy: 64.0, zoom: 1.0 }, &s, 0);
+        let lum = |p: [u8; 3]| u32::from(p[0]) + u32::from(p[1]) + u32::from(p[2]);
+        let (behind, ahead) = (lum(pixel(&img, 61, 64)), lum(pixel(&img, 67, 64)));
+        assert!(behind > ahead + 60, "behind {behind}, ahead {ahead}");
+    }
+
+    #[test]
+    fn many_sparks_light_the_ground_together() {
+        let render = |sparks: bool| {
+            let mats = Arc::new(fe_materials::base_set());
+            let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+            sim.load_rect(IRect::new(0, 0, 256, 256));
+            let stone = sim.material("stone").unwrap_or_default();
+            sim.apply(&Command::FillRect { rect: IRect::new(0, 220, 256, 256), material: stone });
+            if sparks {
+                let id = sim.material("molten_metal").unwrap_or_default();
+                for k in 0..120 {
+                    let c = Cell::new(id, fe_core::celsius_to_temp(1800), 0);
+                    let (x, y) = (98 + (k % 12) * 5, 40 + (k / 12) * 5);
+                    let (fx, fy) = (fe_core::Fx::from_int(x), fe_core::Fx::from_int(y));
+                    sim.particles.spawn(fx, fy, fe_core::Fx::ZERO, fe_core::Fx::ZERO, c);
+                }
+            }
+            let r = Renderer::new(&mats);
+            let s =
+                RenderSettings { view_w: 256, view_h: 256, scale: 1, ..RenderSettings::default() };
+            let img = r.render(&sim, View { cx: 128.0, cy: 128.0, zoom: 1.0 }, &s, 0);
+            pixel(&img, 128, 221).iter().map(|&c| u32::from(c)).sum::<u32>()
+        };
+        let (dark, lit) = (render(false), render(true));
+        // The ground is 150 cells below the sparks.
+        assert!(lit > dark + 40, "ground {dark} without sparks, {lit} under them");
+    }
+
+    #[test]
+    fn the_sky_goes_on_under_a_body() {
+        let render = |carve: bool| {
+            let mats = Arc::new(fe_materials::base_set());
+            let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+            sim.load_rect(IRect::new(0, 0, 128, 128));
+            let wood = sim.material("wood").unwrap_or_default();
+            // The deck spans the view, so under terrain no open air carries
+            // the sky in from its ends (see `reach_sky`).
+            let deck = IRect::new(0, 40, 128, 44);
+            sim.apply(&Command::FillRect { rect: deck, material: wood });
+            if carve {
+                sim.apply(&Command::CarveBody { rect: deck });
+            }
+            let r = Renderer::new(&mats);
+            let s = RenderSettings {
+                view_w: 128,
+                view_h: 128,
+                scale: 1,
+                sky: Sky::Day,
+                ..RenderSettings::default()
+            };
+            let img = r.render(&sim, View { cx: 64.0, cy: 64.0, zoom: 1.0 }, &s, 0);
+            pixel(&img, 64, 70)
+        };
+        // Under terrain the air is a dark back wall; under a body it is sky.
+        let (wall, sky) = (render(false), render(true));
+        assert!(sky[2] > wall[2] + 60, "under terrain {wall:?}, under a body {sky:?}");
+    }
+
+    #[test]
+    fn a_hold_open_at_one_end_draws_as_the_body_inside() {
+        // A broken-off half of a hull: deck, bottom and one end, open at the
+        // other end. Its hold is the body's inside, not sky.
+        let mats = Arc::new(fe_materials::base_set());
+        let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+        sim.load_rect(IRect::new(0, 0, 128, 128));
+        let wood = sim.material("wood").unwrap_or_default();
+        for rect in
+            [IRect::new(20, 40, 108, 43), IRect::new(20, 60, 108, 63), IRect::new(20, 43, 24, 60)]
+        {
+            sim.apply(&Command::FillRect { rect, material: wood });
+        }
+        sim.apply(&Command::CarveBody { rect: IRect::new(20, 40, 108, 63) });
+        let r = Renderer::new(&mats);
+        let s = RenderSettings {
+            view_w: 128,
+            view_h: 128,
+            scale: 1,
+            sky: Sky::Day,
+            ..RenderSettings::default()
+        };
+        let img = r.render(&sim, View { cx: 64.0, cy: 64.0, zoom: 1.0 }, &s, 0);
+        let (hold, sky) = (pixel(&img, 64, 52), pixel(&img, 118, 52));
+        assert!(sky[2] > hold[2] + 60, "hold {hold:?}, sky beside it {sky:?}");
+    }
+
+    #[test]
+    fn a_hold_holed_in_its_floor_draws_as_the_body_inside() {
+        // A closed hull with a hole through its floor. The air over the hole
+        // has the deck over it but no floor under it; it is still the hold,
+        // not a stripe of sky down the middle of the hull.
+        let mats = Arc::new(fe_materials::base_set());
+        let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+        sim.load_rect(IRect::new(0, 0, 128, 128));
+        let wood = sim.material("wood").unwrap_or_default();
+        sim.apply(&Command::FillRect { rect: IRect::new(20, 40, 108, 63), material: wood });
+        for rect in [IRect::new(23, 43, 105, 60), IRect::new(60, 60, 68, 63)] {
+            sim.apply(&Command::FillRect { rect, material: MaterialId::AIR });
+        }
+        sim.apply(&Command::CarveBody { rect: IRect::new(20, 40, 108, 63) });
+        let r = Renderer::new(&mats);
+        let s = RenderSettings {
+            view_w: 128,
+            view_h: 128,
+            scale: 1,
+            sky: Sky::Day,
+            ..RenderSettings::default()
+        };
+        let img = r.render(&sim, View { cx: 64.0, cy: 64.0, zoom: 1.0 }, &s, 0);
+        let (over_hole, hold) = (pixel(&img, 64, 50), pixel(&img, 40, 50));
+        let sky = pixel(&img, 118, 50);
+        assert!(sky[2] > over_hole[2] + 60, "over the hole {over_hole:?}, sky {sky:?}");
+        assert!(over_hole[2] < hold[2] + 20, "over the hole {over_hole:?}, hold {hold:?}");
+    }
+
+    #[test]
+    fn zero_view_and_extreme_zoom_do_not_panic_or_blow_up() {
+        let mats = Arc::new(fe_materials::base_set());
+        let mut sim = Simulation::new(mats.clone(), SimConfig::default());
+        sim.load_rect(IRect::new(0, 0, 64, 64));
+        let r = Renderer::new(&mats);
+        let s = RenderSettings { view_w: 0, view_h: 0, scale: 0, ..RenderSettings::default() };
+        let img = r.render(&sim, View { cx: 32.0, cy: 32.0, zoom: 1.0 }, &s, 0);
+        assert_eq!((img.width, img.height), (1, 1));
+        let z = clamp_zoom(0.05, 4096, 4096);
+        let cells = (4096.0 / z) * (4096.0 / z);
+        assert!(cells <= MAX_CELLS as f32 * 1.01, "{cells} cells at zoom {z}");
+        assert!((clamp_zoom(0.3, 960, 540) - 0.3).abs() < 1e-6);
     }
 }
