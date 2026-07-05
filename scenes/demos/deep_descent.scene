@@ -1,0 +1,109 @@
+// Deep Descent: procedural world generation and chunk streaming.
+//
+// No terrain in this file is hand-built. Every cell comes from the `caves`
+// world generator and the seed: rolling hills with a soil crust and sand,
+// stone with coal seams, moss-lit caves near the surface, caves lit blue by
+// glowshroom and violet by crystal further down, lava pockets in the deep
+// caves, and dark bedrock 600 cells below the surface. Chunks are generated
+// from the seed only as the miner comes within 8 chunks of them and stored
+// once he is 20 chunks away, so the camera follows him about 1,000 cells
+// sideways and 540 down through terrain nobody authored.
+//
+// The miner (player 0) is driven by timeline input and shows the character
+// controller and its tools: the dig tool bores the tunnel, a small charge
+// from the explode tool flares over his head as he works, and the paint tool
+// hangs a lamp (torch) from the tunnel roof every 42 ticks, so the finished
+// bore is traced by a line of lights. At the bottom the camera stops and
+// pulls back to show the whole lamp-lit tunnel crossing the generated caves.
+[scene]
+name = deep descent
+description = A miner bores a lamp-lit tunnel 540 cells down through a procedurally generated, chunk-streamed world: soil and coal, caves lit by glowshroom and crystal, glowing lava pockets, down to bedrock, then the camera pulls back to reveal the whole tunnel.
+// Only the chunks around the start are loaded up front; the rest stream in.
+bounds = -864 64 -736 192
+seed = 45
+worldgen = caves 120
+// Generate chunks within 8 of the miner: that covers the tracking view at
+// zoom 1.45 plus the camera's lag. Chunks more than 20 away are stored; the
+// margin of 12 keeps everything the final pull-back shows loaded.
+stream = 8 12
+ticks = 2220
+
+[build]
+player 0 -800 140
+
+[events]
+// The bore. The miner walks in a three-steps, three-pauses rhythm (move=0 on
+// the last 3 ticks of every 6) so he keeps his feet on the tunnel floor
+// instead of sailing down it, while the dig tool clears a 10-cell disc ahead
+// and below him. The aim sets the slope: about 28 degrees through the upper
+// rock, shallower across the big cave and past the lava pockets, then steeper
+// again down to bedrock, which he reaches at tick 1860.
+at 90..1140: input 0 move=1 tool=dig param=10 aim=15,5 use
+every 6 from 93 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
+every 6 from 94 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
+every 6 from 95 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
+at 1140..1530: input 0 move=1 tool=dig param=10 aim=15,2 use
+every 6 from 1143 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
+every 6 from 1144 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
+every 6 from 1145 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
+at 1530..1860: input 0 move=1 tool=dig param=10 aim=15,6 use
+every 6 from 1533 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
+every 6 from 1534 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
+every 6 from 1535 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
+// A small charge in the open bore just over his head on every 4th pause: a
+// flicker of flame that lights the face he is cutting. It sits clear of the
+// rock, so it throws no rubble for him to climb.
+every 24 from 93 to 1860: input 0 move=0 tool=explode param=6 aim=4,-8 use
+// Lamps on the tunnel roof behind him, skipping the stretch where the bore
+// crosses the first big cave.
+every 42 from 220 to 370: input 0 move=0 tool=paint param=torch aim=-2,-12 use
+every 42 from 424 to 1010: input 0 move=0 tool=paint param=torch aim=-2,-12 use
+every 42 from 1132 to 1170: input 0 move=0 tool=paint param=torch aim=-2,-12 use
+every 42 from 1324 to 1390: input 0 move=0 tool=paint param=torch aim=-2,-12 use
+every 42 from 1444 to 1860: input 0 move=0 tool=paint param=torch aim=-2,-12 use
+// A lamp beside him at the entrance before he starts.
+at 30: input 0 tool=paint param=torch aim=-7,4 use
+// Geothermal heat under two of the generated lava pockets the bore passes:
+// the long lava lake on the floor of the deep cave and the small pocket just
+// below it. A thin generated pocket freezes to basalt within a few seconds of
+// its chunk loading, long before the miner gets there; this keeps them molten
+// so they glow and spill toward the bore as he cuts past.
+every 10 from 950 to 1800: heat 70 539 10 2
+every 10 from 950 to 1800: heat 88 539 10 2
+every 10 from 950 to 1800: heat 106 539 10 2
+every 10 from 950 to 1800: heat 124 539 10 2
+every 10 from 950 to 1800: heat 142 539 10 2
+every 10 from 950 to 1800: heat 156 528 10 2
+every 10 from 950 to 1600: heat 62 570 10 2
+every 10 from 950 to 1600: heat 76 582 10 2
+every 10 from 950 to 1600: heat 90 591 10 2
+// No lamps while he crosses open cave, where they would hang in mid-air.
+at 1324: input 0 move=0
+at 1444: input 0 move=0
+at 1486: input 0 move=0
+at 1528: input 0 move=0
+at 1570: input 0 move=0
+at 1654: input 0 move=0
+
+[camera]
+view 960 540
+scale 2
+// A cave sky: air that reaches the top of the frame underground stays dark
+// instead of reading as open sky, and above the hills it reads as night.
+sky cave
+ambient 0.1 0.1 0.12
+exposure 3.8
+// Open on the miner and his lamp at the surface, then two long eased segments
+// along the measured line of the tunnel keep him a little above and left of
+// centre while he digs, and the last stops just as he reaches bedrock.
+at 0: -760 180 zoom=1.1
+at 1300: -60 540 zoom=1.45
+at 1870: 215 640 zoom=1.45
+// Pull back to the whole tunnel, from the lamp at the entrance to bedrock.
+at 2110: -292 410 zoom=0.68
+
+[expect]
+after 1860: avatar 0 x > 190
+after 1860: avatar 0 y > 660
+after 1860: count lava in 50 520 170 560 > 100
+after 1860: count torch in -820 100 260 720 > 400
