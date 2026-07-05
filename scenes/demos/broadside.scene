@@ -1,0 +1,1264 @@
+// Broadside in the Ice: a merchant ship sunk by shellfire in a frozen harbour.
+//
+// Every ship floats on its own hull, with no pins or moorings. A body is lifted
+// by the water its outline displaces below the surface, its dry hold included,
+// so the merchant and the warship ride at their waterlines with their decks
+// clear, and the lift moves to whichever side sits deeper, so they float
+// upright. At dawn the merchant lies off a lighthouse with ice floes around her
+// (ice, 90, rides nine-tenths under) and a warship beyond. The warship's first
+// shot blows in her bow at the waterline: the fore hold floods to the sea's
+// level and she settles by the head behind her watertight iron bulkhead.
+// Grapeshot cuts down the tops of her masts, which float. Two shells amidships
+// break her in two; each half floods through its broken end, tips and goes to
+// the bottom with its iron ballast and the cargo in its hold, and her lanterns
+// go out as the water reaches them. The same shells burst the lamp-oil tank on
+// her deck and set the oil alight; burning oil stays a liquid and burns on the
+// water where it spills. Scripted: the muzzle flashes and smoke, and the shell
+// bursts. The floating, flooding, trim, breaking and sinking, and the fire,
+// follow from them. The sea is at 0 C and the floes at -10 C; ice takes in its
+// latent heat before it melts, so they last the scene.
+[scene]
+name = broadside in the ice
+description = A warship's shells hole a merchant at the waterline, break her in two and set her lamp oil burning on the water; both halves flood and sink while her mast tops and the ice floes float.
+size = 1440 644
+seed = 41
+ticks = 2280
+wind = -1
+
+[legend]
+w wood
+m metal
+t torch
+s stone
+b brick
+k basalt
+x glass
+O oil
+. air
+S snow
+C concrete
+c coal
+I ice body temp=-10
+
+[build]
+fill 0 624 1440 644 bedrock
+fill 0 200 6 644 bedrock
+fill 1434 200 1440 644 bedrock
+fill 6 380 1434 624 water
+temp 6 380 1434 624 0
+terrain 6 1434 596 6 60 sand 624
+[grid 6 130]
+                                                  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                        CCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                        CCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                        CCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                        CCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                        CCCCxxxxxxxxxxxxxxxxxxCCCC
+                                                        CCCCxxxxxxxxxxxxxxxxxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxttttttttttttttxxCCCC
+                                                        CCCCxxxxxxxxxxxxxxxxxxCCCC
+                                                        CCCCxxxxxxxxxxxxxxxxxxCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+S SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS SSSSSS
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+sSssssksSssssssSskssssSssssskSssssssSssksssSssssssSssssssSssskssSssssssSksssssSssssksSssssssSskssssSssssskSssssssSssksssSSSSS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssSSSS
+sskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksSS S
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssSSS
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssSsSS
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksSS
+sssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssSS
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssSS
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssS
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssSS
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssSSS
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssSS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskSS
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssSS
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssSS
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+sssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssSS
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssSS
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskSS
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+sssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssSS
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskS
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssS
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssS
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssSS
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssS
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssS
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssS
+sssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssS
+sssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksS
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssS
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssS
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskS
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssS
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssS
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksSS
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssS
+sssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksS
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssS
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssS
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskS
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssS
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssS
+sssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssS
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssS
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssS
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssS
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssS
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskS
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssS
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+sskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssS
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksS
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssS
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssS
+sssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssS
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssS
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssS
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssS
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+sssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+sssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+sskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+sssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+sksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+sssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+sssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+kssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+sssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+sssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+sssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+ssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksss
+ssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssss
+ksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssss
+ssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssss
+sssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssk
+ssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskss
+ssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssss
+skssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssss
+ssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssss
+ssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssss
+ssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssksssssssssskssssssssssks
+[build]
+[grid 500 182]
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                                                                                                                                                                  www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+                              www                                                                                                                                 www                                                                                                                         www
+  tt                          www                                                                                                                                 www                                                                                                                         www
+  tt                          www                                                                                                                                 www                                                                                                                         www
+  tt                          www                                                                                                                                 www                                                                                                                         www
+  tt                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+  ww                          www                                                                                                                                 www                                                                                                                         www
+wwww........wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww                                                                                                          www                                                                                                                         www
+w   ........    w     w     w www w     w     w     w                                                                                                             www                                                                                                                         www
+w   ........    w     w     w www w     w     w     w                                                                                                             www                                                                                                                         www
+w   ........    w     w     w www w     w     w     w                                                                                                             www                                                                                                                         www
+wwww........wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww                                                                                                       www                                                                                                                         www
+wwww........wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww                                                                                                       www                                                                                                                         www
+wwww........wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww                                               wwwwwwwwwwwwww                                          www                                                                                                           wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wwww..........t.t.t...t.t.t...t.t.t...t.t.t...t.t.t.ww..www                                               w             wwwwwwwwwwwwwwwwwwwwwwwwwwww              www                                                                                                             w     w     www   w     w     w     w     w  w
+wwww..........t.t.t...t.t.t...t.t.t...t.t.t...t.t.t.ww..www                                               w                                        w              www                                                                                                             w     w     www   w     w     w     w     w  w
+wwww................................................ww..www                                               w                                        w              www                                                                                                             w     w     www   w     w     w     w     w  w
+wwww................................................ww..www                                               w                                        w              www                                                                                                        wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wwww................................................ww..wwwwwwww                                          w                                        w              www                                                                                                    wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wwww................................................ww..www     wwwwwwwwwwwwwwwwwwwwwww                   w                                        w              www                                                                             wwwwwwwwwwwwwwwwwwwwwww   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wwww................................................ww..www     w     w     w     w    wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww                           w              www                                            wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  w     w     w     w     wwww............................................wwww
+wwww................................................ww..www     w     w     w     w     w     w     w     w     w     w wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww     w     w     w     w     w     w     w     w     w     wwww............................................wwww
+wwww................................................ww..wwwwwwwww     w     w     w     w     w     w     w     w     w     w     w     w     w    ww     w     w www w     w     w     w     w     w     w     w     w     w     w     w     w     w     w     w     w  wwwwwww............................................wwww
+wwww................................................ww..wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww w     w     w     w     w     w     w     w     w     w    ww     w     w www w     w     w     w     w     w     w     w     w     w     w     w     w   wwwwwwwwwwwwwwwwwwwwwwwwwwwwww............................................wwww
+wwww................................................ww..wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww    w     w     w     w    ww     w     w www w     w     w     w     w     w     w     wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww............................................wwww
+wwww................................................ww..........wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww...................................................wwww
+wwww................................................ww.................................wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww..........................................................................wwww
+wwww................................................ww..............................................................k...wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwww...k.......................................................................................................wwww
+wwww................................................ww..............................................................t.......................k.......................k.......................k.mm....................t.......................................................................................................wwww
+wwww................................................ww..............................................................t.......................t.......................t.......................t.mm....................t.......................................................................................................wwww
+wwww................................................ww......................................................................................t.......................t.......................t.mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm............................................................................................................................wwww
+wwww................................................ww........................................................................................................................................mm...........................................................................................................................mwwww
+wwww................................................ww........................................................................................................................................mm.........................................................................................................................mmmwwww
+wwwwmmm.............................................ww........................................................................................................................................mm.......................................................................................................................mmmmwwwww
+wwwwmmmmmm..........................................ww........................................................................................................................................mm.....................................................................................................................mmmmwwwwwww
+wwwwwwwmmmmm........................................ww........................................................................................................................................mm..................................................................................................................mmmmmwwwwwwww
+wwwwwwwwwwmmmmm.....................................ww........................................................................................................................................mm................................................................................................................mmmmmwwwwwwww
+  wwwwwwwwwwmmmmmm..................................ww........................................................................................................................................mm.............................................................................................................mmmmmwwwwwwwww
+    wwwwwwwwwwwmmmmmm...............................ww........................................................................................................................................mm...........................................................................................................mmmmmwwwwwwwww
+       wwwwwwwwwwwmmmmmm............................ww........................................................................................................................................mm........................................................................................................mmmmmwwwwwwwwww
+          wwwwwwwwwwwmmmmmm.........................ww........................................................................................................................................mm......................................................................................................mmmmmwwwwwwwwww
+            wwwwwwwwwwwwmmmmmm......................ww........................................................................................................................................mm...................................................................................................mmmmmwwwwwwwwww
+               wwwwwwwwwwwwmmmmmmm..................ww........................................................................................................................................mm................................................................................................mmmmmmwwwwwwwwww
+                  wwwwwwwwwwwwmmmmmmm...............ww........................................................................................................................................mm............................................................................................mmmmmmmwwwwwwwwww
+                     wwwwwwwwwwwwwmmmmmmm...........ww........................................................................................................................................mm.........................................................................................mmmmmmmwwwwwwwwwww
+                        wwwwwwwwwwwwwmmmmmmmm.......ww........................................................................................................................................mm......................................................................................mmmmmmwwwwwwwwwwww
+                           wwwwwwwwwwwwwwmmmmmmmm...ww........................................................................................................................................mm..................................................................................mmmmmmmwwwwwwwwwwwww
+                              wwwwwwwwwwwwwwwmmmmmmmww........................................................................................................................................mm.............................................................................mmmmmmmmmwwwwwwwwwwwww
+                                  wwwwwwwwwwwwwwwmmmwwmmmmm...................................................................................................................................mm........................................................................mmmmmmmmmmwwwwwwwwwwwwww
+                                     wwwwwwwwwwwwwwwwwmmmmmmmmmmm.............................................................................................................................mm..................................................................mmmmmmmmmmmwwwwwwwwwwwwwww
+                                         wwwwwwwwwwwwwwwwwwmmmmmmmmmmmmmm.....................................................................................................................mm..........................................................mmmmmmmmmmmmmmwwwwwwwwwwwwwwwww
+                                             wwwwwwwwwwwwwwwwwwwwmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm............................................................................mm.............................mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmwwwwwwwwwwwwwwwwwwww
+                                                 wwwwwwwwwwwwwwwwwwwwwwwwmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm............................................................................mm.............................mmmmmmmmmmmmmmmmmmmmmmmmmmmmmwwwwwwwwwwwwwwwwwwwwwwww
+                                                      wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                           wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                         wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwmmwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+[build]
+carve 500 182 820 411
+[grid 512 383]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 512 383 524 389
+[grid 722 398]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 722 398 734 404
+[grid 526 387]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 526 387 538 393
+[grid 738 398]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 738 398 750 404
+[grid 540 391]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 540 391 552 397
+[grid 754 395]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 754 395 766 401
+[grid 554 395]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 554 395 566 401
+[grid 770 391]
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+ssssssssssss
+[build]
+carve 770 391 782 397
+[grid 572 393]
+wwwwwwwww
+w.......w
+m.......m
+w.......w
+w.......w
+w.......w
+w.......w
+m.......m
+w.......w
+wwwwwwwww
+[build]
+carve 572 393 581 403
+[grid 586 394]
+wwwwwwwww
+w.......w
+m.......m
+w.......w
+w.......w
+w.......w
+w.......w
+m.......m
+w.......w
+wwwwwwwww
+[build]
+carve 586 394 595 404
+[grid 600 394]
+wwwwwwwww
+w.......w
+m.......m
+w.......w
+w.......w
+w.......w
+w.......w
+m.......m
+w.......w
+wwwwwwwww
+[build]
+carve 600 394 609 404
+[grid 696 394]
+wwwwwwwww
+w.......w
+m.......m
+w.......w
+w.......w
+w.......w
+w.......w
+m.......m
+w.......w
+wwwwwwwww
+[build]
+carve 696 394 705 404
+[grid 708 394]
+wwwwwwwww
+w.......w
+m.......m
+w.......w
+w.......w
+w.......w
+w.......w
+m.......m
+w.......w
+wwwwwwwww
+[build]
+carve 708 394 717 404
+[grid 607 363]
+OOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+             OOOOOOOOOOOOOOOOOOOOOOOOOOO
+[build]
+[grid 1060 197]
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                                                                                                      www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www
+                                                                      www                                                                             www                                      wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                      www                                                                             www                                         w     w     w     w     w     w     w     w  w
+                                                                      www                                                                             www                                         w     w     w     w     w     w     w     w  w
+                                                                      www                                                                             www                                         w     w     w     w     w     w     w     w  w
+                                                                      www                                                                             www                                  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                      www                                                                             www                                  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                      www                                                                             www                                  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                      www                                                                             www                                  wwwwww...........................................wwww
+                                                                      www                                                                             www                                  wwwwww...........................................wwww
+                                                                      www                                                                             www                                  wwwwww.....ttttt....ttttt....ttttt....ttttt....tttttw
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww.....ttttt....ttttt....ttttt....ttttt....tttttw
+w w     w     w     w     w     w     w     w     w     w     w     w www w     w     w     w     w     w     w     w     w     w     w     w     w   www     w     w     w     w     w    wwwwww.....ttttt....ttttt....ttttt....ttttt....tttttw
+w w     w     w     w     w     w     w     w     w     w     w     w www w     w     w     w     w     w     w     w     w     w     w     w     w   www     w     w     w     w     w    wwwwww.....ttttt....ttttt....ttttt....ttttt....tttttw
+w w     w     w     w     w     w     w     w     w     w     w     w www w     w     w     w     w     w     w     w     w     w     w     w     w   www     w     w     w     w     w    wwwwww...........................................wwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww...........................................wwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww...........................................wwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww...........................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww............................................................tttttt....................tttttt....................tttttt....................tttttt....................tttttt..............................................................wwww
+wwww............................................................tttttt....................tttttt....................tttttt....................tttttt....................tttttt..............................................................wwww
+wwww............................................................tttttt....................tttttt....................tttttt....................tttttt....................tttttt..............................................................wwww
+wwww............................................................tttttt....................tttttt....................tttttt....................tttttt....................tttttt..............................................................wwww
+wwww............................................................tttttt....................tttttt....................tttttt....................tttttt....................tttttt..............................................................wwww
+wwww..........................wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww..................................................wwww
+wwww..........................wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww..................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww........................................................................................................................................................................................................................................wwww
+wwww..mm....................................................................................................................................................................................................................................wwww
+wwwww.mmmm..................................................................................................................................................................................................................................wwww
+wwwwwwmmmmm.................................................................................................................................................................................................................................wwww
+ wwwwwwwmmmmm...............................................................................................................................................................................................................................wwww
+   wwwwwwwmmmmm.............................................................................................................................................................................................................................wwww
+     wwwwwwmmmmmm...........................................................................................................................................................................................................................wwww
+      wwwwwwwmmmmmm.....................................................................................................................................................................................................................mm..wwww
+        wwwwwwwmmmmmm.................................................................................................................................................................................................................mmmm.wwwww
+          wwwwwwwmmmmmm............................................................................................................................................................................................................mmmmmwwwwwwww
+           wwwwwwwwmmmmmmm......................................................................................................................................................................................................mmmmmmwwwwwwwww
+             wwwwwwwwmmmmmmm.................................................................................................................................................................................................mmmmmmwwwwwwwwww
+               wwwwwwwwmmmmmmmm...........................................................................................................................................................................................mmmmmmwwwwwwwwwww
+                 wwwwwwwwwmmmmmmmm.....................................................................................................................................................................................mmmmmmwwwwwwwwwww
+                   wwwwwwwwwmmmmmmmmm...............................................................................................................................................................................mmmmmmwwwwwwwwwwww
+                     wwwwwwwwwwmmmmmmmmmm.......................................................................................................................................................................mmmmmmmwwwwwwwwwwww
+                       wwwwwwwwwwwmmmmmmmmmmmm.............................................................................................................................................................mmmmmmmmmwwwwwwwwwwww
+                          wwwwwwwwwwwmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm...............................................................................................................................mmmmmmmmmmmwwwwwwwwwwwww
+                            wwwwwwwwwwwwwmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmwwwwwwwwwwwwwww
+                               wwwwwwwwwwwwwwwmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmwwwwwwwwwwwwwwwwww
+                                  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                     wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                         wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+                                              wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+[build]
+carve 1060 197 1300 410
+[grid 300 377]
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+    IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+     IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+      IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+[build]
+[grid 900 378]
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+    IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+     IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+      IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+[build]
+[grid 1350 377]
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+ IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+    IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+     IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+      IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+[build]
+run 1
+
+[events]
+at 280: paint 1055 357 3 flash
+at 281: paint 1050 356 4 smoke
+at 284: paint 1043 355 6 smoke
+at 300: explode 808 390 18 240
+at 450: paint 1055 362 3 flash
+at 451: paint 1050 361 4 smoke
+at 454: paint 1043 360 6 smoke
+at 454: paint 1055 352 3 flash
+at 455: paint 1050 351 4 smoke
+at 458: paint 1043 350 6 smoke
+at 470: explode 664 252 8 160
+at 473: explode 533 268 8 160
+at 476: explode 788 294 8 160
+at 676: paint 1055 357 3 flash
+at 677: paint 1050 356 4 smoke
+at 680: paint 1043 355 6 smoke
+at 680: paint 1055 352 3 flash
+at 681: paint 1050 351 4 smoke
+at 684: paint 1043 350 6 smoke
+at 700: explode 653 380 20 255
+at 703: explode 653 402 20 255
+
+[camera]
+// Both ships for the guns, in on the merchant as she is hit, then down
+// with her halves to the sea floor.
+view 960 540
+scale 2
+sky dusk
+ambient 0.11 0.12 0.17
+exposure 1.3
+at 0: 760 340 zoom=1.0
+at 300: 770 350 zoom=1.05
+at 420: 700 330 zoom=1.0
+at 680: 680 350 zoom=1.08
+at 800: 680 370 zoom=1.12
+at 1300: 690 374 zoom=1.0
+at 2280: 690 374 zoom=1.0
+
+[expect]
+// Afloat on her own hull: decks clear and the main hold dry until she
+// breaks. The oil burns on the water. At the end both halves are on the
+// bottom with their iron and their lanterns out, while the warship rides
+// with her lamps lit and the floes are all still there, riding however
+// high the sea beside them stands.
+after 290: count wood in 480 352 840 380 > 1600
+after 690: count water in 600 380 676 404 == 0
+after 800: count burning_oil in 400 300 1000 460 > 200
+after 2279: count metal in 400 540 950 624 > 300
+after 2279: count torch in 400 200 950 624 == 0
+after 2279: count torch in 1050 280 1310 385 >= 240
+after 2279: count ice in 0 300 1440 470 > 5900
+
