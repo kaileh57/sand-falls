@@ -1,8 +1,15 @@
 //! Free particles: cells that left the grid and fly until they land.
+//!
+//! A particle's cell keeps living in flight: it trades heat with the air it
+//! passes through, burns down if it has a lifetime, and melts, freezes or
+//! catches fire like a cell in the grid. A molten speck cools from white
+//! through orange to a dull red and freezes to scrap before it lands, and an
+//! ember thrown by a blast burns out in the air.
 
+use crate::rules::{heat_split, new_cell};
 use crate::world::World;
-use fe_core::{Cell, CellPos, Fx, MaterialId};
-use fe_materials::State;
+use fe_core::{AMBIENT_TEMP, Cell, CellPos, Fx, MaterialId, cell_rand};
+use fe_materials::{CHANCE_ONE, State, Transition};
 use serde::{Deserialize, Serialize};
 
 /// Gravity on particles, in cells per tick squared: the world's [`fe_core::GRAVITY`].
@@ -38,6 +45,10 @@ pub struct Particles {
     next_id: u32,
     lost: u64,
 }
+
+/// A burning particle loses this fraction of its speed to the air each tick
+/// (one part in 16), which caps its fall at about 2.6 m/s.
+const FIRE_DRAG: i32 = 16;
 
 /// Landings a particle may retry before it is pushed up its column.
 const LAND_RETRIES: u8 = 30;
@@ -84,9 +95,24 @@ impl Particles {
         let mut keep = Vec::with_capacity(list.len());
         for mut p in list {
             p.vy = (p.vy + PARTICLE_GRAVITY).clamp(-lim, lim);
+            if world.materials().get(p.cell.material()).state == State::Fire {
+                // Embers and flames are light: the air slows them, so sparks
+                // from a blast fly out, stall and drift down.
+                p.vx = Fx(p.vx.0 - p.vx.0 / FIRE_DRAG);
+                p.vy = Fx(p.vy.0 - p.vy.0 / FIRE_DRAG);
+            }
             p.age = p.age.saturating_add(1);
             match fly(world, &mut p) {
-                Flight::Airborne => keep.push(p),
+                Flight::Airborne => match burn(world, &mut p) {
+                    InFlight::Flying => keep.push(p),
+                    InFlight::Released(cell) => {
+                        // Smoke or steam joins the grid where the particle is.
+                        let at = CellPos::new(p.x.floor(), p.y.floor());
+                        if !cell.is_air() && world.get(at).is_air() {
+                            let _ = world.set(at, cell);
+                        }
+                    }
+                },
                 Flight::Landed(at) => {
                     if land(world, at, p) {
                         landed += 1;
@@ -178,6 +204,98 @@ fn fly(world: &World, p: &mut Particle) -> Flight {
     Flight::Airborne
 }
 
+/// What a tick in flight did to a particle's cell.
+enum InFlight {
+    /// It flies on, perhaps as another material.
+    Flying,
+    /// It became a gas, or nothing: it leaves the flight as this cell.
+    Released(Cell),
+}
+
+/// One tick in flight for a particle's cell, following the grid's cell rules:
+/// it trades heat with the cell it is passing through (air, gas or fire), the
+/// material's own cooling and held temperature apply, a lifetime counts down,
+/// and it melts, freezes or catches fire. A liquid that freezes in the air
+/// becomes its solid's debris, as it would falling in the grid. Explosives do
+/// not go off in flight; they do when they land.
+fn burn(world: &World, p: &mut Particle) -> InFlight {
+    let mats = world.materials();
+    let id = p.id;
+    let rnd = |salt: u32| cell_rand(world.seed(), world.tick(), id as i32, -0x5f1, salt);
+    let mut cell = p.cell;
+    let m = mats.get(cell.material());
+    let around = world.get(CellPos::new(p.x.floor(), p.y.floor()));
+    let am = mats.get(around.material());
+    let diff = i32::from(around.temp) - i32::from(cell.temp);
+    let k = i32::from(m.conductivity.min(am.conductivity).min(128));
+    if diff.abs() >= 2 && k > 0 {
+        let (ca, cb) = (i32::from(m.heat_capacity.max(1)), i32::from(am.heat_capacity.max(1)));
+        let (q, _) = heat_split(diff, k, ca, cb, rnd(0), rnd(1));
+        cell.temp = (i32::from(cell.temp) + q).clamp(0, 255) as u8;
+    }
+    if m.hold_temp > cell.temp {
+        cell.temp = m.hold_temp;
+    }
+    if m.cooling > 0 && cell.temp != AMBIENT_TEMP && ((rnd(2) >> 24) as u8) < m.cooling {
+        cell.temp = if cell.temp > AMBIENT_TEMP { cell.temp - 1 } else { cell.temp + 1 };
+    }
+    // The cell becomes another material: it flies on unless that is a gas.
+    let mut change = |into: MaterialId, temp: u8| {
+        let c = new_cell(mats, into, Some(temp), rnd(4));
+        if c.is_air() || mats.get(into).state == State::Gas {
+            return InFlight::Released(c);
+        }
+        p.cell = c;
+        InFlight::Flying
+    };
+    if m.lifetime.is_some()
+        && (m.lifetime_rate >= CHANCE_ONE || (rnd(3) & 0xffff) < m.lifetime_rate)
+    {
+        if cell.value <= 1 {
+            let into = match m.residue {
+                Some((res, chance)) if (rnd(5) & 0xffff) < chance => res,
+                _ => m.decay,
+            };
+            return change(into, cell.temp);
+        }
+        cell.value -= 1;
+    }
+    let latent_done = |t: Transition, temp: u8| {
+        t.latent == 0 || rnd(6) % u32::from(t.latent) < u32::from(temp.abs_diff(t.at))
+    };
+    if let Some(t) = m.melt
+        && cell.temp >= t.at
+    {
+        if latent_done(t, cell.temp) {
+            return change(t.into, cell.temp);
+        }
+        cell.temp = t.at;
+    }
+    if let Some(t) = m.freeze
+        && cell.temp <= t.at
+    {
+        if latent_done(t, cell.temp) {
+            let target = mats.get(t.into);
+            let unsupported = m.state == State::Liquid && target.state == State::Static;
+            let into = if unsupported && target.debris != MaterialId::AIR {
+                target.debris
+            } else {
+                t.into
+            };
+            return change(into, cell.temp);
+        }
+        cell.temp = t.at;
+    }
+    if let Some(ig) = m.ignite
+        && cell.temp >= ig.at
+        && (rnd(7) & 0xffff) < ig.chance
+    {
+        return change(ig.into, cell.temp);
+    }
+    p.cell = cell;
+    InFlight::Flying
+}
+
 /// The cell a particle turns into when it lands.
 fn landing_cell(world: &World, p: &Particle) -> Cell {
     let m = world.materials().get(p.cell.material());
@@ -264,6 +382,60 @@ mod tests {
         assert!(ps.is_empty());
         assert_eq!(w.count(IRect::new(0, 0, 128, 100), sand), 1);
         assert_eq!(w.count(IRect::new(0, 99, 128, 100), sand), 1);
+    }
+
+    /// A tall empty world and one particle launched straight up from near
+    /// its bottom, rising about 650 cells before it falls back.
+    fn launch(name: &str, celsius: i32) -> (World, Particles) {
+        let mats = Arc::new(fe_materials::base_set());
+        let id = mats.id(name).unwrap_or_else(|| panic!("no {name}"));
+        let mut w = World::new(mats, 9, 1);
+        w.ensure_rect(IRect::new(0, 0, 64, 1088), Cell::AIR);
+        let mut c = w.make_cell(id, CellPos::new(0, 0));
+        c.temp = fe_core::celsius_to_temp(celsius);
+        let mut ps = Particles::default();
+        ps.spawn(Fx::from_int(32), Fx::from_int(1000), Fx::ZERO, Fx::from_int(-6), c);
+        (w, ps)
+    }
+
+    fn fly_for(w: &mut World, ps: &mut Particles, ticks: u32) -> Option<Particle> {
+        for _ in 0..ticks {
+            ps.step(w);
+            w.finish_tick();
+        }
+        ps.iter().next().copied()
+    }
+
+    #[test]
+    fn a_molten_speck_cools_and_freezes_to_scrap_in_flight() {
+        let (mut w, mut ps) = launch("molten_metal", 1900);
+        let (molten, scrap) = (w.materials().id("molten_metal"), w.materials().id("scrap"));
+        let c = |p: Option<Particle>| p.unwrap_or_else(|| panic!("landed early")).cell;
+        let early = c(fly_for(&mut w, &mut ps, 40));
+        assert_eq!(Some(early.material()), molten);
+        let t = fe_core::temp_to_celsius(early.temp);
+        assert!((1400..1880).contains(&t), "{t} C after 40 ticks");
+        let later = c(fly_for(&mut w, &mut ps, 260));
+        assert_eq!(Some(later.material()), scrap, "a speck in the air freezes to scrap");
+        let t = fe_core::temp_to_celsius(later.temp);
+        assert!(t < 1100, "{t} C after 300 ticks");
+    }
+
+    #[test]
+    fn an_ember_burns_out_in_flight() {
+        let (mut w, mut ps) = launch("ember", 700);
+        let ember = w.materials().id("ember");
+        let p = fly_for(&mut w, &mut ps, 90);
+        assert!(p.is_none_or(|p| Some(p.cell.material()) != ember), "{p:?}");
+    }
+
+    #[test]
+    fn hot_splinters_catch_fire_in_flight() {
+        let (mut w, mut ps) = launch("splinters", 600);
+        let fire = w.materials().id("fire");
+        let p = fly_for(&mut w, &mut ps, 30);
+        // It burned in the air: it is fire now, or already smoke.
+        assert!(p.is_none_or(|p| Some(p.cell.material()) == fire), "{p:?}");
     }
 
     #[test]

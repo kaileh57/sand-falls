@@ -965,9 +965,10 @@ fn move_gas(
     }
     let spread = i32::from(m.spread.max(1));
     let k = 1 + ((r >> 8) % spread as u32) as i32;
-    for dx in [side * k, -side * k] {
-        if nb.get(lx + dx, ly).is_air() && nb.get(lx + dx.signum(), ly).is_air() {
-            swap_to(nb, ctx, lx, ly, lx + dx, ly, cell);
+    for s in [side, -side] {
+        // Every cell on the way must be air, or gas would pass through thin walls.
+        if (1..=k).all(|j| nb.get(lx + s * j, ly).is_air()) {
+            swap_to(nb, ctx, lx, ly, lx + s * k, ly, cell);
             return true;
         }
     }
