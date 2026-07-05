@@ -1,0 +1,12 @@
+[build]
+target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+  # The engine saves every mutable global after each call, so the stack
+  # pointer must be exported.
+  "-C", "link-arg=--export=__stack_pointer",
+  # Keep linear memory to one page: it is saved into the world state every tick.
+  "-C", "link-arg=-zstack-size=16384",
+  "-C", "link-arg=--initial-memory=65536",
+]

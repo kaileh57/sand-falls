@@ -1,0 +1,22 @@
+[package]
+name = "siege"
+description = "Siege builder: a falling-engine game mod. Build a fort on a budget, then bombard the other team's core."
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+strip = true
+
+# A standalone package, not part of the engine workspace.
+[workspace]
