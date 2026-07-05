@@ -54,6 +54,11 @@ fn hud(
         img.fill(x, gy + gh - bar, x + 2, gy + gh, [120, 200, 255, 255]);
     }
     img.text(gx, gy, 1, &format!("{max:.0}"), [160, 160, 160, 255]);
+    // The game's status line, set by its script.
+    if !sim.status.is_empty() {
+        let y = img.height as i32 - 28;
+        img.banner(y, &sim.status, [255, 230, 150, 255]);
+    }
 }
 
 /// `fe-server demo <scene> --out FILE.mp4`.
@@ -62,7 +67,10 @@ pub(crate) fn demo(args: &[String]) -> Result<bool, String> {
     let out = opt(args, "--out").ok_or("--out FILE.mp4 is required")?.to_string();
     let every = num(args, "--every", 2u64)?.max(1);
     let cfg = soak_config(args, Some(scene_path))?;
-    let scene = fe_scene::parse(&cfg.scene_text).map_err(|e| e.to_string())?;
+    let mut scene = fe_scene::parse(&cfg.scene_text).map_err(|e| e.to_string())?;
+    // Only the materials and camera are read here, but attach the script anyway so
+    // this scene is complete if it is ever handed to a runner.
+    fe_scene::attach_script(&mut scene, &cfg.scene_dir).map_err(|e| e.to_string())?;
     let mats = fe_scene::load_materials(&scene, &cfg.scene_dir).map_err(|e| e.to_string())?;
     let renderer = Renderer::new(&mats);
     let settings = fe_control::render_settings(&scene.camera);

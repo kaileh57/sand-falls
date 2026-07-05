@@ -112,8 +112,9 @@ fn soak(args: &[String]) -> Result<bool, String> {
 fn host(args: &[String]) -> Result<bool, String> {
     let path = args.first().ok_or("missing scene path")?;
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-    let scene = fe_scene::parse(&text).map_err(|e| format!("{path}: {e}"))?;
+    let mut scene = fe_scene::parse(&text).map_err(|e| format!("{path}: {e}"))?;
     let dir = Path::new(path).parent().map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    fe_scene::attach_script(&mut scene, &dir).map_err(|e| format!("{path}: {e}"))?;
     let mats = Arc::new(fe_scene::load_materials(&scene, &dir).map_err(|e| e.to_string())?);
     let runner = fe_scene::Runner::new(scene, mats, threads(args)).map_err(|e| e.to_string())?;
     let port = num(args, "--port", 7777u16)?;
