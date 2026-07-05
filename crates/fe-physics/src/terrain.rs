@@ -1,3 +1,4 @@
+use crate::body::merge_rects;
 use crate::{CELLS_PER_METER, PixelBody};
 use fe_core::{CHUNK_SIZE, Cell, ChunkPos, MaterialId};
 use fe_materials::State;
@@ -86,30 +87,34 @@ pub(crate) fn update(
     }
 }
 
+/// A compound of cuboids covering one chunk's static cells.
+///
+/// Voxel colliders were tried first, but Rapier often generated no contact
+/// between a voxel shape and a body's cuboids, so bodies sank into flat ground.
 fn build(world: &World, pos: ChunkPos) -> Option<Collider> {
     let chunk = world.grid.chunk(pos)?;
     let origin = pos.origin();
-    let mut keys = Vec::new();
-    for i in 0..fe_core::CHUNK_AREA {
-        let c = chunk.get(i);
+    let solid = |x: i32, y: i32| {
+        let c = chunk.get((y * CHUNK_SIZE + x) as usize);
         if c.is_air() || c.has(Cell::FLAG_IN_BODY) {
-            continue;
+            return false;
         }
-        let static_cell = c.material() == MaterialId::BOUNDARY
-            || world.materials().get(c.material()).state == State::Static;
-        if static_cell {
-            let lx = i as i32 % CHUNK_SIZE;
-            let ly = i as i32 / CHUNK_SIZE;
-            keys.push(IVector::new(origin.x + lx, origin.y + ly));
-        }
-    }
-    if keys.is_empty() {
+        c.material() == MaterialId::BOUNDARY
+            || world.materials().get(c.material()).state == State::Static
+    };
+    let s = 1.0 / CELLS_PER_METER;
+    let shapes: Vec<(Pose, SharedShape)> = merge_rects(CHUNK_SIZE, CHUNK_SIZE, solid)
+        .into_iter()
+        .map(|(x0, y0, x1, y1)| {
+            let cx = (origin.x as f32 + (x0 + x1) as f32 * 0.5) * s;
+            let cy = (origin.y as f32 + (y0 + y1) as f32 * 0.5) * s;
+            let hx = (x1 - x0) as f32 * 0.5 * s;
+            let hy = (y1 - y0) as f32 * 0.5 * s;
+            (Pose::from_translation(Vector::new(cx, cy)), SharedShape::cuboid(hx, hy))
+        })
+        .collect();
+    if shapes.is_empty() {
         return None;
     }
-    Some(
-        ColliderBuilder::voxels(Vector::splat(1.0 / CELLS_PER_METER), &keys)
-            .friction(0.8)
-            .restitution(0.05)
-            .build(),
-    )
+    Some(ColliderBuilder::compound(shapes).friction(0.8).restitution(0.05).build())
 }

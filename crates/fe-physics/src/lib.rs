@@ -11,9 +11,11 @@
 #![forbid(unsafe_code)]
 
 mod body;
+#[cfg(test)]
+mod float_tests;
 mod terrain;
 
-pub use body::{BodyInfo, JointKind, MIN_BODY_CELLS, PixelBody};
+pub use body::{BodyInfo, JointKind, MAX_BODY_SIDE, MIN_BODY_CELLS, PixelBody};
 
 use fe_core::{Cell, CellPos, ChunkPos, Fx, SeqRng, StableHasher};
 use fe_materials::State;
@@ -50,6 +52,18 @@ pub struct JointInfo {
     pub break_force: f32,
 }
 
+/// A joint taken off a body that is splitting, to put back on one of its parts.
+struct CarriedJoint {
+    /// The body on the other end, or `u32::MAX` for the terrain.
+    other: u32,
+    /// The splitting body was the joint's first body.
+    first: bool,
+    /// The splitting body's joint frame in world space.
+    world_frame: Pose,
+    data: GenericJoint,
+    break_force: f32,
+}
+
 /// Counters from the last physics step.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PhysicsStats {
@@ -65,9 +79,6 @@ pub struct PhysicsStats {
     pub removed: u32,
     /// Joints broken this tick.
     pub joints_broken: u32,
-    /// Liquid or powder cells a body displaced that found no room and were lost,
-    /// summed over the run.
-    pub lost_cells: u64,
 }
 
 /// All bodies, joints and terrain colliders.
@@ -112,6 +123,14 @@ impl Physics {
         self.stats
     }
 
+    /// Resets the per-tick counters. Call at the start of each tick, before any
+    /// body is created, split or removed.
+    pub const fn begin_tick(&mut self) {
+        self.stats.created = 0;
+        self.stats.removed = 0;
+        self.stats.joints_broken = 0;
+    }
+
     /// Bodies in id order.
     pub fn bodies(&self) -> &[PixelBody] {
         &self.bodies
@@ -151,7 +170,15 @@ impl Physics {
     }
 
     /// Cuts the cells inside a rectangle out of the world and turns them into a body.
-    pub fn carve_body(&mut self, world: &mut World, rect: fe_core::IRect) -> Option<u32> {
+    ///
+    /// Structure removed this way is added to `support_lost`, so the caller can
+    /// check what it held up.
+    pub fn carve_body(
+        &mut self,
+        world: &mut World,
+        rect: fe_core::IRect,
+        support_lost: &mut Vec<CellPos>,
+    ) -> Option<u32> {
         let mut cells = Vec::new();
         for y in rect.min.y..rect.max.y {
             for x in rect.min.x..rect.max.x {
@@ -162,16 +189,34 @@ impl Physics {
                 }
             }
         }
-        if cells.len() < MIN_BODY_CELLS {
+        self.carve_cells(world, &cells, support_lost)
+    }
+
+    /// Removes cells from the world and turns them into one body. The cells must
+    /// be body material (see [`is_body_material`]). Leaves the world unchanged and
+    /// returns `None` if the cells are too few or span too large an area.
+    ///
+    /// Structure removed this way is added to `support_lost`.
+    pub fn carve_cells(
+        &mut self,
+        world: &mut World,
+        cells: &[(CellPos, Cell)],
+        support_lost: &mut Vec<CellPos>,
+    ) -> Option<u32> {
+        if cells.len() < MIN_BODY_CELLS || !fits_in_body(cells) {
             return None;
         }
-        for &(p, _) in &cells {
-            world.grid.set(p, Cell::AIR);
-            if let Some(ch) = world.grid.chunk(p.chunk()) {
-                ch.flag_solid_changed();
+        for &(p, _) in cells {
+            if let Some(fe_sim::Event::SupportLost(q)) = world.set(p, Cell::AIR) {
+                support_lost.push(q);
             }
         }
-        self.create_body(world, &cells, (0.0, 0.0), 0.0)
+        let id = self.create_body(world, cells, (0.0, 0.0), 0.0)?;
+        // Stamp it now: a body carved before the cell passes would otherwise leave
+        // a hole for one tick, and water would run into a hull's hold through it.
+        let holders = body::Holders::of(&self.bodies, &self.rapier);
+        self.stamp_body(world, self.bodies.len() - 1, &holders);
+        Some(id)
     }
 
     /// Changes a body's velocity by `(vx, vy)` cells per second.
@@ -241,31 +286,9 @@ impl Physics {
             // rebuilding it would reset its contacts and kick it.
             if self.bodies[i].components().len() == 1 {
                 let shift = self.bodies[i].refresh_shape(world, &mut self.rapier);
-                self.shift_joint_anchors(self.bodies[i].id, shift);
+                self.shift_joint_frames(self.bodies[i].id, shift);
             } else {
                 self.resplit(world, particles, i, None);
-            }
-        }
-    }
-
-    /// Keeps the joints on body `id` attached to the same material after its
-    /// center of mass, the origin of its frame, moved by `shift` (body frame,
-    /// meters) because it lost cells. A hinge on a burning tower stays where it was.
-    fn shift_joint_anchors(&mut self, id: u32, shift: Vector) {
-        if shift.x == 0.0 && shift.y == 0.0 {
-            return;
-        }
-        for j in &self.joints {
-            let Some(joint) = self.rapier.impulse_joints.get_mut(j.handle, false) else {
-                continue;
-            };
-            if j.a == id {
-                let a = joint.data.local_anchor1();
-                joint.data.set_local_anchor1(a - shift);
-            }
-            if j.b == id {
-                let b = joint.data.local_anchor2();
-                joint.data.set_local_anchor2(b - shift);
             }
         }
     }
@@ -326,10 +349,6 @@ impl Physics {
     /// Steps the physics world: buoyancy, terrain colliders, Rapier, fracture,
     /// joint breaks and merging. Call between [`Physics::unstamp`] and [`Physics::stamp`].
     pub fn step(&mut self, world: &mut World, particles: &mut Particles) {
-        self.stats.created = 0;
-        self.stats.removed = 0;
-        self.stats.joints_broken = 0;
-
         terrain::update(
             &mut self.terrain,
             &mut self.rapier,
@@ -377,6 +396,7 @@ impl Physics {
         }
 
         self.break_joints();
+        self.remove_lost(world);
         self.merge_resting(world);
         self.stats.bodies = self.bodies.len() as u32;
         self.stats.awake = self
@@ -389,11 +409,21 @@ impl Physics {
 
     /// Writes every body's cells into the world at its new position.
     pub fn stamp(&mut self, world: &mut World) {
-        for b in &mut self.bodies {
+        let holders = body::Holders::of(&self.bodies, &self.rapier);
+        for i in 0..self.bodies.len() {
+            let b = &self.bodies[i];
             if b.stamped.is_empty() || b.needs_restamp(&self.rapier) {
-                self.stats.lost_cells += u64::from(b.stamp(world, &self.rapier));
+                self.stamp_body(world, i, &holders);
             }
         }
+    }
+
+    /// Stamps body `i`, keeping the fluid it pushes aside out of the air the
+    /// other bodies hold.
+    fn stamp_body(&mut self, world: &mut World, i: usize, holders: &body::Holders) {
+        let (before, rest) = self.bodies.split_at_mut(i);
+        let Some((b, after)) = rest.split_first_mut() else { return };
+        b.stamp(world, &self.rapier, &body::Others::new(holders, i, before, after));
     }
 
     /// Turns structure that lost support into bodies, or into debris if too small.
@@ -420,6 +450,9 @@ impl Physics {
     /// Replaces body `i` with its connected parts, or with Voronoi shards when
     /// `shatter` is set: `(seed, impact speed change, direction to the contact
     /// in the body frame)`.
+    ///
+    /// Joints on the body move to the part nearest each joint's anchor. A joint
+    /// whose anchor part became debris is dropped.
     fn resplit(
         &mut self,
         world: &mut World,
@@ -432,6 +465,7 @@ impl Physics {
         let pose = *rb.position();
         let linvel = rb.linvel();
         let angvel = rb.angvel();
+        let carried = self.joints_of(&body, &pose);
         let had_stamp = !body.stamped.is_empty();
         let mut body = body;
         if had_stamp {
@@ -449,6 +483,7 @@ impl Physics {
             impact_dust(world, &body, &pose, dir, amount / 2, seed ^ 0x1d);
         }
         let mut rng = SeqRng::new(shatter.map_or(0, |s| s.0) ^ u64::from(body.id));
+        let mut made: Vec<(u32, Vec<CellPos>)> = Vec::new();
         for part in parts {
             // Each piece moves with the parent's motion at its own center of mass
             // (see `from_local_cells`), plus a small kick, so the wreck does not
@@ -471,6 +506,8 @@ impl Physics {
                     angvel,
                 ) {
                     self.next_id += 1;
+                    let at = part.iter().map(|&(lx, ly, _)| body.local_to_world(&pose, lx, ly));
+                    made.push((id, at.collect()));
                     self.bodies.push(child);
                     self.stats.created += 1;
                     continue;
@@ -480,6 +517,90 @@ impl Physics {
                 part.iter().map(|&(lx, ly, c)| (body.local_to_world(&pose, lx, ly), c)).collect();
             drop_as_debris(world, particles, &cells, (v.x, v.y));
         }
+        for c in &carried {
+            self.reattach(c, &made);
+        }
+    }
+
+    /// Moves the frames of a body's joints by `-shift` in its local space, after
+    /// its origin moved by `shift`, so every anchor stays at the same world point.
+    fn shift_joint_frames(&mut self, id: u32, shift: Vector) {
+        if shift == Vector::ZERO {
+            return;
+        }
+        for j in &self.joints {
+            let (first, second) = (j.a == id, j.b == id);
+            if !first && !second {
+                continue;
+            }
+            let Some(ij) = self.rapier.impulse_joints.get_mut(j.handle, false) else { continue };
+            if first {
+                ij.data.local_frame1.translation -= shift;
+            }
+            if second {
+                ij.data.local_frame2.translation -= shift;
+            }
+        }
+    }
+
+    /// The joints attached to a body, with the body's anchor frames in world space.
+    fn joints_of(&self, body: &PixelBody, pose: &Pose) -> Vec<CarriedJoint> {
+        let mut out = Vec::new();
+        for j in &self.joints {
+            let first = j.a == body.id;
+            if !first && j.b != body.id {
+                continue;
+            }
+            let Some(ij) = self.rapier.impulse_joints.get(j.handle) else { continue };
+            let local = if first { ij.data.local_frame1 } else { ij.data.local_frame2 };
+            out.push(CarriedJoint {
+                other: if first { j.b } else { j.a },
+                first,
+                world_frame: *pose * local,
+                data: ij.data,
+                break_force: j.break_force,
+            });
+        }
+        out
+    }
+
+    /// Puts a carried joint back on the new part closest to its anchor.
+    fn reattach(&mut self, c: &CarriedJoint, parts: &[(u32, Vec<CellPos>)]) {
+        let t = c.world_frame.translation * CELLS_PER_METER;
+        let anchor = CellPos::new(t.x.floor() as i32, t.y.floor() as i32);
+        let dist = |p: &CellPos| {
+            let (dx, dy) =
+                (i64::from(p.x) - i64::from(anchor.x), i64::from(p.y) - i64::from(anchor.y));
+            dx * dx + dy * dy
+        };
+        let nearest = parts
+            .iter()
+            .filter_map(|(id, cells)| cells.iter().map(dist).min().map(|d| (d, *id)))
+            .min();
+        let Some((_, id)) = nearest else { return };
+        let Some(new_handle) = self.bodies.iter().find(|b| b.id == id).map(|b| b.handle) else {
+            return;
+        };
+        let other_handle = if c.other == u32::MAX {
+            Some(self.terrain_body)
+        } else {
+            self.bodies.iter().find(|b| b.id == c.other).map(|b| b.handle)
+        };
+        let Some(other_handle) = other_handle else { return };
+        let Some(new_pose) = self.rapier.bodies.get(new_handle).map(|rb| *rb.position()) else {
+            return;
+        };
+        let mut data = c.data;
+        let local = new_pose.inverse() * c.world_frame;
+        let (h1, h2, a, b) = if c.first {
+            data.set_local_frame1(local);
+            (new_handle, other_handle, id, c.other)
+        } else {
+            data.set_local_frame2(local);
+            (other_handle, new_handle, c.other, id)
+        };
+        let handle = self.rapier.impulse_joints.insert(h1, h2, data, true);
+        self.joints.push(JointInfo { handle, a, b, break_force: c.break_force });
     }
 
     fn remove_rapier_body(&mut self, body: &PixelBody) {
@@ -517,20 +638,55 @@ impl Physics {
         }
     }
 
+    /// Removes bodies that left the loaded chunks. Nothing collides with them or
+    /// stamps them there, so they would fall forever.
+    fn remove_lost(&mut self, world: &World) {
+        let mut k = 0;
+        while k < self.bodies.len() {
+            let b = &self.bodies[k];
+            let lost = b.stamped.is_empty()
+                && self.rapier.bodies.get(b.handle).is_some_and(|rb| {
+                    let t = rb.translation() * CELLS_PER_METER;
+                    let (w, h) = b.size();
+                    let r = f32::from(w.max(h));
+                    let a = CellPos::new((t.x - r).floor() as i32, (t.y - r).floor() as i32);
+                    let z = CellPos::new((t.x + r).floor() as i32, (t.y + r).floor() as i32);
+                    let (a, z) = (a.chunk(), z.chunk());
+                    !(a.y..=z.y)
+                        .any(|cy| (a.x..=z.x).any(|cx| world.grid.contains(ChunkPos::new(cx, cy))))
+                });
+            if lost {
+                let b = self.bodies.remove(k);
+                self.remove_rapier_body(&b);
+                self.stats.removed += 1;
+                continue;
+            }
+            k += 1;
+        }
+    }
+
+    /// Merges small bodies that have rested on the terrain for a while back into
+    /// it. A body that floats, or rests on another body, never merges: a crate
+    /// on the water would freeze into the surface, and a cask in a hold would
+    /// turn into a block of terrain holding the ship up.
     fn merge_resting(&mut self, world: &mut World) {
         let mut k = 0;
         while k < self.bodies.len() {
-            let b = &mut self.bodies[k];
+            let b = &self.bodies[k];
             let resting = self.rapier.bodies.get(b.handle).is_some_and(|rb| {
                 rb.is_sleeping() || (rb.linvel().length() < 0.05 && rb.angvel().abs() < 0.05)
             });
             let jointed = self.joints.iter().any(|j| j.a == b.id || j.b == b.id);
             // A body floating in, or resting on, a liquid or powder stays a body:
             // a raft would otherwise turn into terrain in the middle of a lake.
-            b.rest_ticks = if resting && !jointed && !b.wet { b.rest_ticks + 1 } else { 0 };
+            // So does one resting on another body.
+            let settled = resting && !jointed && !b.floating && !self.on_body(b);
+            let b = &mut self.bodies[k];
+            b.rest_ticks = if settled { b.rest_ticks + 1 } else { 0 };
             if b.rest_ticks >= MERGE_AFTER_TICKS
                 && b.cell_count() <= MERGE_MAX_CELLS
                 && !b.stamped.is_empty()
+                && b.fully_stamped()
             {
                 let b = self.bodies.remove(k);
                 b.merge_into(world);
@@ -540,6 +696,20 @@ impl Physics {
             }
             k += 1;
         }
+    }
+
+    /// True if the body touches another body.
+    fn on_body(&self, b: &PixelBody) -> bool {
+        self.rapier.narrow_phase.contact_pairs_with(b.collider).any(|pair| {
+            let other = if pair.collider1 == b.collider { pair.collider2 } else { pair.collider1 };
+            pair.has_any_active_contact()
+                && self
+                    .rapier
+                    .colliders
+                    .get(other)
+                    .and_then(Collider::parent)
+                    .is_some_and(|h| h != self.terrain_body)
+        })
     }
 
     /// Hash of every body, joint and Rapier body state, in id order.
@@ -561,6 +731,15 @@ impl Physics {
 /// Converts a world cell position to its center in physics meters.
 pub fn cell_to_m(p: CellPos) -> Vector {
     Vector::new((p.x as f32 + 0.5) / CELLS_PER_METER, (p.y as f32 + 0.5) / CELLS_PER_METER)
+}
+
+/// True if the cells span no more than [`MAX_BODY_SIDE`] in each direction.
+fn fits_in_body(cells: &[(CellPos, Cell)]) -> bool {
+    let mut r = (i64::MAX, i64::MAX, i64::MIN, i64::MIN);
+    for &(p, _) in cells {
+        r = (r.0.min(p.x.into()), r.1.min(p.y.into()), r.2.max(p.x.into()), r.3.max(p.y.into()));
+    }
+    r.2 - r.0 < i64::from(MAX_BODY_SIDE) && r.3 - r.1 < i64::from(MAX_BODY_SIDE)
 }
 
 /// Returns true if a cell can be part of a rigid body.
@@ -761,7 +940,7 @@ mod tests {
     fn brick_body(w: &mut World, ph: &mut Physics, rect: IRect) -> u32 {
         let brick = w.materials().id("brick").unwrap_or_default();
         w.fill_rect(rect, brick);
-        ph.carve_body(w, rect).unwrap_or_else(|| panic!("no body"))
+        ph.carve_body(w, rect, &mut Vec::new()).unwrap_or_else(|| panic!("no body"))
     }
 
     #[test]

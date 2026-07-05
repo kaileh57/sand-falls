@@ -92,6 +92,18 @@ impl Image {
         }
     }
 
+    /// Draws one line of text centered across the image on a dark panel, at
+    /// double size when it fits. Used for a game's status line.
+    pub fn banner(&mut self, y: i32, s: &str, color: [u8; 4]) {
+        let chars = s.chars().count() as i32;
+        let w = self.width as i32;
+        let size = if chars * 12 + 16 <= w { 2 } else { 1 };
+        let tw = chars * 6 * size;
+        let x = ((w - tw) / 2).max(4);
+        self.shade(x - 6, y - 4, x + tw + 6, y + 7 * size + 5, 150);
+        self.text(x, y, size, s, color);
+    }
+
     /// Darkens a rectangle, for text panels.
     pub fn shade(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, alpha: u8) {
         for y in y0.max(0)..y1.min(self.height as i32) {
