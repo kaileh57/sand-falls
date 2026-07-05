@@ -1,13 +1,15 @@
 use crate::{CELLS_PER_METER, is_body_material};
-use fe_core::{Cell, CellPos, SeqRng, StableHasher};
+use fe_core::{Cell, CellPos, MaterialId, SeqRng, StableHasher};
 use fe_materials::State;
 use fe_sim::World;
 use rapier2d::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Smallest group of cells that becomes a body. Smaller groups become debris.
 pub const MIN_BODY_CELLS: usize = 16;
+/// Largest width or height of a body, in cells.
+pub const MAX_BODY_SIDE: i32 = 4096;
 
 /// Physical size of one cell in meters.
 const S: f32 = 1.0 / CELLS_PER_METER;
@@ -50,7 +52,10 @@ pub struct PixelBody {
     w: u16,
     h: u16,
     cells: Vec<Cell>,
-    interior: Vec<bool>,
+    /// Air cells inside the body's outline: bit 0 marks a cell between solid
+    /// cells of its local row, bit 1 one between solid cells of its local
+    /// column. A hold, the inside of an open boat, or air under an upturned hull.
+    envelope: Vec<u8>,
     com: (f32, f32),
     /// Rapier body.
     pub handle: RigidBodyHandle,
@@ -58,17 +63,28 @@ pub struct PixelBody {
     pub collider: ColliderHandle,
     /// World cells written by the last stamp, with the local index each came from.
     pub stamped: Vec<(CellPos, u32)>,
-    cavity: Vec<CellPos>,
+    /// World cells of the air the body closes in at its last stamp: a sealed
+    /// hold, or air with the body close above and below it in its local column,
+    /// such as a hold with its side blown in or a hull broken in two. Only the
+    /// renderer reads it, to draw a body's inside; it is rebuilt by every stamp
+    /// and not saved.
+    #[serde(skip)]
+    pub hollow: Vec<CellPos>,
     last_pose: [u32; 4],
     /// Ticks spent at rest.
     pub rest_ticks: u32,
     /// Fracture strength: the body shatters when one tick's change in velocity,
     /// apart from gravity, exceeds `fracture / 32` m/s. 0 never shatters.
     pub fracture: u16,
-    /// A liquid or powder held the body up on the last tick. Recomputed every
-    /// tick before it is read, so it is not saved.
-    #[serde(skip)]
-    pub(crate) wet: bool,
+    /// Cells the last stamp left out because the liquid or powder there had
+    /// nowhere to go.
+    wet: Vec<CellPos>,
+    /// The last fluid step found the body afloat or submerged in a liquid or powder.
+    pub floating: bool,
+    /// The net vertical force (N) and torque (N m) the fluid put on the body in
+    /// the last step. A sleeping body wakes when they change: when its hold
+    /// floods, or the water under it drains away.
+    fluid_push: (f32, f32),
 }
 
 fn cell_mass(world: &World, c: Cell) -> f32 {
@@ -100,10 +116,10 @@ impl PixelBody {
         let y0 = cells.iter().map(|c| c.0.y).min()?;
         let x1 = cells.iter().map(|c| c.0.x).max()?;
         let y1 = cells.iter().map(|c| c.0.y).max()?;
-        let (w, h) = ((x1 - x0 + 1) as usize, (y1 - y0 + 1) as usize);
-        if w > 4096 || h > 4096 {
+        if x1 - x0 >= MAX_BODY_SIDE || y1 - y0 >= MAX_BODY_SIDE {
             return None;
         }
+        let (w, h) = ((x1 - x0 + 1) as usize, (y1 - y0 + 1) as usize);
         let mut grid = vec![Cell::AIR; w * h];
         for &(p, c) in cells {
             grid[(p.y - y0) as usize * w + (p.x - x0) as usize] =
@@ -162,25 +178,27 @@ impl PixelBody {
             w: w as u16,
             h: h as u16,
             cells,
-            interior: Vec::new(),
+            envelope: Vec::new(),
             com: (0.0, 0.0),
             handle: RigidBodyHandle::invalid(),
             collider: ColliderHandle::invalid(),
             stamped: Vec::new(),
-            cavity: Vec::new(),
+            hollow: Vec::new(),
             last_pose: [0; 4],
             rest_ticks: 0,
             fracture: 0,
-            wet: false,
+            wet: Vec::new(),
+            floating: false,
+            fluid_push: (0.0, 0.0),
         }
     }
 
-    /// Recomputes the center of mass, hull interior and fracture strength from the
+    /// Recomputes the center of mass, hull envelope and fracture strength from the
     /// cells. Returns the mass and angular inertia.
     fn refresh_props(&mut self, world: &World) -> (f32, f32) {
         let (mass, com, inertia) = self.mass_props(world);
         self.com = com;
-        self.interior = self.find_interior();
+        self.envelope = self.find_envelope();
         self.fracture = self.compute_fracture(world);
         (mass, inertia)
     }
@@ -212,8 +230,9 @@ impl PixelBody {
     /// fracture strength and collider, and a translation shifted so the remaining
     /// cells stay where they are.
     ///
-    /// Returns how far the center of mass moved in the body's own frame, in
-    /// meters, so joint anchors on the body can be moved by the same amount.
+    /// Returns how far the body's origin moved in its own frame, in meters. The
+    /// caller must shift joint frames on this body back by that much, or the
+    /// anchors move with the center of mass and drag the body after them.
     pub(crate) fn refresh_shape(&mut self, world: &World, rapier: &mut PhysicsWorld) -> Vector {
         let old_com = self.com;
         let (mass, inertia) = self.refresh_props(world);
@@ -221,12 +240,11 @@ impl PixelBody {
         if let Some(col) = rapier.colliders.get_mut(self.collider) {
             col.set_shape(shape);
         }
-        let shift = Vector::new((self.com.0 - old_com.0) * S, (self.com.1 - old_com.1) * S);
-        let Some(rb) = rapier.bodies.get_mut(self.handle) else { return shift };
+        let (dx, dy) = ((self.com.0 - old_com.0) * S, (self.com.1 - old_com.1) * S);
+        let Some(rb) = rapier.bodies.get_mut(self.handle) else { return Vector::ZERO };
         let sleeping = rb.is_sleeping();
         rb.set_additional_mass_properties(MassProperties::new(Vector::ZERO, mass, inertia), false);
         let mut pose = *rb.position();
-        let (dx, dy) = ((self.com.0 - old_com.0) * S, (self.com.1 - old_com.1) * S);
         let (c, s) = (pose.rotation.cos(), pose.rotation.sin());
         let off = Vector::new(c * dx - s * dy, s * dx + c * dy);
         pose.translation += off;
@@ -240,7 +258,7 @@ impl PixelBody {
         }
         // Force a restamp so the lost cells' slots are written fresh.
         self.last_pose = [u32::MAX; 4];
-        shift
+        Vector::new(dx, dy)
     }
 
     /// The mass-weighted mean fracture strength of the cells that can shatter, or
@@ -265,41 +283,11 @@ impl PixelBody {
 
     /// Splits the cells into rectangles: horizontal runs merged with identical runs below.
     fn rectangles(&self) -> Vec<(i32, i32, i32, i32)> {
-        let (w, h) = (i32::from(self.w), i32::from(self.h));
-        let solid = |x: i32, y: i32| !self.cells[(y * w + x) as usize].is_air();
-        let mut used = vec![false; self.cells.len()];
-        let mut rects = Vec::new();
-        for y in 0..h {
-            let mut x = 0;
-            while x < w {
-                if !solid(x, y) || used[(y * w + x) as usize] {
-                    x += 1;
-                    continue;
-                }
-                let x0 = x;
-                while x < w && solid(x, y) && !used[(y * w + x) as usize] {
-                    x += 1;
-                }
-                let x1 = x;
-                let mut y1 = y + 1;
-                while y1 < h && (x0..x1).all(|xx| solid(xx, y1) && !used[(y1 * w + xx) as usize]) {
-                    y1 += 1;
-                }
-                for yy in y..y1 {
-                    for xx in x0..x1 {
-                        used[(yy * w + xx) as usize] = true;
-                    }
-                }
-                rects.push((x0, y, x1, y1));
-            }
-        }
-        rects
+        let w = i32::from(self.w);
+        merge_rects(w, i32::from(self.h), |x, y| !self.cells[(y * w + x) as usize].is_air())
     }
 
     /// A compound of cuboids covering the cells.
-    ///
-    /// Rapier collides voxel shapes with other shapes but not with each other, so
-    /// bodies use cuboids and terrain uses voxels.
     fn build_collider(&self) -> Collider {
         ColliderBuilder::new(self.compound_shape())
             .density(0.0)
@@ -354,11 +342,81 @@ impl PixelBody {
         (m, com, inertia.max(1e-6))
     }
 
-    /// Local cells not connected to the grid's border through air: the inside of a hull.
-    fn find_interior(&self) -> Vec<bool> {
+    /// Marks the air inside the body's outline along each local axis (see
+    /// [`PixelBody::envelope`]). Whatever fills those cells in the world, air or
+    /// water, is held by the hull and moves its buoyancy: a dry hold floats it,
+    /// a flooded one does not.
+    fn find_envelope(&self) -> Vec<u8> {
         let (w, h) = (self.w as usize, self.h as usize);
-        let mut outside = vec![false; w * h];
-        let mut stack = Vec::new();
+        let solid = |x: usize, y: usize| !self.cells[y * w + x].is_air();
+        let mut env = vec![0u8; w * h];
+        for y in 0..h {
+            let first = (0..w).find(|&x| solid(x, y));
+            let last = (0..w).rev().find(|&x| solid(x, y));
+            if let (Some(a), Some(b)) = (first, last) {
+                for x in a + 1..b {
+                    if !solid(x, y) {
+                        env[y * w + x] |= ROW_INSIDE;
+                    }
+                }
+            }
+        }
+        for x in 0..w {
+            let first = (0..h).find(|&y| solid(x, y));
+            let last = (0..h).rev().find(|&y| solid(x, y));
+            if let (Some(a), Some(b)) = (first, last) {
+                let mut roof = a;
+                for y in a + 1..=b {
+                    if !solid(x, y) {
+                        env[y * w + x] |= COL_INSIDE;
+                        continue;
+                    }
+                    // A short run of air with the body above and below it is
+                    // under cover, like a hold under its deck; the air under a
+                    // spar high over the deck is not.
+                    if y - roof - 1 <= COVER_DEPTH {
+                        for k in roof + 1..y {
+                            env[k * w + x] |= COVERED;
+                        }
+                    }
+                    roof = y;
+                }
+            }
+        }
+        // Air between solid cells of its row with nothing over it in its
+        // column holds water only near a floor: the inside of an open boat,
+        // or water on a deck. Higher up it is the air between two masts,
+        // which holds nothing. Air with the body over it, such as a hold
+        // holed in its floor, is still held.
+        for x in 0..w {
+            let mut below = None;
+            let mut roofed = vec![false; h];
+            let mut over = None;
+            for (y, r) in roofed.iter_mut().enumerate() {
+                if solid(x, y) {
+                    over = Some(y);
+                } else {
+                    *r = over.is_some_and(|o| y - o <= COVER_DEPTH);
+                }
+            }
+            for y in (0..h).rev() {
+                if solid(x, y) {
+                    below = Some(y);
+                    continue;
+                }
+                let e = &mut env[y * w + x];
+                if *e & ROW_INSIDE != 0
+                    && *e & COL_INSIDE == 0
+                    && !roofed[y]
+                    && below.is_none_or(|b| b - y > OPEN_DEPTH)
+                {
+                    *e &= !ROW_INSIDE;
+                }
+            }
+        }
+        // Air no path through air leads out of: a sealed hold.
+        let mut open = vec![false; w * h];
+        let mut stack: Vec<(usize, usize)> = Vec::new();
         for x in 0..w {
             stack.push((x, 0));
             stack.push((x, h - 1));
@@ -369,10 +427,10 @@ impl PixelBody {
         }
         while let Some((x, y)) = stack.pop() {
             let i = y * w + x;
-            if outside[i] || !self.cells[i].is_air() {
+            if open[i] || solid(x, y) {
                 continue;
             }
-            outside[i] = true;
+            open[i] = true;
             if x > 0 {
                 stack.push((x - 1, y));
             }
@@ -386,7 +444,54 @@ impl PixelBody {
                 stack.push((x, y + 1));
             }
         }
-        (0..w * h).map(|i| self.cells[i].is_air() && !outside[i]).collect()
+        for (i, e) in env.iter_mut().enumerate() {
+            if !open[i] && self.cells[i].is_air() {
+                *e |= ENCLOSED;
+            }
+        }
+        // A hold holed in its floor: the air over the hole has the deck above
+        // it but no floor under it, so the columns leave it uncovered, though
+        // it lies between the hull's sides among covered air. A run of air
+        // between two solid cells of a row that is mostly inside is inside
+        // all along, and so is the air between the sides of the hole under
+        // it. The air under an arch or a bridge, or over a deck under the
+        // eaves of a deckhouse, is mostly not, so it stays what lies behind
+        // the body.
+        let inside = |e: u8| e & (COVERED | ENCLOSED) != 0;
+        for y in 0..h {
+            let row = &mut env[y * w..(y + 1) * w];
+            let mut x = 0;
+            while x < w {
+                if solid(x, y) {
+                    x += 1;
+                    continue;
+                }
+                let a = x;
+                while x < w && !solid(x, y) {
+                    x += 1;
+                }
+                let covered = row[a..x].iter().filter(|&&e| inside(e)).count();
+                if a > 0 && x < w && covered * 2 > x - a {
+                    for e in &mut row[a..x] {
+                        *e |= COVERED;
+                    }
+                }
+            }
+        }
+        for y in 1..h {
+            for x in 0..w {
+                let i = y * w + x;
+                if !solid(x, y) && env[i] & ROW_INSIDE != 0 && inside(env[i - w]) {
+                    env[i] |= COVERED;
+                }
+            }
+        }
+        env
+    }
+
+    /// True if the last stamp placed every cell it could reach.
+    pub fn fully_stamped(&self) -> bool {
+        self.wet.is_empty()
     }
 
     /// Number of solid cells.
@@ -473,10 +578,15 @@ impl PixelBody {
         best.map(|(x, y, d2)| (x, y, d2.sqrt()))
     }
 
-    /// True if the body moved since its last stamp or was never stamped.
+    /// True if the body moved since its last stamp, was never stamped, or its
+    /// last stamp left cells out.
     pub(crate) fn needs_restamp(&self, rapier: &PhysicsWorld) -> bool {
         match rapier.bodies.get(self.handle) {
-            Some(rb) => self.stamped.is_empty() || pose_bits(rb.position()) != self.last_pose,
+            Some(rb) => {
+                self.stamped.is_empty()
+                    || !self.wet.is_empty()
+                    || pose_bits(rb.position()) != self.last_pose
+            }
             None => false,
         }
     }
@@ -518,163 +628,379 @@ impl PixelBody {
             }
         }
         self.stamped.clear();
-        self.cavity.clear();
+        self.wet.clear();
+        self.hollow.clear();
     }
 
     /// Writes the body's cells into the world at its current pose, pushing fluids
-    /// aside. Returns the number of displaced fluid cells that found no room.
-    pub(crate) fn stamp(&mut self, world: &mut World, rapier: &PhysicsWorld) -> u32 {
-        let Some(rb) = rapier.bodies.get(self.handle) else { return 0 };
-        let mut lost = 0;
+    /// aside. A cell whose fluid finds no room stays out (see `wet`). `others`
+    /// are the other bodies, whose holds the fluid is kept out of.
+    pub(crate) fn stamp(&mut self, world: &mut World, rapier: &PhysicsWorld, others: &Others<'_>) {
+        let Some(rb) = rapier.bodies.get(self.handle) else { return };
         let pose = *rb.position();
         if !self.stamped.is_empty() {
             self.unstamp(world);
         }
+        // Where the body was stamped last, to tell what it holds from the sea.
+        let prev = Frame::from_bits(self, self.last_pose);
         self.last_pose = pose_bits(&pose);
-        let (c, s) = (pose.rotation.cos(), pose.rotation.sin());
-        let tx = pose.translation.x * CELLS_PER_METER;
-        let ty = pose.translation.y * CELLS_PER_METER;
-        let (w, h) = (f32::from(self.w), f32::from(self.h));
-        let corners = [(0.0, 0.0), (w, 0.0), (0.0, h), (w, h)];
-        let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
-        for (lx, ly) in corners {
-            let (ox, oy) = (lx - self.com.0, ly - self.com.1);
-            let wx = tx + c * ox - s * oy;
-            let wy = ty + s * ox + c * oy;
-            x0 = x0.min(wx);
-            y0 = y0.min(wy);
-            x1 = x1.max(wx);
-            y1 = y1.max(wy);
-        }
-        let (wi, hi) = (i32::from(self.w), i32::from(self.h));
-        for wy in (y0.floor() as i32)..=(y1.floor() as i32) {
-            for wx in (x0.floor() as i32)..=(x1.floor() as i32) {
-                let px = wx as f32 + 0.5 - tx;
-                let py = wy as f32 + 0.5 - ty;
-                let lxf = c * px + s * py + self.com.0;
-                let lyf = -s * px + c * py + self.com.1;
-                let (lx, ly) = (lxf.floor() as i32, lyf.floor() as i32);
-                if lx < 0 || ly < 0 || lx >= wi || ly >= hi {
-                    continue;
-                }
-                let idx = (ly * wi + lx) as usize;
+        let frame = Frame::new(self, &pose);
+        let (x0, y0, x1, y1) = frame.world_bounds();
+        // The world cells the body covers, and the outline of each world row,
+        // which tells displaced fluid where the surface beside the body is.
+        let mut targets = Vec::new();
+        let mut hollow = Vec::new();
+        let mut rows = vec![(i32::MAX, i32::MIN); (y1 - y0 + 1) as usize];
+        for wy in y0..=y1 {
+            for wx in x0..=x1 {
                 let p = CellPos::new(wx, wy);
-                if self.interior.get(idx).copied().unwrap_or(false) {
-                    self.cavity.push(p);
-                    continue;
-                }
-                let cell = self.cells[idx];
-                if cell.is_air() {
-                    continue;
-                }
-                match place(world, p, cell) {
-                    Placed::Yes => self.stamped.push((p, idx as u32)),
-                    Placed::Displaced(ok) => {
-                        self.stamped.push((p, idx as u32));
-                        lost += u32::from(!ok);
+                let Some(idx) = frame.local_of(p) else { continue };
+                if self.cells[idx].is_air() {
+                    let e = self.envelope[idx];
+                    if e & (ENCLOSED | COVERED) != 0 {
+                        hollow.push(p);
                     }
-                    Placed::No => {}
+                    continue;
                 }
+                let r = &mut rows[(wy - y0) as usize];
+                *r = (r.0.min(wx), r.1.max(wx));
+                targets.push((p, idx));
             }
         }
-        lost
+        let mut shore = Shore { frame, prev, body: self, others, y0, rows, cursor: [None, None] };
+        let mut placed = Vec::with_capacity(targets.len());
+        let mut wet = Vec::new();
+        for (p, idx) in targets {
+            match place(world, p, self.cells[idx], &mut shore) {
+                Place::Placed => placed.push((p, idx as u32)),
+                Place::Blocked => {}
+                Place::NoRoom => wet.push(p),
+            }
+        }
+        self.stamped = placed;
+        self.wet = wet;
+        self.hollow = hollow;
     }
 
-    /// Applies buoyancy and drag from liquids and powders around the body.
+    /// Floods a hold that is open to the sea below the waterline, then applies
+    /// buoyancy, the weight of what the hull holds, and drag from the liquids
+    /// and powders around the body.
     ///
-    /// Only liquid or powder outside the body counts. Water in a tank the body
-    /// carries, or an oil film on one of its floors, moves with it: it adds
-    /// weight through the cells it rests on, not lift or drag. A few loose
-    /// grains do not count either; the medium has to be a real pool or heap.
-    pub(crate) fn apply_fluid_forces(&mut self, rapier: &mut PhysicsWorld, world: &World) {
-        self.wet = false;
+    /// The medium's level is read just outside the body on the left and on the
+    /// right (see [`Shoreline::measure`]) and taken as the mean of the two.
+    /// Every solid cell and every cell of the envelope (a hold, the inside of
+    /// an open hull) below that line displaces the medium and is lifted by its
+    /// weight, the cell at the line in proportion to how far it is under, so a
+    /// wide hull with a dry hold floats with its deck clear of the water, and a
+    /// flooded hold adds no lift. Liquid and powder inside the envelope weigh
+    /// on the hull where they lie. Each force acts where it is centered, so a
+    /// floating body that tilts finds the lift moving to its lower side and
+    /// rights itself, and a hull flooding on one side lists that way.
+    pub(crate) fn apply_fluid_forces(&mut self, rapier: &mut PhysicsWorld, world: &mut World) {
         let Some(rb) = rapier.bodies.get_mut(self.handle) else { return };
         rb.reset_forces(false);
-        if self.stamped.is_empty() {
+        rb.reset_torques(false);
+        self.floating = false;
+        let in_air = |rb: &mut RigidBody| {
+            rb.set_linear_damping(0.0);
+            rb.set_angular_damping(0.05);
+        };
+        if self.stamped.is_empty() && self.wet.is_empty() {
+            in_air(rb);
             return;
         }
-        let mut cavity = self.cavity.clone();
-        cavity.sort_unstable();
-        // Group the body's footprint (cells and hull cavity) by world column.
-        let mut cols: BTreeMap<i32, Vec<(i32, bool)>> = BTreeMap::new();
-        for &(p, _) in &self.stamped {
-            cols.entry(p.x).or_default().push((p.y, true));
+        // The rows and columns the body covers in the world.
+        let footprint = || self.stamped.iter().map(|s| s.0).chain(self.wet.iter().copied());
+        let (mut x0, mut y0, mut x1, mut y1) = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+        for p in footprint() {
+            (x0, y0, x1, y1) = (x0.min(p.x), y0.min(p.y), x1.max(p.x), y1.max(p.y));
         }
-        for &p in &self.cavity {
-            cols.entry(p.x).or_default().push((p.y, false));
+        let (ymin, n) = (y0, (y1 - y0 + 1) as usize);
+        let l = Shoreline::measure(world, x0 - 1, ymin, n, -1);
+        let r = Shoreline::measure(world, x1 + 1, ymin, n, 1);
+        if l.level.is_none() && r.level.is_none() {
+            in_air(rb);
+            self.wake_on_change(rb, (0.0, 0.0));
+            return;
         }
-        let is_fluid = |p: CellPos| {
-            let c = world.get(p);
-            !c.is_air()
-                && !c.has(Cell::FLAG_IN_BODY)
-                && matches!(
-                    world.materials().get(c.material()).state,
-                    State::Liquid | State::Powder
-                )
+        // Under a wide hull the cell world does not carry pressure from one
+        // side to the other, so the two levels can differ for a long time; the
+        // water under the hull is taken as level, at their mean.
+        let level = match (l.level, r.level) {
+            (Some(a), Some(b)) => (a + b) * 0.5,
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => f32::MAX,
         };
-        let fluid = |p: CellPos| -> Option<(i16, u8)> {
-            if !is_fluid(p) || cavity.binary_search(&p).is_ok() {
-                return None;
-            }
-            // A pool or heap, not a speck: at least four of the eight cells
-            // around it are liquid or powder too.
-            let mut around = 0;
-            for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)] {
-                around += u32::from(is_fluid(CellPos::new(p.x + dx, p.y + dy)));
-            }
-            if around < 4 {
-                return None;
-            }
-            let m = world.materials().get(world.get(p).material());
-            Some((m.density, m.viscosity.max(40)))
+        let mid = (x0 + x1) as f32 * 0.5 + 0.5;
+        let medium_at = |x: f32, row: usize| {
+            let (a, b) = if x <= mid { (&l.media, &r.media) } else { (&r.media, &l.media) };
+            a[row].or(b[row])
         };
-        let (mut force, mut n, mut visc) = (0.0f32, 0u32, 0u32);
-        for (x, mut entries) in cols {
-            entries.sort_unstable();
-            let mut medium: Option<(i16, u8)> = None;
-            for (y, is_cell) in entries {
-                if medium.is_none() {
-                    // Look past the air a moving body leaves behind, up to three cells out.
-                    'dirs: for (dx, dy) in [(0, -1), (-1, 0), (1, 0), (0, 1)] {
-                        for k in 1..=3 {
-                            let q = CellPos::new(x + dx * k, y + dy * k);
-                            let c = world.get(q);
-                            if c.is_air() {
-                                continue;
+        let frame = Frame::new(self, rb.position());
+        // A body lies in a sea, whose pressure the flooding stands in for,
+        // when the medium touches it on both sides. A spill running down one
+        // side of a cask against a wall is no sea.
+        if l.level.is_some() && r.level.is_some() && self.flood(world, &frame, level) > 0 {
+            rb.wake_up(true);
+        }
+        let world: &World = world;
+        // The envelope is taken along the local axis nearest to the world's
+        // horizontal, so an open hull holds air only while its opening faces up.
+        let bit = if frame.c.abs() >= frame.s.abs() { ROW_INSIDE } else { COL_INSIDE };
+        let (w, h) = (i32::from(self.w), i32::from(self.h));
+        let mut lift = Moment::default();
+        let mut load = Moment::default();
+        let (mut cells, mut sub, mut visc) = (0u32, 0.0f32, 0.0f32);
+        for ly in 0..h {
+            for lx in 0..w {
+                let i = (ly * w + lx) as usize;
+                let inside = self.cells[i].is_air();
+                if inside && self.envelope[i] & bit == 0 {
+                    continue;
+                }
+                let (wx, wy) = frame.world_of(lx, ly);
+                if inside {
+                    let c = world.get(CellPos::new(wx.floor() as i32, wy.floor() as i32));
+                    if !c.is_air() && !c.has(Cell::FLAG_IN_BODY) {
+                        let m = world.materials().get(c.material());
+                        match m.state {
+                            // What the hull holds weighs on it where it lies.
+                            State::Liquid | State::Powder => {
+                                load.add(f32::from(m.density.max(0)), wx, wy);
                             }
-                            if let Some(f) = fluid(q) {
-                                medium = Some(f);
-                                break 'dirs;
-                            }
-                            break;
+                            // Terrain poking into the hull displaces nothing.
+                            State::Static => continue,
+                            _ => {}
                         }
                     }
                 }
-                let Some((density, v)) = medium else { continue };
-                // A flooded cavity cell holds liquid, not air, so it adds no lift.
-                if !is_cell && !world.get(CellPos::new(x, y)).is_air() {
+                cells += 1;
+                let f = (wy + 0.5 - level).clamp(0.0, 1.0);
+                if f <= 0.0 {
                     continue;
                 }
-                let lift = f32::from(density.max(0)) / 100.0 * crate::GRAVITY;
-                force += lift;
-                n += 1;
-                visc += u32::from(v);
+                let row = (wy.floor() as i32 - ymin).clamp(0, n as i32 - 1) as usize;
+                let Some((density, v)) = medium_at(wx, row) else { continue };
+                lift.add(f * f32::from(density.max(0)), wx, wy);
+                sub += f;
+                visc += f * f32::from(v);
             }
         }
-        let total = (self.stamped.len() + self.cavity.len()).max(1) as f32;
-        if n > 0 && force > 0.0 {
-            // Lift acts at the center of mass. Applying it at the centroid of the wet
-            // cells would let the air a spinning body leaves behind feed its spin.
-            rb.add_force(Vector::new(0.0, -force), false);
-            let frac = n as f32 / total;
-            let avg_visc = visc as f32 / n as f32;
+        // A cell of density 100 holds 1 kg.
+        let g = crate::GRAVITY / 100.0;
+        let com = rb.translation();
+        let mut push = (0.0f32, 0.0f32);
+        for (m, sign) in [(&lift, -1.0f32), (&load, 1.0)] {
+            if let Some(at) = m.center() {
+                let f = sign * m.weight * g;
+                rb.add_force_at_point(Vector::new(0.0, f), at, false);
+                push.0 += f;
+                push.1 += (at.x - com.x) * f;
+            }
+        }
+        self.wake_on_change(rb, push);
+        if sub > 0.0 {
+            self.floating = true;
+            let frac = sub / cells.max(1) as f32;
+            let avg_visc = visc / sub;
             rb.set_linear_damping(frac * avg_visc / 8.0);
             rb.set_angular_damping(frac * avg_visc / 6.0);
-            self.wet = true;
         } else {
-            rb.set_linear_damping(0.0);
-            rb.set_angular_damping(0.05);
+            in_air(rb);
         }
+    }
+
+    /// Wakes a sleeping body whose fluid force or torque changed by more than
+    /// a fiftieth of its weight (the torque by that much at one meter) since
+    /// it fell asleep, so a change that builds up slowly wakes it as well.
+    fn wake_on_change(&mut self, rb: &mut RigidBody, push: (f32, f32)) {
+        let limit = rb.mass() * crate::GRAVITY / 50.0;
+        let (df, dt) = (push.0 - self.fluid_push.0, push.1 - self.fluid_push.1);
+        if rb.is_sleeping() {
+            if df.abs() <= limit && dt.abs() <= limit {
+                return;
+            }
+            rb.wake_up(true);
+        }
+        self.fluid_push = push;
+    }
+
+    /// Lets the sea into a hold that is open to it below the waterline, and
+    /// out again while the water inside stands higher than the sea.
+    ///
+    /// The cell world carries no pressure, so water does not rise through a
+    /// hole in a hull's bottom, nor above the top of a hole in its side, and
+    /// water a hull lifts does not run back out through a hole in its bottom.
+    /// This stands in for the pressure. An opening is a cell of the hold
+    /// below `level` with the liquid outside beside it. The air the openings
+    /// reach through the hold below `level` fills with that liquid, lowest
+    /// cells first. Once none is left, the liquid they reach through the
+    /// liquid in the hold that stands more than a row over `level` runs out,
+    /// highest cells first. Each opening cell passes sqrt(2 g h) cells a
+    /// tick, water running out of an orifice, where h is how far the level
+    /// outside and the level inside or the opening differ, so a hold floods
+    /// in seconds through a shell hole and in minutes through a seam. The
+    /// liquid comes from, and goes back to, the surface of the liquid outside
+    /// the openings, found through that liquid, the highest cells first and
+    /// the lowest air first, so none is made or lost and none moves between
+    /// pools. A hold whose openings all lie above the water, such as an open
+    /// boat or a holed deck, takes on none this way, and neither does a body
+    /// that holds less than [`MIN_HOLD`] cells of air, such as a cracked plank.
+    ///
+    /// `level` is the world y of the top of the medium outside. Returns the
+    /// number of cells moved.
+    fn flood(&self, world: &mut World, frame: &Frame, level: f32) -> usize {
+        // A crack or a notch in a plank is no hold, and a sealed hold has no
+        // opening.
+        let (mut held, mut open) = (0, false);
+        for (c, &e) in self.cells.iter().zip(&self.envelope) {
+            if c.is_air() && e & HOLD != 0 {
+                held += 1;
+                open |= e & ENCLOSED == 0;
+            }
+        }
+        if held < MIN_HOLD || !open {
+            return 0;
+        }
+        // The first row under the surface outside.
+        let top = level.ceil() as i32;
+        let (bx0, by0, bx1, by1) = frame.world_bounds();
+        if top > by1 {
+            return 0;
+        }
+        let w = (bx1 - bx0 + 1) as usize;
+        let slot = |p: CellPos| (p.y - by0) as usize * w + (p.x - bx0) as usize;
+        let boxed = |p: CellPos| p.x >= bx0 && p.x <= bx1 && p.y >= by0 && p.y <= by1;
+        let in_hold = |p: CellPos| {
+            frame
+                .local_of(p)
+                .is_some_and(|i| self.cells[i].is_air() && self.envelope[i] & HOLD != 0)
+        };
+        let outside = |p: CellPos| {
+            frame.local_of(p).is_none_or(|i| self.cells[i].is_air() && self.envelope[i] & HOLD == 0)
+        };
+        let state = |c: Cell| world.materials().get(c.material()).state;
+        let liquid = |c: Cell| !c.has(Cell::FLAG_IN_BODY) && state(c) == State::Liquid;
+        // What water fills or runs through: air, gas, fire and liquid.
+        let passable = |c: Cell| {
+            c.is_air()
+                || (!c.has(Cell::FLAG_IN_BODY)
+                    && matches!(state(c), State::Liquid | State::Gas | State::Fire))
+        };
+        let around = |p: CellPos| {
+            [(0, 1), (-1, 0), (1, 0), (0, -1)].map(|(dx, dy)| CellPos::new(p.x + dx, p.y + dy))
+        };
+        // Each opening, with the liquid outside it.
+        let mut openings: Vec<(CellPos, CellPos)> = Vec::new();
+        let mut fluid: Option<(i32, MaterialId)> = None;
+        for y in by0.max(top)..=by1 {
+            for x in bx0..=bx1 {
+                let p = CellPos::new(x, y);
+                if !in_hold(p) || !passable(world.get(p)) {
+                    continue;
+                }
+                let beside = around(p)
+                    .into_iter()
+                    .find(|&o| o.y >= top && outside(o) && liquid(world.get(o)));
+                if let Some(o) = beside {
+                    openings.push((p, o));
+                    // The hold takes the liquid at its deepest opening.
+                    if fluid.is_none_or(|(row, _)| y > row) {
+                        fluid = Some((y, world.get(o).material()));
+                    }
+                }
+            }
+        }
+        let Some((_, fluid)) = fluid else { return 0 };
+        // Searches the hold from the openings through the cells `pass` lets
+        // through, and returns the cells `take` picks.
+        let search = |pass: &dyn Fn(CellPos) -> bool, take: &dyn Fn(CellPos) -> bool| {
+            let mut seen = vec![false; w * (by1 - by0 + 1) as usize];
+            let mut queue: Vec<CellPos> =
+                openings.iter().map(|&(p, _)| p).filter(|&p| pass(p)).collect();
+            for &p in &queue {
+                seen[slot(p)] = true;
+            }
+            let mut found = Vec::new();
+            let mut k = 0;
+            while k < queue.len() {
+                let p = queue[k];
+                k += 1;
+                if take(p) {
+                    found.push(p);
+                }
+                for q in around(p) {
+                    if boxed(q) && !seen[slot(q)] && in_hold(q) && pass(q) {
+                        seen[slot(q)] = true;
+                        queue.push(q);
+                    }
+                }
+            }
+            found
+        };
+        let is_fluid = |p: CellPos| {
+            let c = world.get(p);
+            c.material() == fluid && !c.has(Cell::FLAG_IN_BODY)
+        };
+        let mut air = search(&|p| p.y >= top && passable(world.get(p)), &|p| world.get(p).is_air());
+        let filling = !air.is_empty();
+        // The cells that change, the first first, and the head over each opening.
+        let (cells, head): (Vec<CellPos>, Box<dyn Fn(CellPos) -> f32>) = if filling {
+            air.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
+            // The top of the liquid inside, under the lowest air.
+            let inside = air[0].y as f32 + 1.0;
+            (air, Box::new(move |o: CellPos| (o.y as f32 + 0.5).min(inside) - level))
+        } else {
+            let mut high = search(&is_fluid, &|p| p.y < top - 1);
+            high.sort_unstable_by_key(|p| (p.y, p.x));
+            let Some(first) = high.first() else { return 0 };
+            let inside = first.y as f32;
+            (high, Box::new(move |o: CellPos| if is_fluid(o) { level - inside } else { 0.0 }))
+        };
+        let tps = fe_core::TICKS_PER_SECOND as f32;
+        let g = crate::GRAVITY * CELLS_PER_METER / (tps * tps);
+        let mut rate = 0.0f32;
+        for &(o, _) in &openings {
+            let h = head(o);
+            if h > 0.0 {
+                rate += (2.0 * g * h).sqrt();
+            }
+        }
+        // Whole cells, with the fraction rounded up by chance.
+        let chance = fe_core::cell_rand(world.seed(), world.tick(), self.id as i32, 0, 0xf100);
+        let mut n = rate as usize;
+        if (chance >> 8) as f32 / 16_777_216.0 < rate.fract() {
+            n += 1;
+        }
+        let n = n.min(cells.len()).min(FLOOD_MAX);
+        if n == 0 {
+            return 0;
+        }
+        // The top of the liquid outside that reaches the openings: liquid
+        // comes from the highest of it, and goes onto the lowest.
+        let starts: Vec<CellPos> =
+            openings.iter().map(|&(_, o)| o).filter(|&o| is_fluid(o)).collect();
+        let sea = |p: CellPos| is_fluid(p) && !in_hold(p);
+        let mut tops = surface_of(world, &starts, &sea, n * 2 + 8);
+        let outer: Vec<CellPos> = if filling {
+            tops.sort_unstable_by_key(|p| (p.y, p.x));
+            tops.into_iter().take(n).collect()
+        } else {
+            tops.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
+            tops.iter()
+                .map(|p| CellPos::new(p.x, p.y - 1))
+                .filter(|&p| world.get(p).is_air())
+                .take(n)
+                .collect()
+        };
+        drop(head);
+        for (&a, &b) in cells.iter().zip(&outer) {
+            let (ca, cb) = (world.get(a), world.get(b));
+            world.grid.set(a, cb);
+            world.grid.set(b, ca);
+        }
+        outer.len()
     }
 
     /// Connected parts of the remaining cells, as `(lx, ly, cell)` lists.
@@ -814,68 +1140,598 @@ impl PixelBody {
             h.write_u32(rb.angvel().to_bits());
         }
         h.write_u32(self.rest_ticks);
+        h.write_u64(self.wet.len() as u64);
     }
 }
 
-/// What [`place`] did.
-enum Placed {
-    /// The cell was written into air or a gas.
-    Yes,
-    /// The cell was written over a liquid or powder cell, which moved to air if
-    /// the flag is true and was lost if it is false.
-    Displaced(bool),
-    /// Something solid is in the way.
-    No,
-}
-
-/// Places a body cell into the world, pushing a fluid or powder cell to nearby air.
-fn place(world: &mut World, p: CellPos, cell: Cell) -> Placed {
-    let existing = world.get(p);
-    if existing.material() == fe_core::MaterialId::BOUNDARY || existing.has(Cell::FLAG_IN_BODY) {
-        return Placed::No;
-    }
-    let mut placed = Placed::Yes;
-    if !existing.is_air() {
-        let m = world.materials().get(existing.material());
-        if m.state == State::Static {
-            return Placed::No;
+/// Covers the cells where `solid` is true with rectangles: horizontal runs
+/// merged with identical runs below. Returns `(x0, y0, x1, y1)`, ends exclusive.
+pub(crate) fn merge_rects(
+    w: i32,
+    h: i32,
+    solid: impl Fn(i32, i32) -> bool,
+) -> Vec<(i32, i32, i32, i32)> {
+    let mut used = vec![false; (w * h) as usize];
+    let mut rects = Vec::new();
+    for y in 0..h {
+        let mut x = 0;
+        while x < w {
+            if !solid(x, y) || used[(y * w + x) as usize] {
+                x += 1;
+                continue;
+            }
+            let x0 = x;
+            while x < w && solid(x, y) && !used[(y * w + x) as usize] {
+                x += 1;
+            }
+            let x1 = x;
+            let mut y1 = y + 1;
+            while y1 < h && (x0..x1).all(|xx| solid(xx, y1) && !used[(y1 * w + xx) as usize]) {
+                y1 += 1;
+            }
+            for yy in y..y1 {
+                for xx in x0..x1 {
+                    used[(yy * w + xx) as usize] = true;
+                }
+            }
+            rects.push((x0, y, x1, y1));
         }
-        if matches!(m.state, State::Liquid | State::Powder) {
-            placed = Placed::Displaced(push_aside(world, p, existing));
-        }
     }
-    world.grid.set(p, cell.with_flag(Cell::FLAG_IN_BODY, true));
-    placed
+    rects
 }
 
-/// Moves a displaced cell to the nearest air within a few cells, sideways first.
-///
-/// When there is none, as under a wide slab sinking into a lake, the cell goes up
-/// its column through liquid, powder and body cells to the first air, which is
-/// usually the space the body just left above itself. Returns false if that also
-/// fails and the cell is lost.
-fn push_aside(world: &mut World, from: CellPos, cell: Cell) -> bool {
-    for r in 1..=4 {
-        for (dx, dy) in [(-r, 0), (r, 0), (-r, -r), (r, -r), (-r, r), (r, r), (0, -r), (0, r)] {
-            let q = CellPos::new(from.x + dx, from.y + dy);
-            if world.get(q).is_air() {
-                world.grid.set(q, cell);
-                return true;
+/// A body that holds air: its index in the body list, its frame at its pose
+/// in the physics world, and a box round the world cells its grid can cover.
+struct Holder {
+    index: usize,
+    frame: Frame,
+    bounds: (i32, i32, i32, i32),
+}
+
+/// The bodies that hold air, for keeping fluid out of their holds.
+pub(crate) struct Holders(Vec<Holder>);
+
+impl Holders {
+    /// The bodies of `bodies` that hold any air, at their poses in `rapier`,
+    /// with a box round the world cells their local grids can cover.
+    pub(crate) fn of(bodies: &[PixelBody], rapier: &PhysicsWorld) -> Self {
+        Self(
+            bodies
+                .iter()
+                .enumerate()
+                .filter(|(_, b)| b.envelope.iter().any(|&e| e != 0))
+                .filter_map(|(index, b)| {
+                    let frame = Frame::new(b, rapier.bodies.get(b.handle)?.position());
+                    // A cell wider, so rounding at the edge never rejects a
+                    // cell that maps into the grid.
+                    let (x0, y0, x1, y1) = frame.world_bounds();
+                    Some(Holder { index, frame, bounds: (x0 - 1, y0 - 1, x1 + 1, y1 + 1) })
+                })
+                .collect(),
+        )
+    }
+}
+
+/// The bodies other than the one being stamped, at the poses they are
+/// stamped at this tick: `before` and `after` are the bodies before and after
+/// it, number `me`, in the list [`Holders`] was made from.
+pub(crate) struct Others<'a> {
+    holders: &'a Holders,
+    me: usize,
+    before: &'a [PixelBody],
+    after: &'a [PixelBody],
+}
+
+impl<'a> Others<'a> {
+    pub(crate) const fn new(
+        holders: &'a Holders,
+        me: usize,
+        before: &'a [PixelBody],
+        after: &'a [PixelBody],
+    ) -> Self {
+        Self { holders, me, before, after }
+    }
+
+    /// True if `q` is air one of the other bodies holds.
+    fn holds(&self, q: CellPos) -> bool {
+        self.holders.0.iter().any(|h| {
+            let (x0, y0, x1, y1) = h.bounds;
+            if q.x < x0 || q.y < y0 || q.x > x1 || q.y > y1 {
+                return false;
+            }
+            let b = match h.index.cmp(&self.me) {
+                std::cmp::Ordering::Less => &self.before[h.index],
+                std::cmp::Ordering::Greater => &self.after[h.index - self.me - 1],
+                std::cmp::Ordering::Equal => return false,
+            };
+            h.frame.local_of(q).is_some_and(|i| b.cells[i].is_air() && b.envelope[i] != 0)
+        })
+    }
+}
+
+/// What happened when a body cell was placed.
+enum Place {
+    /// The cell is in the world.
+    Placed,
+    /// Something solid is there; the cell stays out.
+    Blocked,
+    /// A liquid or powder is there with no air to move it to; the cell
+    /// stays out so the displaced cell is not destroyed.
+    NoRoom,
+}
+
+/// [`PixelBody::envelope`] bit: between solid cells of the local row.
+const ROW_INSIDE: u8 = 1;
+/// [`PixelBody::envelope`] bit: between solid cells of the local column.
+const COL_INSIDE: u8 = 2;
+/// [`PixelBody::envelope`] bit: closed in on every side, like a sealed hold.
+const ENCLOSED: u8 = 4;
+/// [`PixelBody::envelope`] bit: in a run of air no more than [`COVER_DEPTH`]
+/// cells tall between solid cells of the local column, or in a row of a hold
+/// with such air in it (see [`PixelBody::find_envelope`]). Only drawing reads it.
+const COVERED: u8 = 8;
+/// [`PixelBody::envelope`] bits of the air a hull holds: between its solid
+/// cells along a local row or column.
+const HOLD: u8 = ROW_INSIDE | COL_INSIDE;
+/// The tallest gap between a body's cells, along its local column, that still
+/// draws as the body's inside rather than as what lies behind it, and the
+/// farthest air with the body over it may lie from it and still be held.
+const COVER_DEPTH: usize = 48;
+/// The deepest air open above that a body holds over a floor of its own: the
+/// inside of an open boat, or water on a deck between its bulwarks.
+const OPEN_DEPTH: usize = 8;
+
+/// A body's pose as plain numbers, for mapping between its local grid and
+/// world cells. Positions are in cells.
+#[derive(Clone, Copy)]
+struct Frame {
+    tx: f32,
+    ty: f32,
+    c: f32,
+    s: f32,
+    com: (f32, f32),
+    w: i32,
+    h: i32,
+}
+
+impl Frame {
+    fn new(body: &PixelBody, pose: &Pose) -> Self {
+        Self {
+            tx: pose.translation.x * CELLS_PER_METER,
+            ty: pose.translation.y * CELLS_PER_METER,
+            c: pose.rotation.cos(),
+            s: pose.rotation.sin(),
+            com: body.com,
+            w: i32::from(body.w),
+            h: i32::from(body.h),
+        }
+    }
+
+    /// The frame of a stamp made with [`pose_bits`], or `None` if there was
+    /// none: the body was never stamped, or its shape changed since.
+    fn from_bits(body: &PixelBody, b: [u32; 4]) -> Option<Self> {
+        if b == [0; 4] || b == [u32::MAX; 4] {
+            return None;
+        }
+        Some(Self {
+            tx: f32::from_bits(b[0]) * CELLS_PER_METER,
+            ty: f32::from_bits(b[1]) * CELLS_PER_METER,
+            c: f32::from_bits(b[2]),
+            s: f32::from_bits(b[3]),
+            com: body.com,
+            w: i32::from(body.w),
+            h: i32::from(body.h),
+        })
+    }
+
+    /// World position of the center of local cell `(lx, ly)`.
+    fn world_of(&self, lx: i32, ly: i32) -> (f32, f32) {
+        let ox = lx as f32 + 0.5 - self.com.0;
+        let oy = ly as f32 + 0.5 - self.com.1;
+        (self.tx + self.c * ox - self.s * oy, self.ty + self.s * ox + self.c * oy)
+    }
+
+    /// Index of the local cell under the center of world cell `p`, if any.
+    fn local_of(&self, p: CellPos) -> Option<usize> {
+        let px = p.x as f32 + 0.5 - self.tx;
+        let py = p.y as f32 + 0.5 - self.ty;
+        let lx = (self.c * px + self.s * py + self.com.0).floor() as i32;
+        let ly = (-self.s * px + self.c * py + self.com.1).floor() as i32;
+        if lx < 0 || ly < 0 || lx >= self.w || ly >= self.h {
+            return None;
+        }
+        Some((ly * self.w + lx) as usize)
+    }
+
+    /// The world cells the local grid can cover: `(x0, y0, x1, y1)`, inclusive.
+    fn world_bounds(&self) -> (i32, i32, i32, i32) {
+        let (w, h) = (self.w as f32, self.h as f32);
+        let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+        for (lx, ly) in [(0.0, 0.0), (w, 0.0), (0.0, h), (w, h)] {
+            let (ox, oy) = (lx - self.com.0, ly - self.com.1);
+            let wx = self.tx + self.c * ox - self.s * oy;
+            let wy = self.ty + self.s * ox + self.c * oy;
+            x0 = x0.min(wx);
+            y0 = y0.min(wy);
+            x1 = x1.max(wx);
+            y1 = y1.max(wy);
+        }
+        (x0.floor() as i32, y0.floor() as i32, x1.floor() as i32, y1.floor() as i32)
+    }
+}
+
+/// A sum of weights at positions, for the point a force acts at.
+#[derive(Default)]
+struct Moment {
+    weight: f32,
+    x: f32,
+    y: f32,
+}
+
+impl Moment {
+    fn add(&mut self, k: f32, x: f32, y: f32) {
+        self.weight += k;
+        self.x += k * x;
+        self.y += k * y;
+    }
+
+    /// The weighted center in physics meters, or `None` if nothing was added.
+    fn center(&self) -> Option<Vector> {
+        (self.weight > 0.0).then(|| {
+            Vector::new(
+                self.x / self.weight / CELLS_PER_METER,
+                self.y / self.weight / CELLS_PER_METER,
+            )
+        })
+    }
+}
+
+/// A liquid or powder a body can float in: its density and viscosity.
+fn medium(world: &World, c: Cell) -> Option<(i16, u8)> {
+    if c.is_air() || c.has(Cell::FLAG_IN_BODY) {
+        return None;
+    }
+    let m = world.materials().get(c.material());
+    matches!(m.state, State::Liquid | State::Powder).then_some((m.density, m.viscosity.max(40)))
+}
+
+/// Air, gas or fire: room a moving body can leave behind it.
+fn open(world: &World, c: Cell) -> bool {
+    c.is_air()
+        || (!c.has(Cell::FLAG_IN_BODY)
+            && matches!(world.materials().get(c.material()).state, State::Gas | State::Fire))
+}
+
+/// The level of the liquid or powder against one side of a body.
+struct Shoreline {
+    /// World y of the top of the medium beside the body, or `None` if no
+    /// medium touches this side.
+    level: Option<f32>,
+    /// The medium beside each row, from the level down.
+    media: Vec<Option<(i16, u8)>>,
+}
+
+impl Shoreline {
+    /// Reads the medium in the `n` rows from `ymin` beside a body, in the
+    /// column `x` just outside it and up to two cells further out on the side
+    /// `dir` points to, past the air a moving body leaves behind. The column is
+    /// outside the whole body, so a hole in its side does not show its hold.
+    ///
+    /// The level is the top of the medium that reaches up from below: rows are
+    /// read from the bottom up, rows against something solid neither count nor
+    /// break the run, and more than [`LEVEL_GAP`] dry rows in a row end it.
+    /// Drops running down the side of a body that leaves the water, or a
+    /// splash beside it, then do not hold it up.
+    fn measure(world: &World, x: i32, ymin: i32, n: usize, dir: i32) -> Self {
+        /// What lies beside a row.
+        #[derive(Clone, Copy, PartialEq)]
+        enum Beside {
+            Medium((i16, u8)),
+            Open,
+            Solid,
+        }
+        let beside: Vec<Beside> = (0..n)
+            .map(|i| {
+                let y = ymin + i as i32;
+                match (0..3)
+                    .map(|k| world.get(CellPos::new(x + dir * k, y)))
+                    .find(|&c| !open(world, c))
+                {
+                    None => Beside::Open,
+                    Some(c) => medium(world, c).map_or(Beside::Solid, Beside::Medium),
+                }
+            })
+            .collect();
+        let mut out = Self { level: None, media: vec![None; n] };
+        let (mut top, mut gap) = (None, 0);
+        for i in (0..n).rev() {
+            match beside[i] {
+                Beside::Medium(_) => {
+                    top = Some(i);
+                    gap = 0;
+                }
+                Beside::Open => {
+                    gap += 1;
+                    if gap > LEVEL_GAP {
+                        break;
+                    }
+                }
+                Beside::Solid => {}
+            }
+        }
+        let Some(top) = top else { return out };
+        // A body wet up to its top row is under: the level is above it.
+        let level = if top == 0 { ymin - 1 } else { ymin + top as i32 };
+        out.level = Some(level as f32);
+        let mut carry = None;
+        for i in top..n {
+            if let Beside::Medium(m) = beside[i] {
+                carry = Some(m);
+            }
+            out.media[i] = carry;
+        }
+        out
+    }
+}
+
+/// Up to `want` cells at the top of the liquid that `sea` lets through and
+/// `starts` lie in: cells of it with open air or gas above them. They are
+/// searched best-first by height through the liquid, so an opening deep
+/// under a hull finds the surface beside the hull, and liquid in another
+/// pool is never taken. The search stops after [`SURFACE_SEARCH`] cells.
+fn surface_of(
+    world: &World,
+    starts: &[CellPos],
+    sea: &dyn Fn(CellPos) -> bool,
+    want: usize,
+) -> Vec<CellPos> {
+    let mut seen: BTreeSet<(i32, i32)> = BTreeSet::new();
+    let mut queue: BTreeSet<(i32, i32)> = BTreeSet::new();
+    for s in starts {
+        if seen.insert((s.y, s.x)) {
+            queue.insert((s.y, s.x));
+        }
+    }
+    let mut tops = Vec::new();
+    let mut visited = 0;
+    while let Some((y, x)) = queue.pop_first() {
+        visited += 1;
+        if visited > SURFACE_SEARCH || tops.len() >= want {
+            break;
+        }
+        if open(world, world.get(CellPos::new(x, y - 1))) {
+            tops.push(CellPos::new(x, y));
+        }
+        for (dx, dy) in [(0, -1), (-1, 0), (1, 0), (0, 1)] {
+            let q = (y + dy, x + dx);
+            if seen.insert(q) && sea(CellPos::new(q.1, q.0)) {
+                queue.insert(q);
             }
         }
     }
-    for k in 1..=256 {
-        let q = CellPos::new(from.x, from.y - k);
-        let c = world.get(q);
-        if c.is_air() {
+    tops
+}
+
+/// Most cells one hold takes on in a tick.
+const FLOOD_MAX: usize = 128;
+/// Fewest cells of air a body must hold for its hold to flood.
+const MIN_HOLD: usize = 64;
+/// Most cells of liquid searched for the surface a flooding hold draws from.
+const SURFACE_SEARCH: u32 = 4096;
+
+/// Dry rows beside a body that end the medium's run up its side.
+const LEVEL_GAP: u32 = 2;
+/// How far along the surface fluid displaced by a body is spread in one tick.
+const SHORE_REACH: i32 = 256;
+
+/// Where fluid pushed out of a body's way goes while the body is stamped.
+struct Shore<'a> {
+    frame: Frame,
+    /// The body's frame at its last stamp.
+    prev: Option<Frame>,
+    body: &'a PixelBody,
+    others: &'a Others<'a>,
+    /// First world row of `rows`.
+    y0: i32,
+    /// Leftmost and rightmost world x the body covers in each row.
+    rows: Vec<(i32, i32)>,
+    /// The last cell filled at the surface on the left and on the right side;
+    /// the next one goes beside it, so displaced water spreads over the surface
+    /// instead of piling up against the hull.
+    cursor: [Option<CellPos>; 2],
+}
+
+impl Shore<'_> {
+    /// True if `p` is under the body: one of its cells or the air it holds.
+    fn inside(&self, p: CellPos) -> bool {
+        self.frame
+            .local_of(p)
+            .is_some_and(|i| !self.body.cells[i].is_air() || self.body.envelope[i] != 0)
+    }
+
+    /// True if `p` is air the body holds at its new pose: a cell of its hold.
+    fn hold(&self, p: CellPos) -> bool {
+        self.frame
+            .local_of(p)
+            .is_some_and(|i| self.body.cells[i].is_air() && self.body.envelope[i] != 0)
+    }
+
+    /// True if `p` was in the body's hold at its last stamp: a liquid there is
+    /// the body's cargo, not the sea it floats in.
+    fn held(&self, p: CellPos) -> bool {
+        self.prev
+            .and_then(|f| f.local_of(p))
+            .is_some_and(|i| self.body.cells[i].is_air() && self.body.envelope[i] != 0)
+    }
+
+    /// Air in the hold that cargo pushed from `from` can reach without going
+    /// through the body: through the liquid and powder around it, a few dozen
+    /// cells at most, then up its column to the air over the liquid.
+    fn hold_air(&self, world: &World, from: CellPos) -> Option<CellPos> {
+        let wall = |q: CellPos| {
+            let c = world.get(q);
+            c.has(Cell::FLAG_IN_BODY)
+                || c.material() == MaterialId::BOUNDARY
+                || self.frame.local_of(q).is_some_and(|i| !self.body.cells[i].is_air())
+                || (!c.is_air() && medium(world, c).is_none())
+        };
+        let mut seen = vec![from];
+        let mut i = 0;
+        while i < seen.len() && seen.len() < 96 {
+            let p = seen[i];
+            i += 1;
+            for (dx, dy) in [(0, -1), (-1, 0), (1, 0), (0, 1)] {
+                let q = CellPos::new(p.x + dx, p.y + dy);
+                if seen.contains(&q) || wall(q) {
+                    continue;
+                }
+                if world.get(q).is_air() && self.hold(q) {
+                    return Some(q);
+                }
+                seen.push(q);
+            }
+        }
+        (1..=256)
+            .map(|k| CellPos::new(from.x, from.y - k))
+            .take_while(|&q| !wall(q))
+            .find(|&q| world.get(q).is_air() && self.hold(q))
+    }
+
+    fn row(&self, y: i32) -> Option<(i32, i32)> {
+        let i = usize::try_from(y - self.y0).ok()?;
+        self.rows.get(i).copied().filter(|r| r.0 <= r.1)
+    }
+
+    /// Air at the surface of the medium beside the body, on the side nearer to
+    /// `from` first.
+    fn surface(&mut self, world: &World, from: CellPos) -> Option<CellPos> {
+        let (a, b) = self.row(from.y)?;
+        let first = if from.x - a <= b - from.x { -1 } else { 1 };
+        self.surface_on(world, from.y, first).or_else(|| self.surface_on(world, from.y, -first))
+    }
+
+    fn surface_on(&mut self, world: &World, y: i32, dir: i32) -> Option<CellPos> {
+        let side = usize::from(dir > 0);
+        if let Some(mut q) = self.cursor[side] {
+            for _ in 0..SHORE_REACH {
+                q.x += dir;
+                let c = world.get(q);
+                if self.free(world, q) {
+                    self.cursor[side] = Some(q);
+                    return Some(q);
+                }
+                if medium(world, c).is_none() {
+                    break;
+                }
+            }
+            self.cursor[side] = None;
+        }
+        // Up the body's outline while a medium touches it, then straight up.
+        // A few rows whose outer cell lies in the body's hold (a hole in its
+        // side), or in another body's, are passed over; more than that and
+        // this side gives up, so water is never put beside a mast high over
+        // the sea.
+        let mut x = 0;
+        let mut held = 0;
+        for yy in (y - 64..=y).rev() {
+            if let Some((a, b)) = self.row(yy) {
+                x = if dir < 0 { a - 1 } else { b + 1 };
+            } else if yy >= self.y0 {
+                continue;
+            }
+            let q = CellPos::new(x, yy);
+            if self.inside(q) || self.others.holds(q) {
+                held += 1;
+                if held > 12 {
+                    return None;
+                }
+                continue;
+            }
+            held = 0;
+            let c = world.get(q);
+            if c.is_air() {
+                self.cursor[side] = Some(q);
+                return Some(q);
+            }
+            medium(world, c)?;
+        }
+        None
+    }
+
+    /// True if displaced fluid may go to `q`: air that neither this body nor
+    /// another holds.
+    fn free(&self, world: &World, q: CellPos) -> bool {
+        world.get(q).is_air() && !self.inside(q) && !self.others.holds(q)
+    }
+
+    /// Moves a displaced liquid or powder cell to air outside the body: close by
+    /// if there is any, else to the surface beside the body, else up its column
+    /// through the body to the first air above it. It never goes into the air
+    /// the body holds, so moving does not pump water into a sealed hold, nor
+    /// into the air another body holds, so a stone on a deck does not push the
+    /// sea through the deck into the hold under it. A cell that was in the
+    /// body's hold, such as the water in a flooded hold or the oil in a tank,
+    /// is its cargo: it moves to air in the hold it can reach without passing
+    /// through a wall, so the hold neither leaks nor drains as the body moves;
+    /// only a full hold spills over. Returns false if none of that works; the
+    /// body cell then stays out of the world so nothing is destroyed.
+    fn push_aside(&mut self, world: &mut World, from: CellPos, cell: Cell) -> bool {
+        if self.held(from)
+            && let Some(q) = self.hold_air(world, from)
+        {
             world.grid.set(q, cell);
             return true;
         }
-        let through = c.has(Cell::FLAG_IN_BODY)
-            || matches!(world.materials().get(c.material()).state, State::Liquid | State::Powder);
-        if !through || c.material() == fe_core::MaterialId::BOUNDARY {
-            return false;
+        for r in 1..=4 {
+            for (dx, dy) in [(-r, 0), (r, 0), (-r, -r), (r, -r), (-r, r), (r, r), (0, -r), (0, r)] {
+                let q = CellPos::new(from.x + dx, from.y + dy);
+                if self.free(world, q) {
+                    world.grid.set(q, cell);
+                    return true;
+                }
+            }
+        }
+        if let Some(q) = self.surface(world, from) {
+            world.grid.set(q, cell);
+            return true;
+        }
+        for k in 1..=256 {
+            let q = CellPos::new(from.x, from.y - k);
+            let c = world.get(q);
+            if self.free(world, q) {
+                world.grid.set(q, cell);
+                return true;
+            }
+            let through = c.is_air()
+                || c.has(Cell::FLAG_IN_BODY)
+                || matches!(
+                    world.materials().get(c.material()).state,
+                    State::Liquid | State::Powder
+                );
+            if !through || c.material() == MaterialId::BOUNDARY {
+                return false;
+            }
+        }
+        false
+    }
+}
+
+/// Places a body cell into the world, pushing a fluid or powder cell aside.
+fn place(world: &mut World, p: CellPos, cell: Cell, shore: &mut Shore<'_>) -> Place {
+    let existing = world.get(p);
+    if existing.material() == MaterialId::BOUNDARY || existing.has(Cell::FLAG_IN_BODY) {
+        return Place::Blocked;
+    }
+    if !existing.is_air() {
+        let m = world.materials().get(existing.material());
+        if m.state == State::Static {
+            return Place::Blocked;
+        }
+        if matches!(m.state, State::Liquid | State::Powder) && !shore.push_aside(world, p, existing)
+        {
+            return Place::NoRoom;
         }
     }
-    false
+    world.grid.set(p, cell.with_flag(Cell::FLAG_IN_BODY, true));
+    Place::Placed
 }
