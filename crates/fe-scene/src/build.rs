@@ -34,8 +34,6 @@ pub(crate) enum Resolved {
     Scatter(IRect, MaterialId, u32),
     Decorate(IRect, MaterialId, u32, crate::parse::Surface),
     Temp(IRect, u8),
-    Carve(IRect),
-    Body(IRect, MaterialId),
 }
 
 pub(crate) fn resolve(op: &Op, mats: &MaterialSet, line: usize) -> Result<Resolved, SceneError> {
@@ -59,8 +57,13 @@ pub(crate) fn resolve(op: &Op, mats: &MaterialSet, line: usize) -> Result<Resolv
                 replace: false,
             }]
         }
-        Op::Body(r, m) => return Ok(Resolved::Body(*r, mat(mats, m, line)?)),
-        Op::Carve(r) => return Ok(Resolved::Carve(*r)),
+        // Carving is a command, so it runs in order with the fills and paints
+        // of the same tick: `fill` then `carve` makes a body of what was filled.
+        Op::Body(r, m) => vec![
+            Command::FillRect { rect: *r, material: mat(mats, m, line)? },
+            Command::CarveBody { rect: *r },
+        ],
+        Op::Carve(r) => vec![Command::CarveBody { rect: *r }],
         Op::Terrain { material, .. } => {
             mat(mats, material, line)?;
             return Ok(Resolved::Terrain(op.clone()));
@@ -190,13 +193,6 @@ pub(crate) fn apply_now(sim: &mut Simulation, r: Resolved, seed: u64) {
                     }
                 }
             }
-        }
-        Resolved::Carve(rect) => {
-            sim.apply(&Command::CarveBody { rect });
-        }
-        Resolved::Body(rect, id) => {
-            sim.apply(&Command::FillRect { rect, material: id });
-            sim.apply(&Command::CarveBody { rect });
         }
     }
 }

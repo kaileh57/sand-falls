@@ -12,6 +12,7 @@ fe-core.workspace = true
 fe-materials.workspace = true
 fe-sim.workspace = true
 fe-engine.workspace = true
+fe-script.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
