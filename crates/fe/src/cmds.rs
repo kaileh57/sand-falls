@@ -60,6 +60,12 @@ pub fn run(a: &Args) -> Result<bool, String> {
             sum.ticks as f64 / secs.max(1e-9),
             sum.hash
         );
+        for l in r.take_script_logs() {
+            println!("  script: {l}");
+        }
+        if !r.sim.status.is_empty() {
+            println!("  status: {}", r.sim.status);
+        }
     }
     Ok(sum.passed)
 }
@@ -84,19 +90,36 @@ fn collect_scenes(paths: &[String]) -> Vec<PathBuf> {
     out
 }
 
+/// Rewrites the expected hash on one line of a scene file.
 fn bless(path: &Path, line: usize, new_hash: u64) -> Result<(), String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
     let l = lines.get_mut(line - 1).ok_or("line out of range")?;
-    let Some(i) = l.find("hash ==") else { return Err("no hash on that line".into()) };
-    let tail = &l[i + 7..];
-    let after = tail.trim_start();
-    let end = after.find(char::is_whitespace).unwrap_or(after.len());
-    let rest = after[end..].to_string();
-    *l = format!("{}hash == {new_hash:#018x}{rest}", &l[..i]);
+    *l = bless_line(l, new_hash).ok_or("no hash on that line")?;
     let mut out = lines.join("\n");
     out.push('\n');
     std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+/// Replaces the value in a `hash == VALUE` check, splitting on whitespace the
+/// way the scene parser does. Returns `None` if the line has no such check.
+fn bless_line(l: &str, new_hash: u64) -> Option<String> {
+    let mut tokens = Vec::new();
+    let mut start = None;
+    for (i, ch) in l.char_indices().chain(std::iter::once((l.len(), ' '))) {
+        match (ch.is_whitespace(), start) {
+            (false, None) => start = Some(i),
+            (true, Some(s)) => {
+                tokens.push((s, i));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    let tok = |k: usize| tokens.get(k).map(|&(a, b)| &l[a..b]);
+    let k = (0..tokens.len()).find(|&k| tok(k) == Some("hash") && tok(k + 1) == Some("=="))?;
+    let (a, b) = *tokens.get(k + 2)?;
+    Some(format!("{}{new_hash:#018x}{}", &l[..a], &l[b..]))
 }
 
 pub fn test(a: &Args) -> Result<bool, String> {
@@ -133,10 +156,13 @@ pub fn test(a: &Args) -> Result<bool, String> {
         }
         for c in sum.checks.iter().filter(|c| !c.passed) {
             match c.found_hash {
-                Some(h) if a.flag("bless") => {
-                    bless(path, c.line, h).map_err(|e| format!("{p}: cannot bless: {e}"))?;
-                    notes.push(format!("blessed line {}: {}", c.line, c.detail));
-                }
+                Some(h) if a.flag("bless") => match bless(path, c.line, h) {
+                    Ok(()) => notes.push(format!("blessed line {}: {}", c.line, c.detail)),
+                    Err(e) => {
+                        ok = false;
+                        notes.push(format!("line {}: cannot bless: {e}", c.line));
+                    }
+                },
                 _ => {
                     ok = false;
                     notes.push(format!("line {}: {}", c.line, c.detail));
@@ -527,4 +553,23 @@ pub fn materials(a: &Args) -> Result<bool, String> {
     }
     println!("material set hash {:#018x}", set.hash());
     Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bless_line;
+
+    #[test]
+    fn bless_finds_the_hash_with_any_spacing() {
+        assert_eq!(
+            bless_line("after 5: hash  ==   0x1  // note", 2).as_deref(),
+            Some("after 5: hash  ==   0x0000000000000002  // note")
+        );
+        assert_eq!(
+            bless_line("after 5:\thash == 0x1", 0xab).as_deref(),
+            Some("after 5:\thash == 0x00000000000000ab")
+        );
+        assert_eq!(bless_line("after 5: bodies == 3", 1), None);
+        assert_eq!(bless_line("after 5: hash ==", 1), None);
+    }
 }

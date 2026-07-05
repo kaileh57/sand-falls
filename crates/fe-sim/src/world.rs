@@ -398,4 +398,24 @@ mod tests {
         assert!(downwind > upwind, "wind {wind}: down {downwind} up {upwind}");
         assert!(upwind > 0, "wind {wind}: no flame ever moved upwind");
     }
+
+    #[test]
+    fn steam_does_not_pass_through_thin_walls() {
+        let mut w = world(1);
+        let stone = id(&w, "stone");
+        let steam = id(&w, "steam");
+        // A sealed box with 1-cell walls; the inside is 41..59 on both axes.
+        w.fill_rect(IRect::new(40, 40, 60, 41), stone);
+        w.fill_rect(IRect::new(40, 59, 60, 60), stone);
+        w.fill_rect(IRect::new(40, 40, 41, 60), stone);
+        w.fill_rect(IRect::new(59, 40, 60, 60), stone);
+        w.fill_rect(IRect::new(45, 50, 55, 59), steam);
+        for _ in 0..200 {
+            w.step_cells();
+            w.finish_tick();
+            let outside = w.count(IRect::new(0, 0, 256, 192), steam)
+                - w.count(IRect::new(41, 41, 59, 59), steam);
+            assert_eq!(outside, 0, "steam left the box at tick {}", w.tick());
+        }
+    }
 }
