@@ -1,6 +1,21 @@
 [package]
 name = "fe-script"
-version = "0.1.0"
-edition = "2024"
+description = "Game scripts and mods for falling-engine: WebAssembly with floats disabled, fuel limits, and saved state."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
 
 [dependencies]
+fe-core.workspace = true
+fe-engine.workspace = true
+wasmi.workspace = true
+wasmparser.workspace = true
+
+[dev-dependencies]
+fe-materials.workspace = true
+wat.workspace = true
+
+[lints]
+workspace = true

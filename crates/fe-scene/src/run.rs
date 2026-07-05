@@ -20,6 +20,10 @@ pub struct Frame {
     /// Commands, applied before the tick in order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub commands: Vec<Command>,
+    /// Commands applied between ticks with [`Runner::apply_command`], before
+    /// anything else in this tick.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pre: Vec<Command>,
 }
 
 /// The outcome of one expectation.
@@ -73,13 +77,34 @@ pub struct Runner {
     /// Frames to merge in on top of the scene timeline, keyed by tick.
     pub extra: BTreeMap<u64, Frame>,
     recorded: Vec<Frame>,
+    pre: Vec<Command>,
     results: Vec<CheckResult>,
+    /// Per expectation, whether it has been checked.
+    checked: Vec<bool>,
+    script: Option<fe_script::Script>,
 }
 
 impl Runner {
     /// Builds the scene and prepares its timeline.
     pub fn new(scene: Scene, mats: Arc<MaterialSet>, threads: usize) -> Result<Self, SceneError> {
-        let sim = build(&scene, &mats, threads)?;
+        let mut sim = build(&scene, &mats, threads)?;
+        let script = match (&scene.script, &scene.script_wasm) {
+            (None, _) => None,
+            (Some((path, line)), None) => {
+                return Err(SceneError::new(
+                    *line,
+                    format!("script {path} is not loaded (use fe_scene::load or attach_script)"),
+                ));
+            }
+            (Some((path, line)), Some(wasm)) => {
+                let mut s = fe_script::Script::load(&wasm.0, &sim)
+                    .map_err(|e| SceneError::new(*line, format!("{path}: {e}")))?;
+                for c in s.init(&mut sim) {
+                    sim.apply(&c);
+                }
+                Some(s)
+            }
+        };
         let mut timeline = Vec::new();
         for t in &scene.timeline {
             let action = match resolve(&t.op, &mats, t.line)? {
@@ -95,15 +120,72 @@ impl Runner {
                     .ok_or_else(|| SceneError::new(e.line, format!("unknown material '{m}'")))?;
             }
         }
-        Ok(Self {
+        let checked = vec![false; scene.expects.len()];
+        let mut r = Self {
             scene,
             sim,
             mats,
             timeline,
             extra: BTreeMap::new(),
             recorded: Vec::new(),
+            pre: Vec::new(),
             results: Vec::new(),
-        })
+            checked,
+            script,
+        };
+        // Expectations at or before the start tick (`after 0`) hold for the built world.
+        let start = r.check_due();
+        r.results.extend(start);
+        Ok(r)
+    }
+
+    /// Applies a command now, between ticks, and records it so a replay applies
+    /// it at the same point.
+    pub fn apply_command(&mut self, cmd: &Command) {
+        self.sim.apply(cmd);
+        self.pre.push(cmd.clone());
+    }
+
+    /// Checks every expectation not yet checked whose tick has been reached. A
+    /// tick skipped by a `run` op is checked late, at the current tick.
+    fn check_due(&mut self) -> Vec<CheckResult> {
+        let done = self.sim.tick();
+        let mut due: Vec<usize> = (0..self.scene.expects.len())
+            .filter(|&i| !self.checked[i] && self.scene.expects[i].after <= done)
+            .collect();
+        due.sort_by_key(|&i| self.scene.expects[i].after);
+        due.into_iter()
+            .map(|i| {
+                self.checked[i] = true;
+                let e = &self.scene.expects[i];
+                let mut c = self.check(e);
+                if e.after != done {
+                    c.detail = format!("{} (checked late, at tick {done})", c.detail);
+                }
+                c
+            })
+            .collect()
+    }
+
+    /// Replaces the simulation, for example with one restored from a network
+    /// snapshot, and restores the game script from its saved state so it
+    /// continues exactly where the snapshot's script was.
+    pub fn replace_sim(&mut self, sim: Simulation) -> Result<(), SceneError> {
+        self.sim = sim;
+        if let Some(s) = self.script.as_mut() {
+            s.restore(&self.sim).map_err(|e| SceneError::new(0, e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    /// [`fe_script::mod_hash`] of the running script, or 0 if there is none.
+    pub fn mods_hash(&self) -> u64 {
+        self.script.as_ref().map_or(0, fe_script::Script::mod_hash)
+    }
+
+    /// Script log lines since the last call.
+    pub fn take_script_logs(&mut self) -> Vec<String> {
+        self.script.as_mut().map(fe_script::Script::take_logs).unwrap_or_default()
     }
 
     /// The frame the scene timeline (plus any extra frames) gives for a tick.
@@ -139,6 +221,12 @@ impl Runner {
         commands: &[Command],
     ) -> Vec<CheckResult> {
         let tick = self.sim.tick();
+        if let Some(e) = self.extra.get(&tick) {
+            for c in e.pre.clone() {
+                self.sim.apply(&c);
+            }
+        }
+        let pre = std::mem::take(&mut self.pre);
         for t in &self.timeline {
             if let Action::Other(op, line) = &t.action
                 && t.when.fires(tick)
@@ -147,19 +235,29 @@ impl Runner {
                 apply_now(&mut self.sim, r, self.scene.seed ^ tick);
             }
         }
+        // The game script runs first; its commands apply this tick, before the
+        // timeline's. They are not recorded: a replay runs the script again.
+        let mut script_cmds = match self.script.as_mut() {
+            Some(s) => s.tick(&mut self.sim),
+            None => Vec::new(),
+        };
         let mut frame = self.frame_for(tick);
+        script_cmds.append(&mut frame.commands);
+        frame.commands = script_cmds;
         for (p, i) in inputs {
             frame.inputs.insert(*p, *i);
         }
         frame.commands.extend(commands.iter().cloned());
-        if !inputs.is_empty() || !commands.is_empty() {
-            self.recorded.push(Frame { tick, inputs: inputs.clone(), commands: commands.to_vec() });
+        if !inputs.is_empty() || !commands.is_empty() || !pre.is_empty() {
+            self.recorded.push(Frame {
+                tick,
+                inputs: inputs.clone(),
+                commands: commands.to_vec(),
+                pre,
+            });
         }
         self.sim.step(&frame.inputs, &frame.commands);
-        let done = self.sim.tick();
-        let due: Vec<Expect> =
-            self.scene.expects.iter().filter(|e| e.after == done).cloned().collect();
-        let checked: Vec<CheckResult> = due.iter().map(|e| self.check(e)).collect();
+        let checked = self.check_due();
         self.results.extend(checked.iter().cloned());
         checked
     }
@@ -174,10 +272,24 @@ impl Runner {
         self.sim.tick() >= self.scene.ticks
     }
 
-    /// Runs to the end of the scene and summarizes.
+    /// Runs to the end of the scene and summarizes. Expectations for ticks past
+    /// the end are reported as failed.
     pub fn run_to_end(&mut self) -> RunSummary {
         while !self.finished() {
             self.step();
+        }
+        let end = self.sim.tick();
+        for (i, e) in self.scene.expects.iter().enumerate() {
+            if !self.checked[i] {
+                self.checked[i] = true;
+                self.results.push(CheckResult {
+                    line: e.line,
+                    after: e.after,
+                    passed: false,
+                    detail: format!("tick {} never reached; the run ended at tick {end}", e.after),
+                    found_hash: None,
+                });
+            }
         }
         self.summary()
     }
@@ -192,9 +304,14 @@ impl Runner {
         }
     }
 
-    /// Frames injected through [`Runner::step_with`], for saving as a replay.
-    pub fn recorded(&self) -> &[Frame] {
-        &self.recorded
+    /// Frames injected through [`Runner::step_with`] and [`Runner::apply_command`],
+    /// for saving as a replay.
+    pub fn recorded(&self) -> Vec<Frame> {
+        let mut out = self.recorded.clone();
+        if !self.pre.is_empty() {
+            out.push(Frame { tick: self.sim.tick(), pre: self.pre.clone(), ..Frame::default() });
+        }
+        out
     }
 
     /// Evaluates one expectation against the current state.
@@ -294,7 +411,8 @@ impl Replay {
 
     /// Builds a runner with the replay's frames loaded.
     pub fn runner(&self, mats: Arc<MaterialSet>, threads: usize) -> Result<Runner, SceneError> {
-        let scene = crate::parse(&self.scene)?;
+        let mut scene = crate::parse(&self.scene)?;
+        crate::attach_script(&mut scene, std::path::Path::new(&self.scene_dir))?;
         let mut r = Runner::new(scene, mats, threads)?;
         for f in &self.frames {
             r.extra.insert(f.tick, f.clone());

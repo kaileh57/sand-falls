@@ -211,7 +211,7 @@ impl When {
     /// Last tick the entry can fire on, plus one.
     pub fn end(&self) -> u64 {
         match *self {
-            Self::At(t) => t + 1,
+            Self::At(t) => t.saturating_add(1),
             Self::Range(_, b) | Self::Every(_, _, b) => b,
         }
     }
@@ -367,6 +367,20 @@ pub struct Scene {
     pub camera: Camera,
     /// Expectations.
     pub expects: Vec<Expect>,
+    /// Game script path as written, relative to the scene file, and its line.
+    pub script: Option<(String, usize)>,
+    /// The script's bytes, once loaded with [`crate::attach_script`].
+    pub script_wasm: Option<ScriptBytes>,
+}
+
+/// The bytes of a game script, shared between copies of a scene.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ScriptBytes(pub std::sync::Arc<[u8]>);
+
+impl std::fmt::Debug for ScriptBytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ScriptBytes({} bytes)", self.0.len())
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -675,6 +689,8 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
         timeline: Vec::new(),
         camera: Camera::default(),
         expects: Vec::new(),
+        script: None,
+        script_wasm: None,
     };
     let mut section = Section::None;
     let mut grid: Option<(i32, i32, Vec<String>, usize)> = None;
@@ -730,6 +746,7 @@ pub fn parse(text: &str) -> Result<Scene, SceneError> {
                     "description" => scene.description = v.to_string(),
                     "seed" => scene.seed = hex_or_num(line, v)?,
                     "materials" => scene.materials = v.to_string(),
+                    "script" => scene.script = Some((v.to_string(), line)),
                     "ticks" => scene.ticks = num(line, v, "ticks")?,
                     "size" => {
                         need(line, &w, 2, "size = WIDTH HEIGHT")?;
