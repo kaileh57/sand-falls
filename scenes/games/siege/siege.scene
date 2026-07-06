@@ -1,0 +1,41 @@
+// Siege builder: two teams, two forts. Even player ids hold the left fort and
+// odd ids the right one. The game rules live in siege.wasm, built from
+// mods/siege by ci/build_mods.sh.
+//
+// BUILD (30 s): paint only, inside your own half, from a budget of 5000 cells.
+// BATTLE: explode and crate only. A team loses when its crystal core is gone.
+//
+// Host it with: fe-server host scenes/games/siege/siege.scene
+// Join with:    fe-client connect HOST:7777 --scene scenes/games/siege/siege.scene
+[scene]
+name = siege builder
+description = Build a fort on a budget, then bombard the other team's crystal core.
+size = 960 400
+seed = 0x5e9e
+ticks = 3600
+script = siege.wasm
+// Players are dealt to spawn points in turn: even ids left, odd ids right.
+spawn = 130 280
+spawn = 830 280
+
+[build]
+fill 0 340 960 400 bedrock
+fill 0 300 960 340 soil
+// A moat in the middle.
+fill 450 300 510 324 water
+// Left fort: starter walls and a crystal core on a stone plinth.
+fill 60 220 70 300 brick
+fill 190 220 200 300 brick
+fill 112 296 148 300 stone
+fill 122 280 138 296 crystal
+// Right fort, mirrored.
+fill 890 220 900 300 brick
+fill 760 220 770 300 brick
+fill 812 296 848 300 stone
+fill 822 280 838 296 crystal
+
+[camera]
+view 960 400
+scale 1
+sky day
+at 0: 480 220
