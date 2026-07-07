@@ -9,8 +9,10 @@ use fe_sim::{Avatar, Particles, PlayerInput, SupportSeed};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Bumped to 6 when bodies began saving their hull envelope and fluid state.
-const FORMAT_VERSION: u32 = 6;
+/// Bumped to 6 when bodies began saving their hull envelope and fluid state,
+/// and to 7 when liquid cells began storing their velocity in the two top flag
+/// bits and their value.
+const FORMAT_VERSION: u32 = 7;
 
 #[derive(Serialize, Deserialize)]
 struct ChunkData {

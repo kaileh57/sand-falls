@@ -835,9 +835,10 @@ impl PixelBody {
     /// This stands in for the pressure. An opening is a cell of the hold
     /// below `level` with the liquid outside beside it. The air the openings
     /// reach through the hold below `level` fills with that liquid, lowest
-    /// cells first. Once none is left, the liquid they reach through the
-    /// liquid in the hold that stands more than a row over `level` runs out,
-    /// highest cells first. Each opening cell passes sqrt(2 g h) cells a
+    /// cells first. The liquid they reach through the liquid in the hold that
+    /// stands more than a row over `level` runs out, highest cells first. Each
+    /// tick goes whichever way has more cells to move, so a bubble under the
+    /// water inside does not stop it draining. Each opening cell passes sqrt(2 g h) cells a
     /// tick, water running out of an orifice, where h is how far the level
     /// outside and the level inside or the opening differ, so a hold floods
     /// in seconds through a shell hole and in minutes through a seam. The
@@ -943,8 +944,13 @@ impl PixelBody {
             let c = world.get(p);
             c.material() == fluid && !c.has(Cell::FLAG_IN_BODY)
         };
+        // Water standing more than a row over the level runs out, and air under
+        // the level fills, whichever there is more of. Moving water leaves
+        // short-lived bubbles under its surface, and a flooding hold sloshes over
+        // the level now and then; neither turns the flow around.
+        let mut high = search(&is_fluid, &|p| p.y < top - 1);
         let mut air = search(&|p| p.y >= top && passable(world.get(p)), &|p| world.get(p).is_air());
-        let filling = !air.is_empty();
+        let filling = air.len() > high.len();
         // The cells that change, the first first, and the head over each opening.
         let (cells, head): (Vec<CellPos>, Box<dyn Fn(CellPos) -> f32>) = if filling {
             air.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
@@ -952,7 +958,6 @@ impl PixelBody {
             let inside = air[0].y as f32 + 1.0;
             (air, Box::new(move |o: CellPos| (o.y as f32 + 0.5).min(inside) - level))
         } else {
-            let mut high = search(&is_fluid, &|p| p.y < top - 1);
             high.sort_unstable_by_key(|p| (p.y, p.x));
             let Some(first) = high.first() else { return 0 };
             let inside = first.y as f32;
@@ -997,6 +1002,8 @@ impl PixelBody {
         drop(head);
         for (&a, &b) in cells.iter().zip(&outer) {
             let (ca, cb) = (world.get(a), world.get(b));
+            // The water moved lands at rest, whatever speed it had in the sea.
+            let (ca, cb) = (settle(world, ca), settle(world, cb));
             world.grid.set(a, cb);
             world.grid.set(b, ca);
         }
@@ -1386,6 +1393,13 @@ impl Moment {
     }
 }
 
+/// A liquid cell a body moved, at rest: its speed is the body's now. Liquids
+/// with a lifetime, such as burning oil, keep their cell value.
+fn settle(world: &World, c: Cell) -> Cell {
+    let m = world.materials().get(c.material());
+    if m.state == State::Liquid && !m.has_lifetime() { fe_sim::liquid::at_rest(c) } else { c }
+}
+
 /// A liquid or powder a body can float in: its density and viscosity.
 fn medium(world: &World, c: Cell) -> Option<(i16, u8)> {
     if c.is_air() || c.has(Cell::FLAG_IN_BODY) {
@@ -1421,7 +1435,8 @@ impl Shoreline {
     /// read from the bottom up, rows against something solid neither count nor
     /// break the run, and more than [`LEVEL_GAP`] dry rows in a row end it.
     /// Drops running down the side of a body that leaves the water, or a
-    /// splash beside it, then do not hold it up.
+    /// splash beside it, then do not hold it up. Liquid in the air falls past
+    /// the body and is read as open.
     fn measure(world: &World, x: i32, ymin: i32, n: usize, dir: i32) -> Self {
         /// What lies beside a row.
         #[derive(Clone, Copy, PartialEq)]
@@ -1435,7 +1450,7 @@ impl Shoreline {
                 let y = ymin + i as i32;
                 match (0..3)
                     .map(|k| world.get(CellPos::new(x + dir * k, y)))
-                    .find(|&c| !open(world, c))
+                    .find(|&c| !open(world, c) && !fe_sim::liquid::is_airborne(c))
                 {
                     None => Beside::Open,
                     Some(c) => medium(world, c).map_or(Beside::Solid, Beside::Medium),
@@ -1676,6 +1691,8 @@ impl Shore<'_> {
     /// only a full hold spills over. Returns false if none of that works; the
     /// body cell then stays out of the world so nothing is destroyed.
     fn push_aside(&mut self, world: &mut World, from: CellPos, cell: Cell) -> bool {
+        // A displaced liquid cell lands at rest: whatever speed it had is the body's now.
+        let cell = settle(world, cell);
         if self.held(from)
             && let Some(q) = self.hold_air(world, from)
         {

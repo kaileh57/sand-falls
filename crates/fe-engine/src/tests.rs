@@ -620,3 +620,136 @@ fn fill_then_carve_on_one_tick_makes_a_body() {
     assert_eq!(in_body_cells(&s), 144);
     assert_eq!(stamped_cells(&s), 144);
 }
+
+/// The `col_wall` dam break: a column of liquid 50 wide and 100 tall against
+/// the left wall of a 1016-cell floor at y 150.
+fn column(liquid: &str) -> Simulation {
+    let mats = Arc::new(fe_materials::base_set());
+    let mut s = Simulation::new(mats, SimConfig { seed: 3, threads: 2, ..SimConfig::default() });
+    s.load_rect(IRect::new(0, 0, 1024, 192));
+    let bed = id(&s, "bedrock");
+    for (rect, m) in [
+        (IRect::new(0, 150, 1024, 192), bed),
+        (IRect::new(0, 0, 4, 150), bed),
+        (IRect::new(1020, 0, 1024, 150), bed),
+        (IRect::new(4, 50, 54, 150), id(&s, liquid)),
+    ] {
+        s.apply(&Command::FillRect { rect, material: m });
+    }
+    s
+}
+
+/// Liquid still inside the footprint of the column, x 4..54.
+fn left_behind(s: &Simulation, liquid: fe_core::MaterialId) -> u64 {
+    s.world.count(IRect::new(4, 0, 54, 150), liquid)
+}
+
+/// The column that splits the liquid into two equal halves.
+fn median_x(s: &Simulation, liquid: fe_core::MaterialId) -> i32 {
+    let total = s.world.count(IRect::new(4, 0, 1020, 150), liquid);
+    let mut seen = 0;
+    (4..1020)
+        .find(|&x| {
+            seen += s.world.count(IRect::new(x, 0, x + 1, 150), liquid);
+            2 * seen >= total
+        })
+        .unwrap_or(1020)
+}
+
+/// Air cells below the highest liquid cell of each column, above the floor.
+fn trapped_air(s: &Simulation, liquid: fe_core::MaterialId) -> u64 {
+    let mut n = 0;
+    for x in 4..1020 {
+        let mut seen = false;
+        for y in 0..150 {
+            let c = s.world.get(CellPos::new(x, y));
+            if c.material() == liquid {
+                seen = true;
+            } else if seen && c.is_air() {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+/// The rightmost column holding at least two liquid cells.
+fn front(s: &Simulation, liquid: fe_core::MaterialId) -> i32 {
+    (4..1020)
+        .rev()
+        .find(|&x| {
+            (0..150).filter(|&y| s.world.get(CellPos::new(x, y)).material() == liquid).count() >= 2
+        })
+        .unwrap_or(0)
+}
+
+#[test]
+fn a_collapsing_column_stays_coherent() {
+    // The face jets and throws some spray, but the body stays together:
+    // few air cells sit under the liquid surface.
+    let mut s = column("water");
+    let water = id(&s, "water");
+    s.run(60);
+    let at60 = trapped_air(&s, water);
+    s.run(40);
+    let at100 = trapped_air(&s, water);
+    let front100 = front(&s, water);
+    s.run(100);
+    let at200 = trapped_air(&s, water);
+    assert!(at60 <= 2500, "trapped air at tick 60: {at60}");
+    assert!(at100 <= 1200, "trapped air at tick 100: {at100}");
+    assert!(at200 <= 300, "trapped air at tick 200: {at200}");
+    assert!(front100 > 250, "front at tick 100: {front100}");
+}
+
+#[test]
+fn thicker_liquids_collapse_and_spread_more_slowly() {
+    // In order of viscosity: 20, 30, 60, 90 and 160.
+    let liquids = ["water", "acid", "oil", "molten_metal", "lava"];
+    let mut half = Vec::new();
+    let mut middle = Vec::new();
+    let mut fronts = Vec::new();
+    for name in liquids {
+        let mut s = column(name);
+        let m = id(&s, name);
+        let mut at = u64::MAX;
+        for t in 1..=300u64 {
+            s.run(1);
+            if at == u64::MAX && left_behind(&s, m) <= 2500 {
+                at = t;
+            }
+        }
+        half.push(at);
+        middle.push(median_x(&s, m));
+        fronts.push(front(&s, m));
+    }
+    // Half the column runs out later the thicker the liquid. Neighbors in
+    // the list may swap by a few ticks: water and acid differ too little to
+    // order every time.
+    assert!(half.windows(2).all(|w| w[0] <= w[1] + 8), "half out ticks {half:?}");
+    assert!(half[4] * 2 >= half[0] * 3, "lava {} against water {}", half[4], half[0]);
+    // Water, oil and lava are far enough apart to be strictly ordered: in
+    // how fast the column empties, and at tick 300 in where the middle of
+    // the liquid is and how far the front got.
+    for (thin, thick) in [(0, 2), (2, 4)] {
+        assert!(
+            half[thin] < half[thick]
+                && middle[thin] > middle[thick]
+                && fronts[thin] > fronts[thick],
+            "{} against {}: half out {half:?}, middle {middle:?}, fronts {fronts:?}",
+            liquids[thin],
+            liquids[thick],
+        );
+    }
+}
+
+#[test]
+fn a_dam_break_is_independent_of_thread_count() {
+    let run = |threads: usize| {
+        let mut s = column("water");
+        s.world.set_threads(threads);
+        s.run(150);
+        s.hash()
+    };
+    assert_eq!(run(1), run(4));
+}
