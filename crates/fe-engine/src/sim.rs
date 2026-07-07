@@ -112,6 +112,15 @@ pub struct TickReport {
     pub detached: u32,
     /// Joints broken this tick.
     pub joints_broken: u32,
+    /// Liquid cells the flow phase moved by settle moves this tick.
+    #[serde(default)]
+    pub settle_moves: u32,
+    /// Liquid cells the pressure pass moved this tick.
+    #[serde(default)]
+    pub pressure_moves: u32,
+    /// Liquid cells thrown up as splashes this tick.
+    #[serde(default)]
+    pub splashes: u32,
     /// Phase timings.
     pub times: PhaseTimes,
 }
@@ -644,6 +653,13 @@ impl Simulation {
                     merge_blast(&mut pending, pos, radius, power);
                 }
                 Event::SupportLost(p) => self.seed_support(p),
+                Event::Splash { pos, cell, vx, vy } => {
+                    // Launched from the center of the cell it landed on.
+                    let half = fe_core::Fx(fe_core::Fx::ONE.0 / 2);
+                    let (x, y) =
+                        (fe_core::Fx::from_int(pos.x) + half, fe_core::Fx::from_int(pos.y) + half);
+                    self.particles.spawn(x, y, vx, vy, cell);
+                }
             }
         }
         settle_blasts(&mut pending);
@@ -706,6 +722,9 @@ impl Simulation {
             bodies_created: ps.created,
             detached: detached_count,
             joints_broken: ps.joints_broken,
+            settle_moves: cell_stats.settle_moves,
+            pressure_moves: cell_stats.pressure_moves,
+            splashes: cell_stats.splashes,
             times,
         };
     }

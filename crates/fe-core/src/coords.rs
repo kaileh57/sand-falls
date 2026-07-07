@@ -171,6 +171,7 @@ impl LocalRect {
     }
 
     /// Grows the rect to include a local cell.
+    #[inline]
     pub fn include(&mut self, x: u8, y: u8) {
         self.x0 = self.x0.min(x);
         self.y0 = self.y0.min(y);
@@ -180,6 +181,7 @@ impl LocalRect {
 
     /// Returns the union of two rects.
     #[must_use]
+    #[inline]
     pub fn union(self, o: Self) -> Self {
         Self {
             x0: self.x0.min(o.x0),

@@ -27,7 +27,11 @@ impl MaterialId {
 ///
 /// Layout: 12-bit material id, 4 flag bits, an 8-bit temperature, and an 8-bit
 /// material-specific value. The value holds remaining lifetime for materials that
-/// expire, hit points for static solids, and fall speed for powders and liquids.
+/// expire, hit points for static solids, fall speed for powders, and a velocity
+/// code for liquids: the flow speed of its column on the top cell of resting
+/// liquid, or a horizontal and a fall speed code on liquid in the air. The liquid
+/// flags [`Cell::FLAG_LIQ_AIR`] and [`Cell::FLAG_LIQ_LEFT`] complete it; they stay
+/// clear on every other kind of cell.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Cell {
     bits: u16,
@@ -46,10 +50,13 @@ impl Cell {
     pub const FLAG_PARITY: u16 = 1 << 12;
     /// Set while the cell is part of a stamped rigid body.
     pub const FLAG_IN_BODY: u16 = 1 << 13;
-    /// Set on cells that are burning.
-    pub const FLAG_BURNING: u16 = 1 << 14;
-    /// Reserved for future use.
-    pub const FLAG_SPARE: u16 = 1 << 15;
+    /// Liquids only: the cell is in the air (falling or thrown) and its value
+    /// holds a horizontal and a fall speed code.
+    pub const FLAG_LIQ_AIR: u16 = 1 << 14;
+    /// Liquids only: the horizontal speed points left. On a resting liquid cell
+    /// with a zero speed code it means the pressure pass has checked the cell
+    /// and found nothing to do, so it does not ask again until something moves it.
+    pub const FLAG_LIQ_LEFT: u16 = 1 << 15;
 
     /// An air cell at ambient temperature.
     pub const AIR: Self = Self { bits: 0, temp: crate::AMBIENT_TEMP, value: 0 };
