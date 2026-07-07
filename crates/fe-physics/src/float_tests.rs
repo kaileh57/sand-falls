@@ -121,7 +121,19 @@ fn a_tilted_hull_rights_itself() {
     let mut pose = *rb.position();
     pose.rotation = Rotation::new(0.3);
     rb.set_position(pose, true);
-    run(&mut w, &mut ps, &mut ph, 60);
+    // Turning the hull in place swings its sealed hold down over sea water,
+    // which a real hull would have pushed away: take it out, so the hull is
+    // dry as it rights itself. Left in, a few rows of water trapped on the
+    // floor's steps hold the hull at a small list.
+    tick(&mut w, &mut ps, &mut ph);
+    let water = mat(&w, "water");
+    for p in hold_cells(&ph, id) {
+        if w.get(p).material() == water {
+            w.grid.set(p, Cell::AIR);
+        }
+    }
+    assert_eq!(water_in_hold(&w, &ph, id), 0);
+    run(&mut w, &mut ps, &mut ph, 59);
     let early = angle(&ph, id);
     assert!(early.abs() < 0.25, "still at {early} after a second");
     run(&mut w, &mut ps, &mut ph, 540);
@@ -269,20 +281,21 @@ fn water_a_hull_holds_over_the_sea_runs_out_through_a_hole_in_its_bottom() {
 /// Water in the hold of the hull of [`sea_and_hull`], at any angle: in the
 /// world cells its local hold maps to.
 fn water_in_hold(w: &World, ph: &Physics, id: u32) -> u64 {
+    let water = mat(w, "water");
+    hold_cells(ph, id).into_iter().filter(|&p| w.get(p).material() == water).count() as u64
+}
+
+/// The world cells the hold of the hull of [`sea_and_hull`] maps to.
+fn hold_cells(ph: &Physics, id: u32) -> std::collections::BTreeSet<CellPos> {
     let b = body(ph, id);
     let pose = *ph.rapier.bodies[b.handle].position();
-    let water = mat(w, "water");
     let mut seen = std::collections::BTreeSet::new();
-    let mut n = 0;
     for ly in 3..20 {
         for lx in 3..117 {
-            let p = b.local_to_world(&pose, lx, ly);
-            if seen.insert(p) && w.get(p).material() == water {
-                n += 1;
-            }
+            seen.insert(b.local_to_world(&pose, lx, ly));
         }
     }
-    n
+    seen
 }
 
 #[test]

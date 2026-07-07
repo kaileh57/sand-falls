@@ -337,7 +337,11 @@ impl Renderer {
         let bw = (cw + 2 * MARGIN) as usize;
         let bh = (ch + 2 * MARGIN) as usize;
 
-        let cells = sample_cells(sim, bx, by, bw, bh);
+        // Liquid in the air is drawn with the path it swept: see
+        // `fe_sim::liquid::drawn`.
+        let cells = fe_sim::liquid::drawn(&sample_cells(sim, bx, by, bw, bh), bw, bh, |c| {
+            self.look(c.material()).state == State::Liquid
+        });
         let mut buf = Buffers::new(bw, bh);
         self.fill_buffers(sim, avatars, &cells, &mut buf, bx, by, frame, s);
         if s.lighting {

@@ -34,6 +34,10 @@
 //! after 300: temp sand in 0 80 128 96 < 100
 //! ```
 //!
+//! `drawn water in X0 Y0 X1 Y1 >= N` counts the cells drawn as a liquid in a
+//! rectangle: its cells, and the air that a stream of it in the air is drawn
+//! across (see `fe_sim::liquid::drawn`).
+//!
 //! Comments start with `//` everywhere except inside `[grid]` blocks.
 //!
 //! A `script = PATH` key in `[scene]` names a WebAssembly game script, relative
