@@ -115,7 +115,7 @@ impl Runner {
             timeline.push(TimedResolved { when: t.when, action });
         }
         for e in &scene.expects {
-            if let Check::Count(m, ..) | Check::Temp(m, ..) = &e.check {
+            if let Check::Count(m, ..) | Check::Temp(m, ..) | Check::Drawn(m, ..) = &e.check {
                 mats.id(m)
                     .ok_or_else(|| SceneError::new(e.line, format!("unknown material '{m}'")))?;
             }
@@ -324,6 +324,11 @@ impl Runner {
                 let got = sim.world.count(*r, id) as i64;
                 (cmp.test(got, *n), format!("count {m} = {got}, expected {} {n}", cmp.symbol()))
             }
+            Check::Drawn(m, r, cmp, n) => {
+                let id = self.mats.id(m).unwrap_or(MaterialId::BOUNDARY);
+                let got = drawn_count(sim, &self.mats, *r, id);
+                (cmp.test(got, *n), format!("drawn {m} = {got}, expected {} {n}", cmp.symbol()))
+            }
             Check::Hash(h) => {
                 let got = sim.hash();
                 found_hash = Some(got);
@@ -419,4 +424,30 @@ impl Replay {
         }
         Ok(r)
     }
+}
+
+/// Cells of material `id` in `r` as they are drawn, with streams of liquid in
+/// the air joined up (`fe_sim::liquid::drawn`), reading far enough around `r`
+/// for the streams that reach into it.
+fn drawn_count(sim: &Simulation, mats: &MaterialSet, r: fe_core::IRect, id: MaterialId) -> i64 {
+    let m = fe_sim::liquid::STREAK_MAX + 2;
+    let (x0, y0) = (r.min.x - m, r.min.y - m);
+    let (w, h) = ((r.width() + 2 * m) as usize, (r.height() + 2 * m) as usize);
+    let mut cells = Vec::with_capacity(w * h);
+    for y in 0..h as i32 {
+        for x in 0..w as i32 {
+            cells.push(sim.world.get(fe_core::CellPos::new(x0 + x, y0 + y)));
+        }
+    }
+    let liquid = |c: fe_core::Cell| mats.get(c.material()).state == fe_materials::State::Liquid;
+    let out = fe_sim::liquid::drawn(&cells, w, h, liquid);
+    let mut n = 0;
+    for y in r.min.y..r.max.y {
+        for x in r.min.x..r.max.x {
+            if out[(y - y0) as usize * w + (x - x0) as usize].material() == id {
+                n += 1;
+            }
+        }
+    }
+    n
 }

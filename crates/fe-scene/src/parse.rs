@@ -246,6 +246,10 @@ pub enum Check {
     /// Mean temperature in degrees C of a material's cells in a rectangle.
     /// Fails when the rectangle holds none of the material.
     Temp(String, IRect, Cmp, i64),
+    /// Number of cells in a rectangle drawn as a liquid: its cells, and the
+    /// air a stream of it in the air is drawn across (see
+    /// `fe_sim::liquid::drawn`).
+    Drawn(String, IRect, Cmp, i64),
 }
 
 /// An expectation checked after a tick.
@@ -647,6 +651,12 @@ fn parse_check(line: usize, s: &str) -> Result<Check, SceneError> {
     };
     Ok(match w.as_slice() {
         ["count", mat, "in", x0, y0, x1, y1, op, n] => Check::Count(
+            mat.to_string(),
+            rect(line, &[x0, y0, x1, y1])?,
+            cmp(op)?,
+            num(line, n, "count")?,
+        ),
+        ["drawn", mat, "in", x0, y0, x1, y1, op, n] => Check::Drawn(
             mat.to_string(),
             rect(line, &[x0, y0, x1, y1])?,
             cmp(op)?,
