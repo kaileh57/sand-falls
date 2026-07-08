@@ -7,7 +7,9 @@
 
 mod avatar;
 mod explode;
+mod flow;
 mod grid;
+pub mod liquid;
 mod particles;
 mod rules;
 #[allow(unsafe_code, reason = "the scheduler shares chunk cells between threads; see module docs")]

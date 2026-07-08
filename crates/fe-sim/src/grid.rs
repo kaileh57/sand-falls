@@ -124,11 +124,13 @@ pub struct Grid {
     chunks: Vec<Chunk>,
     index: ChunkIndex,
     order: BTreeMap<ChunkPos, usize>,
+    /// Bumped whenever a chunk is inserted or removed.
+    generation: u64,
 }
 
 impl Default for Grid {
     fn default() -> Self {
-        Self { chunks: Vec::new(), index: ChunkIndex::new(), order: BTreeMap::new() }
+        Self { chunks: Vec::new(), index: ChunkIndex::new(), order: BTreeMap::new(), generation: 0 }
     }
 }
 
@@ -145,6 +147,7 @@ impl Grid {
 
     /// Adds a chunk, replacing any chunk already at its position.
     pub fn insert(&mut self, chunk: Chunk) {
+        self.generation += 1;
         let pos = chunk.pos();
         if let Some(i) = self.index.get(pos) {
             self.chunks[i as usize] = chunk;
@@ -159,6 +162,7 @@ impl Grid {
     /// Removes and returns the chunk at a position.
     pub fn remove(&mut self, pos: ChunkPos) -> Option<Chunk> {
         let i = self.index.get(pos)? as usize;
+        self.generation += 1;
         self.index.remove(pos);
         self.order.remove(&pos);
         let chunk = self.chunks.swap_remove(i);
@@ -202,6 +206,17 @@ impl Grid {
         self.chunks.iter_mut()
     }
 
+    /// Chunks in storage order as a slice, for per-chunk work that does not
+    /// depend on order.
+    pub(crate) fn chunk_slice_mut(&mut self) -> &mut [Chunk] {
+        &mut self.chunks
+    }
+
+    /// A counter that changes whenever a chunk is inserted or removed.
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
     /// Reads a cell. Unloaded cells read as the boundary.
     #[inline]
     pub fn get(&self, p: CellPos) -> Cell {
@@ -223,6 +238,14 @@ impl Grid {
         }
     }
 
+    /// Writes a cell without marking it or touching the column tables. Only for
+    /// changes that cannot affect them, such as a liquid cell's settled mark.
+    pub(crate) fn set_quiet(&mut self, p: CellPos, cell: Cell) {
+        if let Some(c) = self.chunk_mut(p.chunk()) {
+            c.set_quiet(p.local_index(), cell);
+        }
+    }
+
     /// Marks a cell and its eight neighbors for a visit on the next tick.
     pub fn mark(&self, p: CellPos) {
         for y in p.y - 1..=p.y + 1 {
@@ -232,6 +255,32 @@ impl Grid {
                     c.mark((q.x & (CHUNK_SIZE - 1)) as u8, (q.y & (CHUNK_SIZE - 1)) as u8);
                 }
             }
+        }
+    }
+
+    /// Marks every cell of the world rectangle `x0..=x1, y0..=y1` for a visit on
+    /// the next tick.
+    pub fn mark_rect(&self, x0: i32, y0: i32, x1: i32, y1: i32) {
+        let (a, b) = (CellPos::new(x0, y0).chunk(), CellPos::new(x1, y1).chunk());
+        for cy in a.y..=b.y {
+            for cx in a.x..=b.x {
+                let Some(c) = self.chunk(ChunkPos::new(cx, cy)) else { continue };
+                let o = c.pos().origin();
+                let (lx0, ly0) = ((x0.max(o.x) - o.x) as u8, (y0.max(o.y) - o.y) as u8);
+                let (lx1, ly1) = (
+                    (x1.min(o.x + CHUNK_SIZE - 1) - o.x) as u8,
+                    (y1.min(o.y + CHUNK_SIZE - 1) - o.y) as u8,
+                );
+                c.mark(lx0, ly0);
+                c.mark(lx1, ly1);
+            }
+        }
+    }
+
+    /// Marks only the cell itself for a visit on the next tick.
+    pub fn keep(&self, p: CellPos) {
+        if let Some(c) = self.chunk(p.chunk()) {
+            c.mark((p.x & (CHUNK_SIZE - 1)) as u8, (p.y & (CHUNK_SIZE - 1)) as u8);
         }
     }
 
