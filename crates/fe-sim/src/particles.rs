@@ -296,12 +296,24 @@ fn burn(world: &World, p: &mut Particle) -> InFlight {
     InFlight::Flying
 }
 
-/// The cell a particle turns into when it lands.
+/// The cell a particle turns into when it lands. Powders and liquids keep their
+/// fall speed, and liquids their sideways speed too, so a splash keeps sliding.
 fn landing_cell(world: &World, p: &Particle) -> Cell {
     let m = world.materials().get(p.cell.material());
     let mut cell = p.cell;
-    if m.state.falls() && !m.has_lifetime() {
-        cell.value = (p.vy.0.max(0) >> 12).min(255) as u8;
+    if m.has_lifetime() {
+        return cell;
+    }
+    // Fx velocities in 1/65536 cells per tick; the cells store 1/16.
+    let vy = (p.vy.0.max(0) >> 12).min(255);
+    match m.state {
+        State::Liquid => {
+            let vx = (p.vx.0 / 4096).clamp(-160, 160);
+            let r = cell_rand(world.seed(), world.tick(), p.x.floor(), p.y.floor(), 0x59);
+            cell = crate::liquid::encode(cell, vx, vy, r);
+        }
+        State::Powder => cell.value = vy as u8,
+        _ => {}
     }
     cell
 }
