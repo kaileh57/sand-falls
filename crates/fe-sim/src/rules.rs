@@ -4,8 +4,9 @@
 //! from [`RuleCtx::rand`], so its result depends only on the world state, the
 //! seed and the tick.
 
-use crate::sched::{Neighborhood, REACH};
-use fe_core::{AMBIENT_TEMP, Cell, CellPos, GRAVITY, LocalRect, MaterialId, mix64};
+use crate::liquid::{self, LiqFast, Outcome};
+use crate::sched::Neighborhood;
+use fe_core::{AMBIENT_TEMP, Cell, CellPos, Fx, GRAVITY, LocalRect, MaterialId, mix64};
 use fe_materials::{MaterialSet, SpawnDir, State, Transition};
 
 /// Fall-speed units per cell: the value byte stores speed in 1/16 cells per tick.
@@ -24,9 +25,6 @@ pub const fn gravity_gain(tick: u64) -> u32 {
     ((((tick + 1) * g) >> 16) - ((tick * g) >> 16)) as u32
 }
 
-/// How far a resting liquid cell looks along a surface for a drop.
-const SURFACE_SCAN: i32 = REACH - 1;
-
 const DIRS4: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 
 /// Something a cell rule asks the world to do after the pass.
@@ -43,6 +41,19 @@ pub enum Event {
     },
     /// A structural cell stopped being structural; its neighbors may have lost support.
     SupportLost(CellPos),
+    /// A liquid cell landed hard and was thrown back up. The cell is already
+    /// gone from the grid; the caller launches it as a free particle from the
+    /// center of `pos`.
+    Splash {
+        /// Where the cell landed.
+        pos: CellPos,
+        /// The cell, at rest.
+        cell: Cell,
+        /// Launch velocity in cells per tick.
+        vx: Fx,
+        /// Launch velocity in cells per tick, negative upward.
+        vy: Fx,
+    },
 }
 
 /// Per-job output, merged in chunk order after each pass.
@@ -52,14 +63,33 @@ pub struct JobOut {
     pub events: Vec<Event>,
     /// Cells the job visited.
     pub visited: u64,
+    /// Top cells of resting liquid columns the job visited, for the flow
+    /// phase: world `(y, x)`.
+    pub tops: Vec<(i32, i32)>,
+    /// Resting liquid surface cells on top of liquid, for the pressure pass: world `(y, x)`.
+    pub pressure: Vec<(i32, i32)>,
+    /// Splashes thrown by this job this tick.
+    pub splashes: u32,
+    /// The main sweep left liquid in the air for the fall sweep.
+    pub falling: bool,
+    /// Columns of the chunk's top row where the fall sweep found liquid in
+    /// the air, one bit per column: liquid resting on it in the chunk above
+    /// may have lost its support.
+    pub fall_up: u64,
+    /// Set before the job runs: in the fall sweep's first round, liquid in
+    /// the air that would fly into liquid ahead that has not moved yet waits
+    /// for the second round (see `liquid::waits`).
+    pub(crate) may_wait: bool,
+    /// Some liquid in the air waited for the second round.
+    pub(crate) waited: bool,
 }
 
 /// The material fields the inner loop reads, packed into 12 bytes.
 #[derive(Clone, Copy, Debug)]
 pub struct Fast {
-    state: State,
+    pub(crate) state: State,
     flags: u8,
-    density: i16,
+    pub(crate) density: i16,
     conductivity: u8,
     cooling: u8,
     hold_temp: u8,
@@ -67,6 +97,14 @@ pub struct Fast {
     heat_cap: u8,
     /// Chance to slide out of 65,536; [`SLIDE_ALWAYS`] means every time.
     slide: u16,
+}
+
+impl Fast {
+    /// True if the material's value byte holds a lifetime rather than a speed.
+    #[inline]
+    pub(crate) const fn has_lifetime(&self) -> bool {
+        self.flags & F_LIFETIME != 0
+    }
 }
 
 /// [`Fast::slide`] value for powders that always slide.
@@ -115,16 +153,40 @@ pub struct RuleCtx<'a> {
     pub mats: &'a MaterialSet,
     /// Packed per-material fields.
     pub fast: &'a [Fast],
+    /// Per-material liquid parameters.
+    pub liq: &'a [LiqFast],
     /// Current tick.
     pub tick: u64,
     base: u64,
     wind: i32,
+    /// Random bits liquid in the air rounds its speeds with on this tick,
+    /// shared by every cell.
+    pub(crate) air_round: u32,
+    /// Seed of the random bits that do not depend on the tick.
+    still: u64,
 }
 
 impl<'a> RuleCtx<'a> {
     /// Creates the context for one tick.
-    pub fn new(mats: &'a MaterialSet, fast: &'a [Fast], seed: u64, tick: u64) -> Self {
-        Self { mats, fast, tick, base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))), wind: 0 }
+    pub fn new(
+        mats: &'a MaterialSet,
+        fast: &'a [Fast],
+        liq: &'a [LiqFast],
+        seed: u64,
+        tick: u64,
+    ) -> Self {
+        let mut ctx = Self {
+            mats,
+            fast,
+            liq,
+            tick,
+            base: mix64(seed ^ mix64(tick.wrapping_add(0x51ed))),
+            wind: 0,
+            air_round: 0,
+            still: mix64(seed ^ 0x7a11_5eed),
+        };
+        ctx.air_round = ctx.rand(0, 0, liquid::SALT_ENCODE);
+        ctx
     }
 
     /// Sets the wind (-4..=4) gases and fire drift with.
@@ -156,11 +218,24 @@ impl<'a> RuleCtx<'a> {
         }
     }
 
+    /// Liquid parameters for a cell's material. Non-liquids read as not liquid.
+    #[inline]
+    pub fn lq(&self, c: Cell) -> LiqFast {
+        self.liq.get(c.material().index()).copied().unwrap_or_default()
+    }
+
     /// Random bits for one decision at one world cell on this tick.
     #[inline]
     pub fn rand(&self, x: i32, y: i32, salt: u32) -> u32 {
         let pos = ((x as u32 as u64) << 32) | y as u32 as u64;
         (mix64(self.base ^ pos ^ u64::from(salt).wrapping_mul(0x9e37_79b9_7f4a_7c15)) >> 32) as u32
+    }
+
+    /// Random bits for one decision at a place, the same on every tick.
+    #[inline]
+    pub(crate) fn rand_still(&self, x: i32, y: i32, salt: u32) -> u32 {
+        let pos = ((x as u32 as u64) << 32) | y as u32 as u64;
+        (mix64(self.still ^ pos ^ u64::from(salt).wrapping_mul(0x9e37_79b9_7f4a_7c15)) >> 32) as u32
     }
 
     #[inline]
@@ -180,22 +255,107 @@ pub fn new_cell(mats: &MaterialSet, id: MaterialId, temp: Option<u8>, rnd: u32) 
     Cell::new(id, temp.unwrap_or(m.temp), value)
 }
 
-/// Updates every cell in a chunk's dirty rect, bottom row first.
-pub fn update_chunk(nb: &Neighborhood<'_>, rect: LocalRect, ctx: &RuleCtx<'_>, out: &mut JobOut) {
+/// Which cells a sweep over a chunk updates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sweep {
+    /// Every cell except liquid in the air, which the fall sweep moves.
+    Main,
+    /// Only liquid in the air. It runs after the main passes, one chunk row at
+    /// a time from the bottom up, so liquid falling across a chunk border
+    /// always finds the liquid below it already moved and a falling stream or
+    /// mass keeps together.
+    Fall,
+}
+
+/// Updates the cells of a chunk's dirty rect that `sweep` covers, bottom row
+/// first.
+///
+/// Each row takes two sweeps. The first goes in the tick's direction (left to
+/// right on even ticks) and updates every cell except liquid moving the same
+/// way; the second goes back the other way and updates only those. Moving
+/// liquid is therefore always updated front first, so a stream moving several
+/// cells per tick does not run into its own tail.
+pub fn update_chunk(
+    nb: &Neighborhood<'_>,
+    rect: LocalRect,
+    ctx: &RuleCtx<'_>,
+    out: &mut JobOut,
+    sweep: Sweep,
+) {
     if rect.is_empty() {
         return;
     }
     let origin = nb.pos().origin();
     let forward = ctx.tick & 1 == 0;
+    // Liquid moving in the first sweep's direction is left for the second.
+    let late = if forward { 1 } else { -1 };
+    let (x0, x1) = (i32::from(rect.x0), i32::from(rect.x1));
     for ly in (i32::from(rect.y0)..=i32::from(rect.y1)).rev() {
+        let mut skipped = 0u64;
+        let mut first = |lx: i32| {
+            let c = nb.get(lx, ly);
+            let air = liquid::in_air(nb, ctx, lx, ly, c);
+            if air != (sweep == Sweep::Fall) {
+                out.falling |= air;
+                return;
+            }
+            if air && ly == 0 {
+                out.fall_up |= 1 << lx;
+            }
+            if air && c.parity() == ctx.parity() && !liquid::is_airborne(c) {
+                fall_late(nb, ctx, out, origin, lx, ly, c);
+            } else if liquid::mover_dir(ctx, c) == late {
+                skipped |= 1 << (lx - x0);
+            } else {
+                update_cell(nb, ctx, out, origin, lx, ly, c);
+            }
+        };
         if forward {
-            for lx in i32::from(rect.x0)..=i32::from(rect.x1) {
-                update_cell(nb, ctx, out, origin, lx, ly);
-            }
+            (x0..=x1).for_each(&mut first);
         } else {
-            for lx in (i32::from(rect.x0)..=i32::from(rect.x1)).rev() {
-                update_cell(nb, ctx, out, origin, lx, ly);
+            (x0..=x1).rev().for_each(&mut first);
+        }
+        if skipped == 0 {
+            continue;
+        }
+        // The second sweep revisits only the cells the first one skipped. One
+        // that has already moved this tick marked itself and gets no keep.
+        let mut second = |lx: i32| {
+            if skipped & (1 << (lx - x0)) != 0 {
+                let c = nb.get(lx, ly);
+                if c.parity() != ctx.parity() {
+                    update_cell(nb, ctx, out, origin, lx, ly, c);
+                }
             }
+        };
+        if forward {
+            (x0..=x1).rev().for_each(&mut second);
+        } else {
+            (x0..=x1).for_each(&mut second);
+        }
+    }
+}
+
+/// Moves liquid that rested when the main sweep updated it and is in the air
+/// now, because the liquid under it started falling in the fall sweep. Its
+/// heat and reactions already ran this tick; it only moves, so a falling body
+/// starts to fall as one instead of one cell per tick from the bottom up.
+fn fall_late(
+    nb: &Neighborhood<'_>,
+    ctx: &RuleCtx<'_>,
+    out: &mut JobOut,
+    origin: CellPos,
+    lx: i32,
+    ly: i32,
+    c: Cell,
+) {
+    let mut cell = c;
+    if let Outcome::Stay { keep } =
+        liquid::update(nb, ctx, out, lx, ly, origin.x + lx, origin.y + ly, c, &mut cell)
+    {
+        nb.set(lx, ly, cell);
+        if keep {
+            nb.keep(lx, ly);
         }
     }
 }
@@ -208,8 +368,8 @@ fn update_cell(
     origin: CellPos,
     lx: i32,
     ly: i32,
+    c: Cell,
 ) {
-    let c = nb.get(lx, ly);
     out.visited += 1;
     let (wx, wy) = (origin.x + lx, origin.y + ly);
     if c.is_air() {
@@ -226,6 +386,10 @@ fn update_cell(
         // Either the cell moved here earlier this tick, or it has slept since a
         // tick of the same parity. Look again next tick in case it is the latter.
         nb.keep(lx, ly);
+        return;
+    }
+    if out.may_wait && liquid::waits(nb, ctx, lx, ly, c, out.waited) {
+        out.waited = true;
         return;
     }
     let f = ctx.f(c);
@@ -388,18 +552,13 @@ fn update_cell(
     if !cell.has(Cell::FLAG_IN_BODY) {
         let moved = match f.state {
             State::Powder => move_powder(nb, ctx, lx, ly, wx, wy, &mut cell, f, r, &mut changed),
-            State::Liquid => {
-                match move_liquid_inner(nb, ctx, lx, ly, &mut cell, f, r, &mut changed) {
-                    LiquidMove::None => false,
-                    LiquidMove::Side | LiquidMove::Hover => true,
-                    LiquidMove::Down => {
-                        // A falling cell can open a drop for surface cells up to
-                        // SURFACE_SCAN away; wake them so they look again.
-                        nb.mark_band(lx - SURFACE_SCAN, lx + SURFACE_SCAN, ly);
-                        true
-                    }
+            State::Liquid => match liquid::update(nb, ctx, out, lx, ly, wx, wy, c, &mut cell) {
+                Outcome::Done => true,
+                Outcome::Stay { keep } => {
+                    awake |= keep;
+                    false
                 }
-            }
+            },
             State::Gas => move_gas(nb, ctx, lx, ly, wx, wy, cell, f),
             State::Fire => move_fire(nb, ctx, lx, ly, wx, wy, cell),
             State::Static | State::Empty => false,
@@ -453,7 +612,11 @@ fn latent_done(ctx: &RuleCtx<'_>, wx: i32, wy: i32, t: Transition, temp: u8) -> 
 /// space, or on top of a different fluid or powder crumbles into its solid's
 /// debris instead of hanging in the air as a fixed solid: falling lava lands as
 /// rubble, and molten metal poured into water sinks as scrap. A crust on its own
-/// melt (basalt on lava, metal on molten metal, ice on water) stays solid.
+/// melt (basalt on lava, metal on molten metal, ice on water) stays solid if
+/// the melt under it stands on something solid or is [`CRUST_DEPTH`] cells
+/// deep: on a few cells of melt that are falling, or that lie on powder or a
+/// different fluid, the melt freezes to debris or runs off in turn and would
+/// leave the crust hanging in the air.
 fn freeze_into(
     nb: &Neighborhood<'_>,
     ctx: &RuleCtx<'_>,
@@ -467,21 +630,44 @@ fn freeze_into(
         return target;
     }
     let below = nb.get(lx, ly + 1);
-    let unsupported = if cell.value > 0 || below.is_air() {
+    let falling = f.flags & F_LIFETIME == 0 && liquid::falling(cell);
+    let unsupported = if falling || below.is_air() {
         true
     } else if below.has(Cell::FLAG_IN_BODY) {
         false
     } else {
         match ctx.f(below).state {
             State::Gas | State::Fire | State::Empty => true,
-            // Its own melt holds a crust only while that melt is at rest: a drop
-            // freezing on top of another falling drop is not resting on anything.
-            State::Liquid | State::Powder => below.material() != cell.material() || below.value > 0,
+            // Its own melt holds a crust only while that melt rests on something
+            // solid or is deep: a drop freezing on top of another falling drop is
+            // not resting on anything.
+            State::Liquid | State::Powder => {
+                below.material() != cell.material() || !on_solid(nb, ctx, lx, ly, cell)
+            }
             State::Static => false,
         }
     };
     let debris = ctx.mats.get(target).debris;
     if unsupported && debris != MaterialId::AIR { debris } else { target }
+}
+
+/// Melt this deep under a freezing cell holds its crust up.
+const CRUST_DEPTH: i32 = 8;
+
+/// True if the melt of `cell` under `(lx, ly)` rests on something solid, or
+/// is [`CRUST_DEPTH`] cells deep: a pool a crust can float on.
+fn on_solid(nb: &Neighborhood<'_>, ctx: &RuleCtx<'_>, lx: i32, ly: i32, cell: Cell) -> bool {
+    for k in 1..=CRUST_DEPTH {
+        let c = nb.get(lx, ly + k);
+        if c.material() == cell.material() && !c.has(Cell::FLAG_IN_BODY) {
+            if liquid::is_airborne(c) {
+                return false;
+            }
+            continue;
+        }
+        return c.has(Cell::FLAG_IN_BODY) || ctx.f(c).state == State::Static;
+    }
+    true
 }
 
 /// Replaces a cell with a different material and records the side effects.
@@ -557,8 +743,9 @@ pub(crate) fn heat_split(
     (round(diff * k * cb, r_split), -round(diff * k * ca, r_split >> 16))
 }
 
-#[inline]
+#[inline(always)]
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
+#[expect(clippy::inline_always, reason = "runs for most visited cells; the call cost showed")]
 fn exchange_heat(
     nb: &Neighborhood<'_>,
     ctx: &RuleCtx<'_>,
@@ -619,19 +806,6 @@ fn can_enter(ctx: &RuleCtx<'_>, m: Fast, target: Cell, sinking: bool, r: u32) ->
     ok && (tm.state != State::Liquid || r & 1 == 0)
 }
 
-/// True if `t` is air or a free fluid lighter than `m`: space a liquid can flow into sideways.
-#[inline]
-fn lighter(ctx: &RuleCtx<'_>, m: Fast, t: Cell) -> bool {
-    if t.is_air() {
-        return true;
-    }
-    if t.has(Cell::FLAG_IN_BODY) {
-        return false;
-    }
-    let tm = ctx.f(t);
-    tm.state.is_fluid() && tm.density < m.density
-}
-
 /// Moves `cell` from `(lx, ly)` to `(tx, ty)`, putting the displaced cell back where it came from.
 #[inline]
 fn swap_to(
@@ -683,14 +857,18 @@ fn blocked_speed(ctx: &RuleCtx<'_>, v: u32, below: Cell) -> u8 {
         return 0;
     }
     let bf = ctx.f(below);
-    if bf.state.falls() && bf.flags & F_LIFETIME == 0 {
+    if bf.flags & F_LIFETIME != 0 {
+        0
+    } else if bf.state == State::Liquid {
+        v.min(liquid::decode(below).1 as u32) as u8
+    } else if bf.state == State::Powder {
         v.min(u32::from(below.value)) as u8
     } else {
         0
     }
 }
 
-/// Falls straight down with acceleration.
+/// Falls straight down with acceleration. Powders only: liquids move in [`liquid`].
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
 fn fall(
     nb: &Neighborhood<'_>,
@@ -821,107 +999,6 @@ fn move_powder(
         }
     }
     false
-}
-
-/// How a liquid cell moved.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum LiquidMove {
-    None,
-    Down,
-    Side,
-    Hover,
-}
-
-#[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
-fn move_liquid_inner(
-    nb: &Neighborhood<'_>,
-    ctx: &RuleCtx<'_>,
-    lx: i32,
-    ly: i32,
-    cell: &mut Cell,
-    m: Fast,
-    r: u32,
-    changed: &mut bool,
-) -> LiquidMove {
-    match fall(nb, ctx, lx, ly, cell, m, r, changed) {
-        FallResult::Moved => return LiquidMove::Down,
-        FallResult::Hover => return LiquidMove::Hover,
-        FallResult::Blocked => {}
-    }
-    let d = if r & (1 << 30) == 0 { 1 } else { -1 };
-    for dx in [d, -d] {
-        if can_enter(ctx, m, nb.get(lx + dx, ly + 1), true, r >> 2) {
-            swap_to(nb, ctx, lx, ly, lx + dx, ly + 1, *cell);
-            return LiquidMove::Down;
-        }
-    }
-    let above = nb.get(lx, ly - 1);
-    let pressured = !above.is_air() && ctx.f(above).state == State::Liquid;
-    let spread = i32::from(m.spread.max(1));
-    for dx in [d, -d] {
-        let mut best = None;
-        for k in 1..=spread {
-            let tx = lx + dx * k;
-            let t = nb.get(tx, ly);
-            if !lighter(ctx, m, t) {
-                break;
-            }
-            if can_enter(ctx, m, nb.get(tx, ly + 1), true, 0) {
-                best = Some(tx);
-                break;
-            }
-            if pressured {
-                best = Some(tx);
-            }
-        }
-        if let Some(tx) = best {
-            swap_to(nb, ctx, lx, ly, tx, ly, *cell);
-            return LiquidMove::Side;
-        }
-    }
-
-    // A cell resting on top of liquid with an open side is a bump on the surface.
-    // It walks along the surface until it drops off an edge. It cannot climb onto
-    // a higher step, so on a staircase the walk always ends one step lower, and
-    // the surface levels no matter how wide the steps are. On a level surface the
-    // walk ends with a small chance each tick and the cell sleeps.
-    let below = nb.get(lx, ly + 1);
-    if below.is_air() || ctx.f(below).state != State::Liquid {
-        return LiquidMove::None;
-    }
-    let left = lighter(ctx, m, nb.get(lx - 1, ly));
-    let right = lighter(ctx, m, nb.get(lx + 1, ly));
-    if !(left || right) || (r >> 26) == 0 {
-        return LiquidMove::None;
-    }
-    // Head for a drop if one is in sight, otherwise toward an open side.
-    let mut target_dir = match (left, right) {
-        (true, true) => d,
-        (true, false) => -1,
-        _ => 1,
-    };
-    'scan: for dx in [d, -d] {
-        let mut k = 1;
-        while k <= SURFACE_SCAN && lighter(ctx, m, nb.get(lx + dx * k, ly)) {
-            if lighter(ctx, m, nb.get(lx + dx * k, ly + 1)) {
-                target_dir = dx;
-                break 'scan;
-            }
-            k += 1;
-        }
-    }
-    let mut tx = lx;
-    while tx - lx != target_dir * spread && lighter(ctx, m, nb.get(tx + target_dir, ly)) {
-        tx += target_dir;
-        if lighter(ctx, m, nb.get(tx, ly + 1)) {
-            break;
-        }
-    }
-    if tx == lx {
-        return LiquidMove::None;
-    }
-    swap_to(nb, ctx, lx, ly, tx, ly, *cell);
-    LiquidMove::Side
 }
 
 #[expect(clippy::too_many_arguments, reason = "hot path; a struct would add copies")]
