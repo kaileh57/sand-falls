@@ -96,7 +96,27 @@ pub struct Chunk {
     next: AtomicRect,
     /// Set when a static cell changed, so physics can rebuild terrain colliders.
     solid_changed: AtomicBool,
+    /// Per column: the run of head liquid (see [`Neighborhood::head`]) going up
+    /// from the bottom row. Derived from the cells; refreshed before each tick.
+    bottom_run: [u8; CHUNK_SIZE as usize],
+    /// Per column: the run of head liquid going down from the top row.
+    /// Derived from the cells; refreshed before each tick.
+    top_run: [u8; CHUNK_SIZE as usize],
+    /// Per column: head liquid continuing above the top row, in the chunks
+    /// above, saturating at [`HEAD_MAX`]. Derived; refreshed before each tick.
+    head_in: [u16; CHUNK_SIZE as usize],
+    /// Per column: head liquid continuing below the bottom row, in the chunks
+    /// below, saturating at [`HEAD_MAX`]. Derived; refreshed before each tick.
+    foot_in: [u16; CHUNK_SIZE as usize],
+    /// Set when cells were replaced without going through the dirty marks, so
+    /// the column tables must be rebuilt before the next tick.
+    tables_stale: bool,
 }
+
+/// Largest head the column tables report.
+pub const HEAD_MAX: u32 = 4095;
+/// Cells [`Neighborhood::head`] reads one by one before it trusts the tables.
+pub const HEAD_EXACT: u32 = 8;
 
 impl Chunk {
     /// Creates a chunk filled with one cell value. The whole chunk starts dirty.
@@ -108,7 +128,63 @@ impl Chunk {
             dirty: LocalRect::EMPTY,
             next: AtomicRect::new(LocalRect::FULL),
             solid_changed: AtomicBool::new(true),
+            bottom_run: [0; CHUNK_SIZE as usize],
+            top_run: [0; CHUNK_SIZE as usize],
+            head_in: [0; CHUNK_SIZE as usize],
+            foot_in: [0; CHUNK_SIZE as usize],
+            tables_stale: true,
         }
+    }
+
+    /// Per column: the run of head liquid going up from the bottom row.
+    pub const fn bottom_run(&self) -> &[u8; CHUNK_SIZE as usize] {
+        &self.bottom_run
+    }
+
+    /// Per column: head liquid above the chunk's top row, from the chunks above.
+    pub const fn head_in(&self) -> &[u16; CHUNK_SIZE as usize] {
+        &self.head_in
+    }
+
+    /// Per column: the run of head liquid going down from the top row.
+    pub const fn top_run(&self) -> &[u8; CHUNK_SIZE as usize] {
+        &self.top_run
+    }
+
+    /// Per column: head liquid below the chunk's bottom row, from the chunks below.
+    pub const fn foot_in(&self) -> &[u16; CHUNK_SIZE as usize] {
+        &self.foot_in
+    }
+
+    /// Sets both run tables. Returns true if either changed, which changes the
+    /// head the chunks below see or the depth the chunks above see.
+    pub(crate) const fn set_runs(
+        &mut self,
+        bottom: [u8; CHUNK_SIZE as usize],
+        top: [u8; CHUNK_SIZE as usize],
+    ) -> bool {
+        let mut changed = false;
+        let mut i = 0;
+        while i < bottom.len() {
+            changed |= self.bottom_run[i] != bottom[i] || self.top_run[i] != top[i];
+            i += 1;
+        }
+        self.bottom_run = bottom;
+        self.top_run = top;
+        changed
+    }
+
+    pub(crate) const fn set_head_in(&mut self, h: [u16; CHUNK_SIZE as usize]) {
+        self.head_in = h;
+    }
+
+    pub(crate) const fn set_foot_in(&mut self, f: [u16; CHUNK_SIZE as usize]) {
+        self.foot_in = f;
+    }
+
+    /// Returns and clears the flag that says the column tables need a rebuild.
+    pub(crate) const fn take_tables_stale(&mut self) -> bool {
+        std::mem::replace(&mut self.tables_stale, false)
     }
 
     /// The chunk's position.
@@ -128,6 +204,14 @@ impl Chunk {
     #[inline]
     pub fn set_raw(&mut self, i: usize, c: Cell) {
         *self.cells[i].0.get_mut() = c;
+        self.tables_stale = true;
+    }
+
+    /// Writes the cell at a local index, keeping the column tables. Only for
+    /// changes that cannot affect them, such as a liquid cell's settled mark.
+    #[inline]
+    pub(crate) fn set_quiet(&mut self, i: usize, c: Cell) {
+        *self.cells[i].0.get_mut() = c;
     }
 
     /// Copies all cells out, row-major.
@@ -140,6 +224,7 @@ impl Chunk {
         for (dst, src) in self.cells.iter_mut().zip(cells) {
             *dst.0.get_mut() = *src;
         }
+        self.tables_stale = true;
     }
 
     /// Cells to visit on the current tick.
@@ -300,6 +385,50 @@ impl<'a> Neighborhood<'a> {
         n
     }
 
+    /// Counts the head above `(lx, ly)`: the contiguous cells directly above it
+    /// for which `is_head` holds, up to `cap`.
+    ///
+    /// The scan walks the column of the chunk that holds the cell with a stride
+    /// of one row. After [`HEAD_EXACT`] cells it trusts the chunk's
+    /// [`Chunk::top_run`] table: when the rest of the column up to the chunk's
+    /// top row was head at the start of the tick, it jumps there. If the run
+    /// reaches the top row, it continues with the chunk's [`Chunk::head_in`]
+    /// table, which the world builds from the chunks above before the passes.
+    /// A cell in the chunk row above the center chunk is scanned only up to the
+    /// reach limit and gets no tables.
+    #[inline]
+    pub fn head(&self, lx: i32, ly: i32, cap: u32, is_head: impl Fn(Cell) -> bool) -> u32 {
+        let Some((c, i)) = self.locate(lx, ly, REACH) else { return 0 };
+        let row = ly & (CHUNK_SIZE - 1);
+        let col = (lx & (CHUNK_SIZE - 1)) as usize;
+        // The highest row of the holding chunk this job may read. Rows above the
+        // reach limit hold cells another job in the same pass may be writing.
+        let top = (-REACH - (ly - row)).max(0);
+        let mut n = 0;
+        let mut y = row;
+        let mut idx = i;
+        while y > top && n < cap {
+            if top == 0 && n == HEAD_EXACT && y <= i32::from(c.top_run[col]) {
+                n += y as u32;
+                y = 0;
+                break;
+            }
+            idx -= CHUNK_SIZE as usize;
+            y -= 1;
+            // SAFETY: rows `top..row` of the holding chunk are within REACH of
+            // this job's chunk (`top` is clamped to the reach limit and `locate`
+            // checked the cell itself), so no other job in the pass reaches them.
+            if !is_head(unsafe { *c.cells[idx].0.get() }) {
+                return n;
+            }
+            n += 1;
+        }
+        if n < cap && y == 0 {
+            n += u32::from(c.head_in[col]);
+        }
+        n.min(cap)
+    }
+
     /// Writes a cell. Writes to missing chunks or out-of-reach cells are dropped.
     #[inline]
     pub fn set(&self, lx: i32, ly: i32, cell: Cell) {
@@ -351,9 +480,17 @@ impl<'a> Neighborhood<'a> {
     }
 
     /// Marks only the cell itself for a visit on the next tick.
-    #[inline]
+    #[inline(always)]
+    #[expect(clippy::inline_always, reason = "called for most visited cells; the call cost showed")]
     pub fn keep(&self, lx: i32, ly: i32) {
-        self.mark_rect(lx, ly, lx, ly);
+        if (lx as u32) < CHUNK_SIZE as u32 && (ly as u32) < CHUNK_SIZE as u32 {
+            let m = &self.marks[4];
+            let mut r = m.get();
+            r.include(lx as u8, ly as u8);
+            m.set(r);
+        } else {
+            self.mark_rect(lx, ly, lx, ly);
+        }
     }
 
     /// Records that a static cell at this position changed.
