@@ -1,0 +1,30 @@
+// A surge over a cliff deep under the surface: at tick 1 a gate opens on a
+// reservoir 90 rows higher, and the surge runs over a 150-row step that
+// stands 100 rows under the still surface. The flow speeds up over the cliff
+// and the surface dips a few rows there, smoothly; it never stands as a
+// step or a spike above the cliff's edge.
+[scene]
+name = cliff surge
+size = 1024 448
+seed = 9
+ticks = 300
+
+[build]
+fill 0 400 1024 448 bedrock
+fill 0 0 4 400 bedrock
+fill 1020 0 1024 400 bedrock
+fill 4 150 1020 400 water
+fill 4 60 300 150 water
+fill 500 250 1020 400 stone
+fill 300 40 306 400 concrete
+
+[events]
+at 1: fill 300 40 306 400 air
+
+[expect]
+// Nothing stands above row 90 over the cliff's edge while the surge runs
+// over it (the surface there is near row 100).
+after 100: count water in 494 0 506 90 == 0
+after 150: count water in 494 0 506 90 == 0
+after 200: count water in 494 0 506 90 == 0
+after 250: count water in 494 0 506 90 == 0

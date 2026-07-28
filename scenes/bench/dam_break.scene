@@ -16,7 +16,7 @@ fill 2048 0 2056 2000 concrete
 fill 8 46 2048 2000 water
 
 [events]
-at 1: dig 2052 1000 1100
+at 1: fill 2048 46 2056 2000 air
 
 [camera]
 view 1024 512
