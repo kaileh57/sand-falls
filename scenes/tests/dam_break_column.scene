@@ -1,0 +1,27 @@
+// A released water column reaches a wall 246 cells away in about the time a
+// real dam break takes, then comes to rest.
+//
+// Theory: a column of height h = 100 collapsing onto a dry floor sends out a
+// front at 2 sqrt(g h) (Ritter). With g = 7/256 cells per tick squared that
+// is 3.31 cells per tick, so the front covers the 246 cells from the column's
+// face (x 54) to the wall (x 300) in 74 ticks. Allowing half again for the
+// start of the collapse, water must touch the wall by tick 111.
+[scene]
+name = dam break column
+size = 320 192
+seed = 3
+ticks = 3000
+
+[build]
+fill 0 150 320 192 bedrock
+fill 0 0 4 150 bedrock
+fill 300 0 320 150 bedrock
+fill 4 50 54 150 water
+
+[expect]
+after 111: count water in 294 0 300 150 > 0
+// It then levels and sleeps: 5,000 cells over 296 columns are 16 or 17 deep.
+after 3000: asleep
+after 3000: count water in 0 0 320 192 == 5000
+after 3000: count water in 0 0 320 133 == 0
+after 3000: count water in 4 134 300 150 == 4736

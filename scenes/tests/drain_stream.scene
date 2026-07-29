@@ -1,0 +1,71 @@
+// A pool on a ledge drains through a hole a cell wide in its floor, and
+// a tap under a stone beside it lets out a cell every three ticks. Both fall
+// about 180 rows as streams a cell wide, drawn as lines: `drawn` counts the
+// cells drawn as water, with the stream joined up, in 40-row bands of each
+// fall. The rejected build let the drain out as rods about 30 cells long with
+// gaps of 60 between them, and the tap's drips ran into one another and fell
+// as clumps with gaps of 40 to 60 rows.
+[scene]
+name = drain stream
+size = 320 300
+seed = 9
+ticks = 1200
+
+[build]
+fill 0 280 320 300 bedrock
+fill 0 0 4 280 bedrock
+fill 316 0 320 280 bedrock
+fill 100 40 104 100 bedrock
+fill 180 40 184 100 bedrock
+fill 100 100 184 104 bedrock
+fill 141 100 142 104 air
+fill 104 50 180 100 water
+fill 230 30 240 32 stone
+
+[events]
+every 3 from 1 to 1200: fill 236 33 237 34 water
+
+[camera]
+view 320 300
+scale 1
+sky day
+ambient 0.6 0.6 0.6
+at 0: 160 150 zoom=1
+
+[expect]
+after 300: drawn water in 136 106 147 146 >= 36
+after 300: drawn water in 136 146 147 186 >= 36
+after 300: drawn water in 136 186 147 226 >= 36
+after 300: drawn water in 136 226 147 266 >= 36
+after 300: drawn water in 231 40 242 80 >= 36
+after 300: drawn water in 231 80 242 120 >= 36
+after 300: drawn water in 231 120 242 160 >= 36
+after 300: drawn water in 231 160 242 200 >= 36
+after 300: drawn water in 231 200 242 240 >= 36
+after 600: drawn water in 136 106 147 146 >= 36
+after 600: drawn water in 136 146 147 186 >= 36
+after 600: drawn water in 136 186 147 226 >= 36
+after 600: drawn water in 136 226 147 266 >= 36
+after 600: drawn water in 231 40 242 80 >= 36
+after 600: drawn water in 231 80 242 120 >= 36
+after 600: drawn water in 231 120 242 160 >= 36
+after 600: drawn water in 231 160 242 200 >= 36
+after 600: drawn water in 231 200 242 240 >= 36
+after 900: drawn water in 136 106 147 146 >= 36
+after 900: drawn water in 136 146 147 186 >= 36
+after 900: drawn water in 136 186 147 226 >= 36
+after 900: drawn water in 136 226 147 266 >= 36
+after 900: drawn water in 231 40 242 80 >= 36
+after 900: drawn water in 231 80 242 120 >= 36
+after 900: drawn water in 231 120 242 160 >= 36
+after 900: drawn water in 231 160 242 200 >= 36
+after 900: drawn water in 231 200 242 240 >= 36
+after 1200: drawn water in 136 106 147 146 >= 36
+after 1200: drawn water in 136 146 147 186 >= 36
+after 1200: drawn water in 136 186 147 226 >= 36
+after 1200: drawn water in 136 226 147 266 >= 36
+after 1200: drawn water in 231 40 242 80 >= 36
+after 1200: drawn water in 231 80 242 120 >= 36
+after 1200: drawn water in 231 120 242 160 >= 36
+after 1200: drawn water in 231 160 242 200 >= 36
+after 1200: drawn water in 231 200 242 240 >= 36
