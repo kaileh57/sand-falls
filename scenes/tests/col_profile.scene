@@ -1,0 +1,28 @@
+// A column 50 wide and 100 tall collapses against a wall. Its surface slopes
+// smoothly down from the wall to the front, as the shallow water equations
+// give it (depths of 69, 65, 53 and 42 rows at x 6, 22, 38 and 54 at tick 40,
+// and 42, 42, 41 and 40 at tick 60), instead of keeping a plateau by the wall
+// that ends in a cliff.
+[scene]
+name = col profile
+size = 640 256
+seed = 5
+ticks = 60
+
+[build]
+fill 0 200 640 256 bedrock
+fill 0 0 4 200 bedrock
+fill 636 0 640 200 bedrock
+fill 4 100 54 200 water
+
+[expect]
+// Four columns at a time: no more than 76 rows deep by the wall at tick 40,
+// and within 36 to 50 rows everywhere near the wall at tick 60.
+after 40: count water in 4 0 8 200 <= 304
+after 40: count water in 20 0 24 200 <= 292
+after 60: count water in 4 0 8 200 >= 144
+after 60: count water in 4 0 8 200 <= 200
+after 60: count water in 20 0 24 200 >= 144
+after 60: count water in 20 0 24 200 <= 200
+after 60: count water in 36 0 40 200 >= 144
+after 60: count water in 36 0 40 200 <= 200

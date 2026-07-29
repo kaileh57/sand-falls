@@ -1,0 +1,30 @@
+// A dam-break column, 50 wide and 100 tall, against the left wall of a long
+// floor. It must collapse like a fluid, not drain a few cells per tick: a
+// real column of height h falls to half its height at the wall in about
+// 2 sqrt(h / g), 120 ticks here, and its front runs at up to 2 sqrt(g h),
+// 3.3 cells per tick. Then it spreads out level and sleeps.
+[scene]
+name = col wall
+size = 1024 192
+seed = 3
+ticks = 4000
+
+[build]
+fill 0 150 1024 192 bedrock
+fill 0 0 4 150 bedrock
+fill 1020 0 1024 150 bedrock
+fill 4 50 54 150 water
+
+[expect]
+// Height at the wall: at most 75 by tick 70, 50 by tick 125, 25 by tick 220.
+after 70: count water in 4 0 8 75 == 0
+after 125: count water in 4 0 8 100 == 0
+after 220: count water in 4 0 8 125 == 0
+// Water at least two rows deep beyond x 250 by tick 100.
+after 100: count water in 250 148 1020 149 >= 5
+// At rest by tick 4000 with every cell kept and the surface level within a
+// row: 5,000 cells on a 1,016-wide floor are 4 or 5 deep everywhere.
+after 4000: asleep
+after 4000: count water in 0 0 1024 192 == 5000
+after 4000: count water in 0 0 1024 145 == 0
+after 4000: count water in 4 146 1020 150 == 4064

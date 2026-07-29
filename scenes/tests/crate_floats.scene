@@ -1,4 +1,12 @@
-// A wooden crate floats in water; a stone block sinks.
+// A wooden crate floats in water; a stone block sinks. The crate bobs a few
+// rows for as long as the scene runs, and the water it pushes aside stays
+// near the surface. The flow phase sent liquid into a column under the crate
+// that had one free cell, and stacked what found no room on the first column
+// with room beside it: a tower of water up to 11 cells high stood beside the
+// crate every few dozen ticks (in the rejected build, 6 cells more than 8
+// rows above the surface at tick 100 and 5 at tick 600). Water the crate
+// pushes aside onto the surface beside it, as it bobs with its deck awash,
+// can leave a cell or two of spray that high for a tick or so.
 [scene]
 name = crate floats
 size = 320 256
@@ -13,5 +21,15 @@ body 60 120 80 130 wood
 body 200 120 212 130 stone
 
 [expect]
-after 400: count water in 0 0 320 140 == 0
+after 400: count water in 0 0 320 145 == 0
 after 400: bodies >= 1
+after 100: count water in 0 0 320 142 <= 2
+after 150: count water in 0 0 320 142 <= 2
+after 200: count water in 0 0 320 142 <= 2
+after 250: count water in 0 0 320 142 <= 2
+after 300: count water in 0 0 320 142 <= 2
+after 350: count water in 0 0 320 142 <= 2
+after 450: count water in 0 0 320 142 <= 2
+after 500: count water in 0 0 320 142 <= 2
+after 550: count water in 0 0 320 142 <= 2
+after 600: count water in 0 0 320 142 <= 2
