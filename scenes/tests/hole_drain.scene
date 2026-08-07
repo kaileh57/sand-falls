@@ -1,0 +1,24 @@
+// A tank 100 rows deep drains through a 4-cell hole at its floor in a 4-cell
+// wall. The hole is part of the flow: the water in it is pressed through as
+// one slug by the head of the tank, so it leaves at about Torricelli's rate,
+// sqrt(2 g h) times the hole times a discharge coefficient of 0.6: 5.6 cells
+// a tick at the start, 5.4 when the head has dropped to 94 rows.
+[scene]
+name = hole drain
+size = 512 192
+seed = 6
+ticks = 400
+
+[build]
+fill 0 150 512 192 bedrock
+fill 0 30 4 150 bedrock
+fill 508 30 512 150 bedrock
+fill 100 30 104 146 bedrock
+fill 4 50 100 150 water
+
+[expect]
+// At least 4.5 cells a tick between ticks 100 and 200, with 9,600 cells to
+// start with.
+after 100: count water in 0 0 100 150 <= 9200
+after 200: count water in 0 0 100 150 <= 8750
+after 400: count water in 0 0 512 192 == 9600

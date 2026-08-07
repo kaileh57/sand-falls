@@ -1,0 +1,58 @@
+// A tank drains through a 3-row hole in a wall 6 cells thick, and the jet
+// falls about 120 rows to the floor. The jet is one stream however thick the
+// wall: `drawn` counts the cells drawn as water, with the stream joined up,
+// in a corridor around the jet's path in each 20-row band of its steep part,
+// and in strips 14 cells wide on either side. The rejected build broke the
+// steep part into two or three parallel trails of dashes about 10 cells
+// apart: up to 29 cells in a strip, and as few as 1 in a corridor.
+[scene]
+name = jet long
+size = 480 300
+seed = 7
+ticks = 900
+
+[build]
+fill 0 280 480 300 bedrock
+fill 0 20 4 280 bedrock
+fill 476 20 480 300 bedrock
+fill 100 40 106 240 bedrock
+fill 4 240 106 280 bedrock
+fill 100 160 106 163 air
+fill 4 60 100 240 water
+
+[camera]
+view 480 300
+scale 1
+sky day
+ambient 0.6 0.6 0.6
+at 0: 240 150 zoom=1
+
+[expect]
+after 300: drawn water in 176 190 212 210 >= 54
+after 300: drawn water in 162 190 176 210 <= 3
+after 300: drawn water in 212 190 226 210 <= 3
+after 300: drawn water in 205 210 230 230 >= 30
+after 300: drawn water in 191 210 205 230 <= 3
+after 300: drawn water in 230 210 244 230 <= 3
+after 300: drawn water in 224 230 246 250 >= 28
+after 300: drawn water in 210 230 224 250 <= 3
+after 300: drawn water in 246 230 260 250 <= 3
+after 600: drawn water in 176 190 212 210 >= 54
+after 600: drawn water in 162 190 176 210 <= 3
+after 600: drawn water in 212 190 226 210 <= 3
+after 600: drawn water in 205 210 230 230 >= 30
+after 600: drawn water in 191 210 205 230 <= 3
+after 600: drawn water in 230 210 244 230 <= 3
+after 600: drawn water in 224 230 246 250 >= 28
+after 600: drawn water in 210 230 224 250 <= 3
+after 600: drawn water in 246 230 260 250 <= 3
+after 900: drawn water in 176 190 212 210 >= 54
+after 900: drawn water in 162 190 176 210 <= 3
+after 900: drawn water in 212 190 226 210 <= 3
+after 900: drawn water in 205 210 230 230 >= 30
+after 900: drawn water in 191 210 205 230 <= 3
+after 900: drawn water in 230 210 244 230 <= 3
+after 900: drawn water in 224 230 246 250 >= 28
+after 900: drawn water in 210 230 224 250 <= 3
+after 900: drawn water in 246 230 260 250 <= 3
+after 900: count water in 0 0 480 300 == 17280

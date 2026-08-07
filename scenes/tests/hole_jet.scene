@@ -1,0 +1,20 @@
+// A tank 100 deep with a 4-cell hole at the floor in its right wall. Water
+// under that much head leaves a hole at sqrt(2 g h), 2.3 cells per tick, so
+// it jets well out across the floor instead of trickling.
+[scene]
+name = hole jet
+size = 512 192
+seed = 6
+ticks = 600
+
+[build]
+fill 0 150 512 192 bedrock
+fill 0 30 4 150 bedrock
+fill 508 30 512 150 bedrock
+fill 100 30 104 146 bedrock
+fill 4 50 100 150 water
+
+[expect]
+// More than 40 cells past the hole by tick 60.
+after 60: count water in 145 0 512 150 > 0
+after 600: count water in 0 0 512 192 == 9600
