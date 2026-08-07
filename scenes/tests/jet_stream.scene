@@ -1,0 +1,57 @@
+// A tank drains through a 4-cell hole halfway up its wall, and the jet arcs
+// out over a ledge. Where it turns steep it is one stream, drawn whole.
+// `drawn` counts the cells drawn as water, with the stream joined up. Each
+// 20-row band of the steep part is checked in a corridor around the jet's
+// path and in a strip 12 cells wide to its right: the stream fills the
+// corridor and nothing runs beside it. The rejected build drew a second
+// trail beside the foot (2 to 20 cells in the strips, as few as 21 in the
+// corridors, with rows of the stream left empty); as two or three parallel
+// dotted trails the steep part was 70 and 76 cells in all.
+[scene]
+name = jet stream
+size = 640 260
+seed = 11
+ticks = 500
+
+[build]
+fill 0 200 640 260 bedrock
+fill 0 40 4 200 bedrock
+fill 636 40 640 260 bedrock
+fill 168 200 636 250 air
+fill 124 60 128 200 bedrock
+fill 124 150 128 154 air
+fill 4 100 124 200 water
+
+[camera]
+view 640 260
+scale 1
+sky day
+ambient 0.6 0.6 0.6
+at 0: 320 130 zoom=1
+
+[expect]
+after 200: drawn water in 180 180 200 200 >= 44
+after 200: drawn water in 200 180 212 200 <= 3
+after 200: drawn water in 197 200 216 220 >= 44
+after 200: drawn water in 216 200 228 220 <= 3
+after 200: drawn water in 213 220 230 240 >= 32
+after 200: drawn water in 230 220 242 240 <= 3
+after 300: drawn water in 180 180 200 200 >= 44
+after 300: drawn water in 200 180 212 200 <= 3
+after 300: drawn water in 197 200 216 220 >= 44
+after 300: drawn water in 216 200 228 220 <= 3
+after 300: drawn water in 213 220 230 240 >= 32
+after 300: drawn water in 230 220 242 240 <= 3
+after 400: drawn water in 180 180 200 200 >= 44
+after 400: drawn water in 200 180 212 200 <= 3
+after 400: drawn water in 197 200 216 220 >= 44
+after 400: drawn water in 216 200 228 220 <= 3
+after 400: drawn water in 213 220 230 240 >= 32
+after 400: drawn water in 230 220 242 240 <= 3
+after 500: drawn water in 180 180 200 200 >= 44
+after 500: drawn water in 200 180 212 200 <= 3
+after 500: drawn water in 197 200 216 220 >= 44
+after 500: drawn water in 216 200 228 220 <= 3
+after 500: drawn water in 213 220 230 240 >= 32
+after 500: drawn water in 230 220 242 240 <= 3
+after 500: count water in 0 0 640 260 == 12000

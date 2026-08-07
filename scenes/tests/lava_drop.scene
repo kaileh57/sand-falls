@@ -11,5 +11,8 @@ circle 96 30 10 lava
 temp 80 14 112 46 760
 
 [expect]
-after 600: count basalt in 0 0 192 236 == 0
-after 600: count lava in 0 0 192 236 == 0
+// The heap is about 12 cells tall; a pocket of lava inside it may freeze to
+// basalt there, but none freezes above it. Thick lava lands as a compact
+// heap, whose last liquid cells freeze by tick 900.
+after 900: count basalt in 0 0 192 224 == 0
+after 900: count lava in 0 0 192 236 == 0
