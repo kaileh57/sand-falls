@@ -1,0 +1,22 @@
+// A wide reservoir, 200 wide and 100 tall, released onto a floor 1,528
+// cells wide. Long after the surge, the surface still has to level out:
+// the settle pass carries row ends down a gentle slope that pressure alone
+// barely moves. 20,000 cells over 1,528 columns are 13.1 deep.
+[scene]
+name = res wide
+size = 1536 192
+seed = 3
+ticks = 10000
+
+[build]
+fill 0 150 1536 192 bedrock
+fill 0 0 4 150 bedrock
+fill 1532 0 1536 150 bedrock
+fill 4 50 204 150 water
+
+[expect]
+// Every column within two rows of the mean surface (y 136.9) by tick 8000.
+after 8000: count water in 0 0 1536 135 == 0
+after 8000: count water in 4 139 1532 140 == 1528
+after 10000: asleep
+after 10000: count water in 0 0 1536 192 == 20000

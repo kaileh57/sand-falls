@@ -1,0 +1,260 @@
+// A surge onto a 1:2 upslope: a reservoir 60 wide and 80 tall, 240 cells of
+// flat floor, then the slope. The surge reaches the slope at speed, runs up
+// well past the final water level, slides back and settles into a lake.
+[scene]
+name = slope run
+size = 768 192
+seed = 3
+ticks = 4000
+
+[build]
+fill 0 150 768 192 bedrock
+fill 0 0 4 150 bedrock
+fill 764 0 768 150 bedrock
+fill 304 149 306 150 bedrock
+fill 306 148 308 150 bedrock
+fill 308 147 310 150 bedrock
+fill 310 146 312 150 bedrock
+fill 312 145 314 150 bedrock
+fill 314 144 316 150 bedrock
+fill 316 143 318 150 bedrock
+fill 318 142 320 150 bedrock
+fill 320 141 322 150 bedrock
+fill 322 140 324 150 bedrock
+fill 324 139 326 150 bedrock
+fill 326 138 328 150 bedrock
+fill 328 137 330 150 bedrock
+fill 330 136 332 150 bedrock
+fill 332 135 334 150 bedrock
+fill 334 134 336 150 bedrock
+fill 336 133 338 150 bedrock
+fill 338 132 340 150 bedrock
+fill 340 131 342 150 bedrock
+fill 342 130 344 150 bedrock
+fill 344 129 346 150 bedrock
+fill 346 128 348 150 bedrock
+fill 348 127 350 150 bedrock
+fill 350 126 352 150 bedrock
+fill 352 125 354 150 bedrock
+fill 354 124 356 150 bedrock
+fill 356 123 358 150 bedrock
+fill 358 122 360 150 bedrock
+fill 360 121 362 150 bedrock
+fill 362 120 364 150 bedrock
+fill 364 119 366 150 bedrock
+fill 366 118 368 150 bedrock
+fill 368 117 370 150 bedrock
+fill 370 116 372 150 bedrock
+fill 372 115 374 150 bedrock
+fill 374 114 376 150 bedrock
+fill 376 113 378 150 bedrock
+fill 378 112 380 150 bedrock
+fill 380 111 382 150 bedrock
+fill 382 110 384 150 bedrock
+fill 384 109 386 150 bedrock
+fill 386 108 388 150 bedrock
+fill 388 107 390 150 bedrock
+fill 390 106 392 150 bedrock
+fill 392 105 394 150 bedrock
+fill 394 104 396 150 bedrock
+fill 396 103 398 150 bedrock
+fill 398 102 400 150 bedrock
+fill 400 101 402 150 bedrock
+fill 402 100 404 150 bedrock
+fill 404 99 406 150 bedrock
+fill 406 98 408 150 bedrock
+fill 408 97 410 150 bedrock
+fill 410 96 412 150 bedrock
+fill 412 95 414 150 bedrock
+fill 414 94 416 150 bedrock
+fill 416 93 418 150 bedrock
+fill 418 92 420 150 bedrock
+fill 420 91 422 150 bedrock
+fill 422 90 424 150 bedrock
+fill 424 89 426 150 bedrock
+fill 426 88 428 150 bedrock
+fill 428 87 430 150 bedrock
+fill 430 86 432 150 bedrock
+fill 432 85 434 150 bedrock
+fill 434 84 436 150 bedrock
+fill 436 83 438 150 bedrock
+fill 438 82 440 150 bedrock
+fill 440 81 442 150 bedrock
+fill 442 80 444 150 bedrock
+fill 444 79 446 150 bedrock
+fill 446 78 448 150 bedrock
+fill 448 77 450 150 bedrock
+fill 450 76 452 150 bedrock
+fill 452 75 454 150 bedrock
+fill 454 74 456 150 bedrock
+fill 456 73 458 150 bedrock
+fill 458 72 460 150 bedrock
+fill 460 71 462 150 bedrock
+fill 462 70 464 150 bedrock
+fill 464 69 466 150 bedrock
+fill 466 68 468 150 bedrock
+fill 468 67 470 150 bedrock
+fill 470 66 472 150 bedrock
+fill 472 65 474 150 bedrock
+fill 474 64 476 150 bedrock
+fill 476 63 478 150 bedrock
+fill 478 62 480 150 bedrock
+fill 480 61 482 150 bedrock
+fill 482 60 484 150 bedrock
+fill 484 59 486 150 bedrock
+fill 486 58 488 150 bedrock
+fill 488 57 490 150 bedrock
+fill 490 56 492 150 bedrock
+fill 492 55 494 150 bedrock
+fill 494 54 496 150 bedrock
+fill 496 53 498 150 bedrock
+fill 498 52 500 150 bedrock
+fill 500 51 502 150 bedrock
+fill 502 50 504 150 bedrock
+fill 504 49 506 150 bedrock
+fill 506 48 508 150 bedrock
+fill 508 47 510 150 bedrock
+fill 510 46 512 150 bedrock
+fill 512 45 514 150 bedrock
+fill 514 44 516 150 bedrock
+fill 516 43 518 150 bedrock
+fill 518 42 520 150 bedrock
+fill 520 41 522 150 bedrock
+fill 522 40 524 150 bedrock
+fill 524 39 526 150 bedrock
+fill 526 38 528 150 bedrock
+fill 528 37 530 150 bedrock
+fill 530 36 532 150 bedrock
+fill 532 35 534 150 bedrock
+fill 534 34 536 150 bedrock
+fill 536 33 538 150 bedrock
+fill 538 32 540 150 bedrock
+fill 540 31 542 150 bedrock
+fill 542 30 544 150 bedrock
+fill 544 29 546 150 bedrock
+fill 546 28 548 150 bedrock
+fill 548 27 550 150 bedrock
+fill 550 26 552 150 bedrock
+fill 552 25 554 150 bedrock
+fill 554 24 556 150 bedrock
+fill 556 23 558 150 bedrock
+fill 558 22 560 150 bedrock
+fill 560 21 562 150 bedrock
+fill 562 20 564 150 bedrock
+fill 564 19 566 150 bedrock
+fill 566 18 568 150 bedrock
+fill 568 17 570 150 bedrock
+fill 570 16 572 150 bedrock
+fill 572 15 574 150 bedrock
+fill 574 14 576 150 bedrock
+fill 576 13 578 150 bedrock
+fill 578 12 580 150 bedrock
+fill 580 11 582 150 bedrock
+fill 582 10 584 150 bedrock
+fill 584 9 586 150 bedrock
+fill 586 8 588 150 bedrock
+fill 588 7 590 150 bedrock
+fill 590 6 592 150 bedrock
+fill 592 5 594 150 bedrock
+fill 594 5 596 150 bedrock
+fill 596 5 598 150 bedrock
+fill 598 5 600 150 bedrock
+fill 600 5 602 150 bedrock
+fill 602 5 604 150 bedrock
+fill 604 5 606 150 bedrock
+fill 606 5 608 150 bedrock
+fill 608 5 610 150 bedrock
+fill 610 5 612 150 bedrock
+fill 612 5 614 150 bedrock
+fill 614 5 616 150 bedrock
+fill 616 5 618 150 bedrock
+fill 618 5 620 150 bedrock
+fill 620 5 622 150 bedrock
+fill 622 5 624 150 bedrock
+fill 624 5 626 150 bedrock
+fill 626 5 628 150 bedrock
+fill 628 5 630 150 bedrock
+fill 630 5 632 150 bedrock
+fill 632 5 634 150 bedrock
+fill 634 5 636 150 bedrock
+fill 636 5 638 150 bedrock
+fill 638 5 640 150 bedrock
+fill 640 5 642 150 bedrock
+fill 642 5 644 150 bedrock
+fill 644 5 646 150 bedrock
+fill 646 5 648 150 bedrock
+fill 648 5 650 150 bedrock
+fill 650 5 652 150 bedrock
+fill 652 5 654 150 bedrock
+fill 654 5 656 150 bedrock
+fill 656 5 658 150 bedrock
+fill 658 5 660 150 bedrock
+fill 660 5 662 150 bedrock
+fill 662 5 664 150 bedrock
+fill 664 5 666 150 bedrock
+fill 666 5 668 150 bedrock
+fill 668 5 670 150 bedrock
+fill 670 5 672 150 bedrock
+fill 672 5 674 150 bedrock
+fill 674 5 676 150 bedrock
+fill 676 5 678 150 bedrock
+fill 678 5 680 150 bedrock
+fill 680 5 682 150 bedrock
+fill 682 5 684 150 bedrock
+fill 684 5 686 150 bedrock
+fill 686 5 688 150 bedrock
+fill 688 5 690 150 bedrock
+fill 690 5 692 150 bedrock
+fill 692 5 694 150 bedrock
+fill 694 5 696 150 bedrock
+fill 696 5 698 150 bedrock
+fill 698 5 700 150 bedrock
+fill 700 5 702 150 bedrock
+fill 702 5 704 150 bedrock
+fill 704 5 706 150 bedrock
+fill 706 5 708 150 bedrock
+fill 708 5 710 150 bedrock
+fill 710 5 712 150 bedrock
+fill 712 5 714 150 bedrock
+fill 714 5 716 150 bedrock
+fill 716 5 718 150 bedrock
+fill 718 5 720 150 bedrock
+fill 720 5 722 150 bedrock
+fill 722 5 724 150 bedrock
+fill 724 5 726 150 bedrock
+fill 726 5 728 150 bedrock
+fill 728 5 730 150 bedrock
+fill 730 5 732 150 bedrock
+fill 732 5 734 150 bedrock
+fill 734 5 736 150 bedrock
+fill 736 5 738 150 bedrock
+fill 738 5 740 150 bedrock
+fill 740 5 742 150 bedrock
+fill 742 5 744 150 bedrock
+fill 744 5 746 150 bedrock
+fill 746 5 748 150 bedrock
+fill 748 5 750 150 bedrock
+fill 750 5 752 150 bedrock
+fill 752 5 754 150 bedrock
+fill 754 5 756 150 bedrock
+fill 756 5 758 150 bedrock
+fill 758 5 760 150 bedrock
+fill 760 5 762 150 bedrock
+fill 762 5 764 150 bedrock
+fill 4 70 64 150 water
+
+[expect]
+// The surge reaches the foot of the slope by tick 140.
+after 140: count water in 296 140 304 150 > 0
+// It runs up more than 35 cells but not 110.
+after 180: count water in 304 0 768 115 > 0
+after 180: count water in 0 0 768 40 == 0
+// The thin tip keeps climbing, to about 135 cells by tick 360, then slides
+// back; the film it leaves on the slope drains last. By tick 700 it is all
+// below 25 cells.
+after 700: count water in 304 0 768 125 == 0
+// It settles into a lake 15 to 17 deep and sleeps, every cell kept.
+after 4000: asleep
+after 4000: count water in 0 0 768 133 == 0
+after 4000: count water in 100 135 101 136 == 1
+after 4000: count water in 0 0 768 192 == 4800
