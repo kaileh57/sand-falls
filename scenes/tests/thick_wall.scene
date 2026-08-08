@@ -1,0 +1,26 @@
+// The same tank drains through a culvert in a 16-cell wall: from the tank
+// floor a 4-row channel runs 8 cells, turns down a 4-wide shaft 26 rows deep,
+// and runs out under the wall onto a lower floor. The whole culvert fills and
+// carries what the 128-row head drives through it, about 6 cells a tick.
+[scene]
+name = thick wall
+size = 512 224
+seed = 6
+ticks = 400
+
+[build]
+fill 0 180 512 224 bedrock
+fill 0 150 100 180 bedrock
+fill 0 30 4 150 bedrock
+fill 508 30 512 180 bedrock
+fill 100 30 116 180 bedrock
+fill 100 146 108 150 air
+fill 104 150 108 176 air
+fill 104 176 116 180 air
+fill 4 50 100 150 water
+
+[expect]
+// At least 4.5 cells a tick between ticks 100 and 200.
+after 100: count water in 0 0 100 150 <= 9300
+after 200: count water in 0 0 100 150 <= 8850
+after 400: count water in 0 0 512 224 == 9600

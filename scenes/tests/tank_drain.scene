@@ -1,0 +1,25 @@
+// A tank 100 deep and 60 wide drains through a 4-cell hole at the floor of
+// its 4-cell wall onto a ledge and over it into a pit. While the surface is
+// above the hole the hole runs full, pressed by the head; once the surface
+// drops below the hole's roof the water in the hole runs out as an open
+// channel instead of standing full under the roof, so the tank empties to a
+// film one row deep and everything sleeps.
+[scene]
+name = tank drain
+size = 384 260
+seed = 11
+ticks = 4000
+
+[build]
+fill 0 200 384 260 bedrock
+fill 0 40 4 200 bedrock
+fill 380 40 384 260 bedrock
+fill 108 200 380 250 air
+fill 64 60 68 200 bedrock
+fill 64 196 68 200 air
+fill 4 100 64 200 water
+
+[expect]
+after 4000: count water in 4 0 64 199 == 0
+after 4000: count water in 0 0 384 260 == 6000
+after 4000: asleep

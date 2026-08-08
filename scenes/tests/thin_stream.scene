@@ -1,0 +1,53 @@
+// A pool drains off the end of a ledge, and as it empties the flow over the
+// edge thins to a stream a cell wide falling 120 rows. The stream is drawn as
+// a line: `drawn` counts the cells drawn as water, with the stream joined
+// up, in each 20-row band of the fall above the pool it lands in. A line
+// puts at least a cell in every row of a band. The rejected build drew it
+// dashed by tick 450 and as dots and fragments from 550 to 800: bands of 0
+// to 6 cells, and up to 56 of the 80 rows empty.
+[scene]
+name = thin stream
+size = 256 256
+seed = 5
+ticks = 800
+
+[build]
+fill 0 220 256 256 bedrock
+fill 0 0 4 220 bedrock
+fill 252 0 256 220 bedrock
+fill 4 100 120 104 bedrock
+fill 4 60 60 100 water
+
+[camera]
+view 256 256
+scale 1
+sky day
+ambient 0.6 0.6 0.6
+at 0: 128 128 zoom=1
+
+[expect]
+after 300: drawn water in 118 104 252 124 >= 18
+after 300: drawn water in 118 124 252 144 >= 18
+after 300: drawn water in 118 144 252 164 >= 18
+after 300: drawn water in 118 164 252 184 >= 18
+after 400: drawn water in 118 104 252 124 >= 18
+after 400: drawn water in 118 124 252 144 >= 18
+after 400: drawn water in 118 144 252 164 >= 18
+after 400: drawn water in 118 164 252 184 >= 18
+after 500: drawn water in 118 104 252 124 >= 18
+after 500: drawn water in 118 124 252 144 >= 18
+after 500: drawn water in 118 144 252 164 >= 18
+after 500: drawn water in 118 164 252 184 >= 18
+after 600: drawn water in 118 104 252 124 >= 18
+after 600: drawn water in 118 124 252 144 >= 18
+after 600: drawn water in 118 144 252 164 >= 18
+after 600: drawn water in 118 164 252 184 >= 18
+after 700: drawn water in 118 104 252 124 >= 18
+after 700: drawn water in 118 124 252 144 >= 18
+after 700: drawn water in 118 144 252 164 >= 18
+after 700: drawn water in 118 164 252 184 >= 18
+after 800: drawn water in 118 104 252 124 >= 18
+after 800: drawn water in 118 124 252 144 >= 18
+after 800: drawn water in 118 144 252 164 >= 18
+after 800: drawn water in 118 164 252 184 >= 18
+after 800: count water in 0 0 256 256 == 2240
