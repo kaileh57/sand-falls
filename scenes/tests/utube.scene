@@ -1,0 +1,33 @@
+// A U-tube: arms x 20..30 and x 70..80 (y 10..150), joined by a channel at
+// y 150..160. The left arm is filled from y 40 and the channel is full; the
+// right arm starts empty. Pressure drives the water through the full channel
+// as one slug, so the arms swing past level and back like connected vessels,
+// then level at y 95 and sleep.
+[scene]
+name = utube
+size = 128 192
+seed = 3
+ticks = 600
+
+[build]
+fill 0 0 20 192 bedrock
+fill 80 0 128 192 bedrock
+fill 20 160 80 192 bedrock
+fill 30 0 70 150 bedrock
+fill 20 0 30 10 bedrock
+fill 70 0 80 10 bedrock
+fill 20 40 30 160 water
+fill 30 150 80 160 water
+
+[expect]
+// The channel passes water fast: the right arm holds over 400 cells by tick
+// 60 and swings past its final 540 by tick 100.
+after 60: count water in 70 0 80 150 > 400
+after 100: count water in 70 0 80 150 > 600
+// Both arms within a row of each other by tick 450.
+after 450: count water in 20 0 30 94 == 0
+after 450: count water in 70 0 80 94 == 0
+after 450: count water in 20 96 30 97 == 10
+after 450: count water in 70 96 80 97 == 10
+after 600: asleep
+after 600: count water in 0 0 128 192 == 1700

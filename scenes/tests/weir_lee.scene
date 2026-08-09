@@ -1,0 +1,29 @@
+// A 120-deep dam break runs over a 40x20 stone block. Off the block's far
+// edge the flood leaves as one sheet of falling water, poured into the cells
+// it crosses each tick, and arcs down onto the floor with air under it.
+// Poured one column per tick, the sheet was a barcode of single-cell lines
+// that hung level with the block top: by tick 340 the 80 columns of the lee
+// held 1,100 to 1,500 cells and everything past the block about 2,800. The
+// sheet now springs clear of the block and lands farther out, so the lee
+// holds about 2,000 cells then and everything past the block about 4,500.
+[scene]
+name = weir lee
+size = 768 256
+seed = 13
+ticks = 400
+
+[build]
+fill 0 220 768 256 bedrock
+fill 0 0 4 220 bedrock
+fill 764 0 768 220 bedrock
+fill 204 40 210 220 bedrock
+fill 4 100 204 220 water
+fill 560 200 600 220 stone
+
+[events]
+at 1: fill 204 0 210 220 air
+
+[expect]
+after 340: count water in 600 0 680 256 > 1600
+after 340: count water in 600 0 768 256 > 4000
+after 400: count water in 0 0 768 256 == 24000
