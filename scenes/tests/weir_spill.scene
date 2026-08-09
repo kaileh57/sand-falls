@@ -1,0 +1,47 @@
+// A dam break floods over a stone block 20 rows high, and for a while the
+// lee of the block stands about as high as the block's top while the flood
+// on the block runs 30 rows deep. The flood pours off the block's edge as a
+// sheet that falls into the lee: the water on the block stood 28 rows over
+// the lee with a still, vertical face from tick 300 to 440, because the two
+// were one body and the columns at the edge passed on what they took in.
+// Later the sheet falls into the lee and the lee fills under it, with no
+// comb of bars hanging from the sheet and no air pocket bridged over for 60
+// ticks.
+[scene]
+name = weir spill
+size = 768 256
+seed = 13
+ticks = 500
+
+[build]
+fill 0 220 768 256 bedrock
+fill 0 0 4 220 bedrock
+fill 764 0 768 220 bedrock
+fill 204 40 210 220 bedrock
+fill 4 100 204 220 water
+fill 560 200 600 220 stone
+
+[events]
+at 1: fill 204 0 210 220 air
+
+[camera]
+view 768 256
+scale 1
+sky day
+ambient 0.6 0.6 0.6
+at 0: 384 128 zoom=1
+
+[expect]
+// Water past the block's edge above the lee: the sheet pouring off the block
+// and the lee it raises (with the face it was 41, 15, 3 and 0 cells).
+after 360: count water in 600 168 616 198 >= 150
+after 380: count water in 600 168 616 198 >= 150
+after 400: count water in 600 168 616 198 >= 150
+after 420: count water in 600 168 616 198 >= 150
+// The lee under the block's edge is full, not an air pocket under a sheet
+// (it held 53, 49, 126 and 140 of its 400 cells).
+after 460: count water in 600 200 620 220 >= 350
+after 470: count water in 600 200 620 220 >= 350
+after 480: count water in 600 200 620 220 >= 350
+after 490: count water in 600 200 620 220 >= 350
+after 500: count water in 0 0 768 256 == 24000
