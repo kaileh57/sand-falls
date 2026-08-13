@@ -1,89 +1,81 @@
 // Deep Descent: procedural world generation and chunk streaming.
 //
-// No terrain in this file is hand-built. Every cell comes from the `caves`
-// world generator and the seed: rolling hills with a soil crust and sand,
-// stone with coal seams, moss-lit caves near the surface, caves lit blue by
-// glowshroom and violet by crystal further down, lava pockets in the deep
-// caves, and dark bedrock 600 cells below the surface. Chunks are generated
-// from the seed only as the miner comes within 8 chunks of them and stored
-// once he is 20 chunks away, so the camera follows him about 1,000 cells
-// sideways and 540 down through terrain nobody authored.
+// No terrain in this file is hand-built, and nothing is heated, placed or
+// carved except by the miner's own tools. Every cell comes from the `caves`
+// world generator and the seed: rolling hills under a soil crust, stone with
+// coal, moss-lit caves near the surface, caves lit blue by glowshroom and
+// violet by crystal further down, water pockets in the shallow caves, lava
+// pockets in the deep ones, and dark bedrock 600 cells below the surface.
 //
-// The miner (player 0) is driven by timeline input and shows the character
-// controller and its tools: the dig tool bores the tunnel, a small charge
-// from the explode tool flares over his head as he works, and the paint tool
-// hangs a lamp (torch) from the tunnel roof every 42 ticks, so the finished
-// bore is traced by a line of lights. At the bottom the camera stops and
-// pulls back to show the whole lamp-lit tunnel crossing the generated caves.
+// Chunk streaming is on screen. Only chunks within 5 of the miner are kept
+// live; the rest of the world does not exist yet (black). As he bores east,
+// a new column of 64x64 chunks is generated at the right edge of the frame
+// about once a second, and the lava pockets in them arrive molten and crust
+// over to basalt as he passes. Chunks more than 13 away are stored. The final
+// pull-back shows the world as the engine holds it: a lit band of generated
+// chunks stepping down along his tunnel, never-generated chunks to the north
+// east, and the tunnel's first 350 cells, lamps and all, already stored.
+//
+// The miner (player 0) is driven by timeline input. He walks at full speed
+// (one cell a tick, 6 m/s) while the dig tool clears a disc ahead of and
+// below him, and the paint tool hangs a lamp (torch) on the tunnel roof
+// about every 44 cells, so the bore is traced by a line of lights. He breaks
+// through into a big cave at about 11 s and drops 90 cells to its floor,
+// crosses the lava caves and stops on bedrock at about 22 s.
 [scene]
 name = deep descent
-description = A miner bores a lamp-lit tunnel 540 cells down through a procedurally generated, chunk-streamed world: soil and coal, caves lit by glowshroom and crystal, glowing lava pockets, down to bedrock, then the camera pulls back to reveal the whole tunnel.
-// Only the chunks around the start are loaded up front; the rest stream in.
-bounds = -864 64 -736 192
+description = A miner bores a lamp-lit tunnel 580 cells down through a procedurally generated world that is streamed in chunk by chunk around him: soil and coal, caves lit by moss, glowshroom and crystal, molten lava pockets that crust over as he passes, down to bedrock, then the camera pulls back to show the band of generated chunks he left behind.
+// The renderer keeps the camera inside the scene bounds, and the bounds are
+// loaded when the scene starts. Streaming stores every chunk of them more
+// than 13 chunks from the miner on the first tick, so what the camera shows
+// east of x 64 is streamed back in only when he comes within 5 chunks of it.
+bounds = -1216 -128 960 960
 seed = 45
 worldgen = caves 120
-// Generate chunks within 8 of the miner: that covers the tracking view at
-// zoom 1.45 plus the camera's lag. Chunks more than 20 away are stored; the
-// margin of 12 keeps everything the final pull-back shows loaded.
-stream = 8 12
-ticks = 2220
+// Keep chunks within 5 of the miner loaded: ahead of him the loaded world
+// ends about 330 cells away, inside the tracking frame, so the frontier and
+// each new column of chunks are visible at its right edge. Store chunks more
+// than 5 + 8 away.
+stream = 5 8
+ticks = 1650
 
 [build]
 player 0 -800 140
 
 [events]
-// The bore. The miner walks in a three-steps, three-pauses rhythm (move=0 on
-// the last 3 ticks of every 6) so he keeps his feet on the tunnel floor
-// instead of sailing down it, while the dig tool clears a 10-cell disc ahead
-// and below him. The aim sets the slope: about 28 degrees through the upper
-// rock, shallower across the big cave and past the lava pockets, then steeper
-// again down to bedrock, which he reaches at tick 1860.
-at 90..1140: input 0 move=1 tool=dig param=10 aim=15,5 use
-every 6 from 93 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
-every 6 from 94 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
-every 6 from 95 to 1140: input 0 move=0 tool=dig param=10 aim=15,5 use
-at 1140..1530: input 0 move=1 tool=dig param=10 aim=15,2 use
-every 6 from 1143 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
-every 6 from 1144 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
-every 6 from 1145 to 1530: input 0 move=0 tool=dig param=10 aim=15,2 use
-at 1530..1860: input 0 move=1 tool=dig param=10 aim=15,6 use
-every 6 from 1533 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
-every 6 from 1534 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
-every 6 from 1535 to 1860: input 0 move=0 tool=dig param=10 aim=15,6 use
-// A small charge in the open bore just over his head on every 4th pause: a
-// flicker of flame that lights the face he is cutting. It sits clear of the
-// rock, so it throws no rubble for him to climb.
-every 24 from 93 to 1860: input 0 move=0 tool=explode param=6 aim=4,-8 use
-// Lamps on the tunnel roof behind him, skipping the stretch where the bore
-// crosses the first big cave.
-every 42 from 220 to 370: input 0 move=0 tool=paint param=torch aim=-2,-12 use
-every 42 from 424 to 1010: input 0 move=0 tool=paint param=torch aim=-2,-12 use
-every 42 from 1132 to 1170: input 0 move=0 tool=paint param=torch aim=-2,-12 use
-every 42 from 1324 to 1390: input 0 move=0 tool=paint param=torch aim=-2,-12 use
-every 42 from 1444 to 1860: input 0 move=0 tool=paint param=torch aim=-2,-12 use
-// A lamp beside him at the entrance before he starts.
-at 30: input 0 tool=paint param=torch aim=-7,4 use
-// Geothermal heat under two of the generated lava pockets the bore passes:
-// the long lava lake on the floor of the deep cave and the small pocket just
-// below it. A thin generated pocket freezes to basalt within a few seconds of
-// its chunk loading, long before the miner gets there; this keeps them molten
-// so they glow and spill toward the bore as he cuts past.
-every 10 from 950 to 1800: heat 70 539 10 2
-every 10 from 950 to 1800: heat 88 539 10 2
-every 10 from 950 to 1800: heat 106 539 10 2
-every 10 from 950 to 1800: heat 124 539 10 2
-every 10 from 950 to 1800: heat 142 539 10 2
-every 10 from 950 to 1800: heat 156 528 10 2
-every 10 from 950 to 1600: heat 62 570 10 2
-every 10 from 950 to 1600: heat 76 582 10 2
-every 10 from 950 to 1600: heat 90 591 10 2
-// No lamps while he crosses open cave, where they would hang in mid-air.
-at 1324: input 0 move=0
-at 1444: input 0 move=0
-at 1486: input 0 move=0
-at 1528: input 0 move=0
-at 1570: input 0 move=0
-at 1654: input 0 move=0
+// A lamp beside him at the entrance, once he has landed.
+at 50: input 0 tool=paint param=torch aim=-7,4 use
+// The bore: full walking speed, digging a 9-cell disc ahead and below. The
+// slope (about 20 degrees) comes from the aim.
+at 60..1340: input 0 move=1 tool=dig param=9 aim=12,4 use
+// Lamps on the tunnel roof, every 44 ticks. Ticks where the roof is out of
+// reach are left out so no lamp hangs in the air: 104 (still at the
+// surface), 280, 456 and 588 (the bore crosses the top of a small cave,
+// 456 moved to 440 and 588 to 604), and 676 to 896, the drop through the
+// big cave.
+at 148: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 192: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 236: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 324: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 368: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 412: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 440: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 500: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 544: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 604: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 632: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 940: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 984: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1028: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1072: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1116: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1160: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1204: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1248: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+at 1292: input 0 move=1 tool=paint param=torch aim=-3,-12 use
+// He stops on bedrock. A small dig around his body each tick keeps loose
+// rubble out of his box.
+at 1341..1650: input 0 move=0 tool=dig param=8 aim=0,-2 use
 
 [camera]
 view 960 540
@@ -93,17 +85,342 @@ scale 2
 sky cave
 ambient 0.1 0.1 0.12
 exposure 3.8
-// Open on the miner and his lamp at the surface, then two long eased segments
-// along the measured line of the tunnel keep him a little above and left of
-// centre while he digs, and the last stops just as he reaches bedrock.
-at 0: -760 180 zoom=1.1
-at 1300: -60 540 zoom=1.45
-at 1870: 215 640 zoom=1.45
-// Pull back to the whole tunnel, from the lamp at the entrance to bedrock.
-at 2110: -292 410 zoom=0.68
+// One second on the miner and his lamp at the surface.
+at 0: -790 140 zoom=1.3
+at 60: -790 140 zoom=1.3
+// Tracking, 4 ticks apart so the eased segments join into an even glide: the
+// miner's measured path, smoothed over a second, with the frame 70 cells
+// ahead of him so the streaming frontier sits in its right-hand part.
+at 64: -794 144 zoom=1.3
+at 68: -791 144 zoom=1.3
+at 72: -788 145 zoom=1.3
+at 76: -784 146 zoom=1.3
+at 80: -779 147 zoom=1.3
+at 84: -774 149 zoom=1.3
+at 88: -769 150 zoom=1.3
+at 92: -764 152 zoom=1.3
+at 96: -758 154 zoom=1.3
+at 100: -752 155 zoom=1.3
+at 104: -746 157 zoom=1.3
+at 108: -739 159 zoom=1.3
+at 112: -733 161 zoom=1.3
+at 116: -727 163 zoom=1.3
+at 120: -720 165 zoom=1.3
+at 124: -713 166 zoom=1.3
+at 128: -707 168 zoom=1.3
+at 132: -700 170 zoom=1.3
+at 136: -693 172 zoom=1.3
+at 140: -686 174 zoom=1.3
+at 144: -680 176 zoom=1.3
+at 148: -673 178 zoom=1.3
+at 152: -666 179 zoom=1.3
+at 156: -659 181 zoom=1.3
+at 160: -653 183 zoom=1.3
+at 164: -646 185 zoom=1.3
+at 168: -640 187 zoom=1.3
+at 172: -633 189 zoom=1.3
+at 176: -627 190 zoom=1.3
+at 180: -621 192 zoom=1.3
+at 184: -615 194 zoom=1.3
+at 188: -610 196 zoom=1.3
+at 192: -604 198 zoom=1.3
+at 196: -599 199 zoom=1.3
+at 200: -594 201 zoom=1.3
+at 204: -589 202 zoom=1.3
+at 208: -584 204 zoom=1.3
+at 212: -580 206 zoom=1.3
+at 216: -576 207 zoom=1.3
+at 220: -572 209 zoom=1.3
+at 224: -568 210 zoom=1.3
+at 228: -564 212 zoom=1.3
+at 232: -560 213 zoom=1.3
+at 236: -556 215 zoom=1.3
+at 240: -552 217 zoom=1.3
+at 244: -548 219 zoom=1.3
+at 248: -544 221 zoom=1.3
+at 252: -540 223 zoom=1.3
+at 256: -536 225 zoom=1.3
+at 260: -532 227 zoom=1.3
+at 264: -528 229 zoom=1.3
+at 268: -524 231 zoom=1.3
+at 272: -520 233 zoom=1.3
+at 276: -516 235 zoom=1.3
+at 280: -512 237 zoom=1.3
+at 284: -508 238 zoom=1.3
+at 288: -504 240 zoom=1.3
+at 292: -500 241 zoom=1.3
+at 296: -496 242 zoom=1.3
+at 300: -492 244 zoom=1.3
+at 304: -488 245 zoom=1.3
+at 308: -484 247 zoom=1.3
+at 312: -480 248 zoom=1.3
+at 316: -476 250 zoom=1.3
+at 320: -472 251 zoom=1.3
+at 324: -468 253 zoom=1.3
+at 328: -464 254 zoom=1.3
+at 332: -460 256 zoom=1.3
+at 336: -456 257 zoom=1.3
+at 340: -452 259 zoom=1.3
+at 344: -448 260 zoom=1.3
+at 348: -444 262 zoom=1.3
+at 352: -440 263 zoom=1.3
+at 356: -436 265 zoom=1.3
+at 360: -432 266 zoom=1.3
+at 364: -428 268 zoom=1.3
+at 368: -424 269 zoom=1.3
+at 372: -420 271 zoom=1.3
+at 376: -416 272 zoom=1.3
+at 380: -412 274 zoom=1.3
+at 384: -408 275 zoom=1.3
+at 388: -404 276 zoom=1.3
+at 392: -400 278 zoom=1.3
+at 396: -396 279 zoom=1.3
+at 400: -392 281 zoom=1.3
+at 404: -388 282 zoom=1.3
+at 408: -384 284 zoom=1.3
+at 412: -380 285 zoom=1.3
+at 416: -376 287 zoom=1.3
+at 420: -372 288 zoom=1.3
+at 424: -368 290 zoom=1.3
+at 428: -364 291 zoom=1.3
+at 432: -360 293 zoom=1.3
+at 436: -356 294 zoom=1.3
+at 440: -352 296 zoom=1.3
+at 444: -348 297 zoom=1.3
+at 448: -344 299 zoom=1.3
+at 452: -340 300 zoom=1.3
+at 456: -336 302 zoom=1.3
+at 460: -332 303 zoom=1.3
+at 464: -328 305 zoom=1.3
+at 468: -324 306 zoom=1.3
+at 472: -320 308 zoom=1.3
+at 476: -316 309 zoom=1.3
+at 480: -312 311 zoom=1.3
+at 484: -308 312 zoom=1.3
+at 488: -304 314 zoom=1.3
+at 492: -300 315 zoom=1.3
+at 496: -296 316 zoom=1.3
+at 500: -292 318 zoom=1.3
+at 504: -288 319 zoom=1.3
+at 508: -284 321 zoom=1.3
+at 512: -280 322 zoom=1.3
+at 516: -276 324 zoom=1.3
+at 520: -272 325 zoom=1.3
+at 524: -268 327 zoom=1.3
+at 528: -264 328 zoom=1.3
+at 532: -260 330 zoom=1.3
+at 536: -256 331 zoom=1.3
+at 540: -252 333 zoom=1.3
+at 544: -248 334 zoom=1.3
+at 548: -244 336 zoom=1.3
+at 552: -240 337 zoom=1.3
+at 556: -236 339 zoom=1.3
+at 560: -232 340 zoom=1.3
+at 564: -228 342 zoom=1.3
+at 568: -224 343 zoom=1.3
+at 572: -220 345 zoom=1.3
+at 576: -216 346 zoom=1.3
+at 580: -212 348 zoom=1.3
+at 584: -208 349 zoom=1.3
+at 588: -204 351 zoom=1.3
+at 592: -200 352 zoom=1.3
+at 596: -196 354 zoom=1.3
+at 600: -192 355 zoom=1.3
+at 604: -188 356 zoom=1.3
+at 608: -184 358 zoom=1.3
+at 612: -180 359 zoom=1.3
+at 616: -176 361 zoom=1.3
+at 620: -172 362 zoom=1.3
+at 624: -168 364 zoom=1.3
+at 628: -164 365 zoom=1.3
+at 632: -160 367 zoom=1.3
+at 636: -156 369 zoom=1.3
+at 640: -152 371 zoom=1.3
+at 644: -148 373 zoom=1.3
+at 648: -144 376 zoom=1.3
+at 652: -140 379 zoom=1.3
+at 656: -136 383 zoom=1.3
+at 660: -132 387 zoom=1.3
+at 664: -128 391 zoom=1.3
+at 668: -124 396 zoom=1.3
+at 672: -120 401 zoom=1.3
+at 676: -116 406 zoom=1.3
+at 680: -112 411 zoom=1.3
+at 684: -108 416 zoom=1.3
+at 688: -104 421 zoom=1.3
+at 692: -100 425 zoom=1.3
+at 696: -96 429 zoom=1.3
+at 700: -92 432 zoom=1.3
+at 704: -88 435 zoom=1.3
+at 708: -84 437 zoom=1.3
+at 712: -80 439 zoom=1.3
+at 716: -76 442 zoom=1.3
+at 720: -72 444 zoom=1.3
+at 724: -68 447 zoom=1.3
+at 728: -64 450 zoom=1.3
+at 732: -60 454 zoom=1.3
+at 736: -56 458 zoom=1.3
+at 740: -52 463 zoom=1.3
+at 744: -48 468 zoom=1.3
+at 748: -44 473 zoom=1.3
+at 752: -40 479 zoom=1.3
+at 756: -36 485 zoom=1.3
+at 760: -32 492 zoom=1.3
+at 764: -28 498 zoom=1.3
+at 768: -24 504 zoom=1.3
+at 772: -20 511 zoom=1.3
+at 776: -16 516 zoom=1.3
+at 780: -12 522 zoom=1.3
+at 784: -8 526 zoom=1.3
+at 788: -4 530 zoom=1.3
+at 792: 0 533 zoom=1.3
+at 796: 4 536 zoom=1.3
+at 800: 8 538 zoom=1.3
+at 804: 12 540 zoom=1.3
+at 808: 16 541 zoom=1.3
+at 812: 20 543 zoom=1.3
+at 816: 24 544 zoom=1.3
+at 820: 28 546 zoom=1.3
+at 824: 32 548 zoom=1.3
+at 828: 36 550 zoom=1.3
+at 832: 40 551 zoom=1.3
+at 836: 44 553 zoom=1.3
+at 840: 48 555 zoom=1.3
+at 844: 52 557 zoom=1.3
+at 848: 56 559 zoom=1.3
+at 852: 60 560 zoom=1.3
+at 856: 64 562 zoom=1.3
+at 860: 68 564 zoom=1.3
+at 864: 72 565 zoom=1.3
+at 868: 76 567 zoom=1.3
+at 872: 80 568 zoom=1.3
+at 876: 84 570 zoom=1.3
+at 880: 88 571 zoom=1.3
+at 884: 92 572 zoom=1.3
+at 888: 96 574 zoom=1.3
+at 892: 100 575 zoom=1.3
+at 896: 104 577 zoom=1.3
+at 900: 108 578 zoom=1.3
+at 904: 112 580 zoom=1.3
+at 908: 116 581 zoom=1.3
+at 912: 120 583 zoom=1.3
+at 916: 124 584 zoom=1.3
+at 920: 128 586 zoom=1.3
+at 924: 132 587 zoom=1.3
+at 928: 136 589 zoom=1.3
+at 932: 140 590 zoom=1.3
+at 936: 144 592 zoom=1.3
+at 940: 148 593 zoom=1.3
+at 944: 152 595 zoom=1.3
+at 948: 156 596 zoom=1.3
+at 952: 160 598 zoom=1.3
+at 956: 164 600 zoom=1.3
+at 960: 168 601 zoom=1.3
+at 964: 172 603 zoom=1.3
+at 968: 176 604 zoom=1.3
+at 972: 180 606 zoom=1.3
+at 976: 184 607 zoom=1.3
+at 980: 188 609 zoom=1.3
+at 984: 192 610 zoom=1.3
+at 988: 196 612 zoom=1.3
+at 992: 200 613 zoom=1.3
+at 996: 204 614 zoom=1.3
+at 1000: 208 616 zoom=1.3
+at 1004: 212 617 zoom=1.3
+at 1008: 216 619 zoom=1.3
+at 1012: 220 620 zoom=1.3
+at 1016: 224 622 zoom=1.3
+at 1020: 228 623 zoom=1.3
+at 1024: 232 625 zoom=1.3
+at 1028: 236 626 zoom=1.3
+at 1032: 240 628 zoom=1.3
+at 1036: 244 629 zoom=1.3
+at 1040: 248 631 zoom=1.3
+at 1044: 252 632 zoom=1.3
+at 1048: 256 634 zoom=1.3
+at 1052: 260 635 zoom=1.3
+at 1056: 264 637 zoom=1.3
+at 1060: 268 638 zoom=1.3
+at 1064: 272 640 zoom=1.3
+at 1068: 276 641 zoom=1.3
+at 1072: 280 643 zoom=1.3
+at 1076: 284 644 zoom=1.3
+at 1080: 288 646 zoom=1.3
+at 1084: 292 647 zoom=1.3
+at 1088: 296 649 zoom=1.3
+at 1092: 300 650 zoom=1.3
+at 1096: 304 652 zoom=1.3
+at 1100: 308 653 zoom=1.3
+at 1104: 312 654 zoom=1.3
+at 1108: 316 656 zoom=1.3
+at 1112: 320 657 zoom=1.3
+at 1116: 324 659 zoom=1.3
+at 1120: 328 660 zoom=1.3
+at 1124: 332 662 zoom=1.3
+at 1128: 336 663 zoom=1.3
+at 1132: 340 665 zoom=1.3
+at 1136: 344 666 zoom=1.3
+at 1140: 348 668 zoom=1.3
+at 1144: 352 669 zoom=1.3
+at 1148: 356 671 zoom=1.3
+at 1152: 360 672 zoom=1.3
+at 1156: 364 674 zoom=1.3
+at 1160: 368 675 zoom=1.3
+at 1164: 372 677 zoom=1.3
+at 1168: 376 678 zoom=1.3
+at 1172: 380 680 zoom=1.3
+at 1176: 384 681 zoom=1.3
+at 1180: 388 683 zoom=1.3
+at 1184: 392 684 zoom=1.3
+at 1188: 396 686 zoom=1.3
+at 1192: 400 687 zoom=1.3
+at 1196: 404 689 zoom=1.3
+at 1200: 408 690 zoom=1.3
+at 1204: 412 692 zoom=1.3
+at 1208: 416 693 zoom=1.3
+at 1212: 420 694 zoom=1.3
+at 1216: 424 696 zoom=1.3
+at 1220: 428 697 zoom=1.3
+at 1224: 432 699 zoom=1.3
+at 1228: 436 700 zoom=1.3
+at 1232: 440 702 zoom=1.3
+at 1236: 444 703 zoom=1.3
+at 1240: 448 705 zoom=1.3
+at 1244: 452 706 zoom=1.3
+at 1248: 456 708 zoom=1.3
+at 1252: 460 709 zoom=1.3
+at 1256: 464 711 zoom=1.3
+at 1260: 468 712 zoom=1.3
+at 1264: 472 714 zoom=1.3
+at 1268: 476 715 zoom=1.3
+at 1272: 480 717 zoom=1.3
+at 1276: 484 718 zoom=1.3
+at 1280: 488 719 zoom=1.3
+at 1284: 492 721 zoom=1.3
+at 1288: 495 722 zoom=1.3
+at 1292: 499 723 zoom=1.3
+at 1296: 502 723 zoom=1.3
+at 1300: 505 724 zoom=1.3
+at 1304: 507 724 zoom=1.3
+at 1308: 509 725 zoom=1.3
+at 1312: 510 725 zoom=1.3
+at 1316: 511 725 zoom=1.3
+// Pull back to the whole streamed band.
+at 1500: -30 430 zoom=0.6
+at 1650: -30 430 zoom=0.6
 
 [expect]
-after 1860: avatar 0 x > 190
-after 1860: avatar 0 y > 660
-after 1860: count lava in 50 520 170 560 > 100
-after 1860: count torch in -820 100 260 720 > 400
+// He reaches bedrock and stays on the tunnel floor.
+after 1320: avatar 0 x > 430
+after 1320: avatar 0 y > 710
+after 1650: avatar 0 y > 710
+// Streaming: the lamps at the tunnel mouth are loaded while he is near them
+// and stored (gone from the live world) by the end.
+after 400: count torch in -830 100 -560 260 > 40
+after 1650: count torch in -830 100 -560 260 == 0
+// The north-east corner of the frame is never generated.
+after 1650: count stone in 640 0 960 200 == 0
+// Lava pockets stream in molten as he nears the deep caves.
+after 780: count lava in -100 380 260 640 > 300
+// The lamps along the part of the tunnel still loaded at the end.
+after 1650: count torch in -460 300 460 740 > 120
