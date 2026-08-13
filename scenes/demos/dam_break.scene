@@ -1,146 +1,634 @@
-// The stress test: a reservoir of 4 million water cells (204 x 195 m at 10
-// cells per metre) released into a valley, in an 8.4-million-cell world.
+// Dam break: the gate of a reservoir is snatched up out of the water, the way
+// the gate of a laboratory dam break is, and the whole reservoir collapses
+// down the valley as one body of water.
 //
-// Charges go off at the foot of the dam at tick 1 and the whole dam is removed,
-// so no water is deleted. The flood spills into a bowl below the dam where a
-// village stands: wooden houses and trees are bodies hinged to the brick
-// houses, which are pinned to the ground. As the water rises the wooden houses
-// and trees float, break their hinges and drift; the brick houses stay put.
-// Further on the flood runs over a small lava pool kept hot by lava sources.
-// The camera opens on the whole reservoir and follows the wave front into the
-// village.
+// The reservoir is 149,040 cells of water (41 m long and 36 m deep, at 10
+// cells per metre) held by a steel gate 2.4 m thick standing on a concrete
+// sill, hung from the housing of its hoist. At tick 40 the hoist's brake lets
+// go, the counterweights fling the gate up into its housing in a quarter of a
+// second, and nothing is left in the water's way. Nothing is dug and no water
+// is removed.
+//
+// The face of the reservoir then collapses as the shallow water equations say
+// it should: the surface slumps into the smooth sloping profile of a dam
+// break while the far end of the lake still lies flat, and the front runs out
+// over the apron, down the slope and across the dry valley at about 25 m/s,
+// hugging the ground. It slams into the far hillside and runs some 25 m up it,
+// throwing spray off its tip, falls back as a bore that travels upstream to
+// the apron, and the new lake sloshes from end to end for the rest of the
+// run. The [expect] lines count every cell of water at the start and at the
+// end.
+//
+// Nothing stands in the valley. Bodies and buildings in the path of the flood
+// are not pushed by it (bodies feel buoyancy and still-water drag only), and
+// the water piles up against them in vertical blocks, so the flood has the
+// valley to itself.
 [scene]
 name = dam break
-description = Charges blow out a concrete dam holding 4 million water cells; the flood pours into a valley village, lifts its wooden houses and trees off their footings and swamps a lava pool.
-size = 4096 2048
+description = A steel floodgate is flung up out of a 36 m deep reservoir: the whole reservoir collapses through the gap as one body, races down the valley at 25 m/s, runs 25 m up the far hillside and falls back as a bore.
+size = 2048 1152
 seed = 22
-ticks = 1500
+ticks = 1200
 
 [build]
-// Valley: a stone plateau with a bowl carved below the dam. Two offset circles
-// leave a soil skin on the bowl floor; the arcs they leave in the sky on the
-// right are cleared again.
-fill 2056 1400 4088 2000 stone
-circle 2300 650 1300 soil
-circle 2300 620 1300 air
-fill 3300 0 4088 1400 air
-fill 0 2000 4096 2048 bedrock
-fill 0 0 8 2000 bedrock
-fill 4088 0 4096 2000 bedrock
-// The dam and its 4-million-cell reservoir.
-fill 2048 20 2056 2000 concrete
-fill 8 46 2048 2000 water
-// tree, body 0
-fill 2111 1907 2140 1912 soil
-fill 2123 1871 2127 1907 wood
-circle 2125 1871 14 leaves
-carve 2111 1857 2140 1907
-// wooden house, body 1
-fill 2159 1913 2191 1918 stone
-fill 2160 1897 2190 1913 wood
-fill 2164 1900 2170 1905 glass
-fill 2180 1900 2186 1905 glass
-fill 2171 1889 2179 1891 wood
-fill 2167 1891 2183 1893 wood
-fill 2163 1893 2187 1895 wood
-fill 2159 1895 2191 1897 wood
-carve 2159 1889 2191 1913
-// brick house with a timber roof, body 2
-fill 2214 1918 2248 1921 stone
-fill 2215 1898 2247 1918 brick
-fill 2220 1902 2226 1908 glass
-fill 2236 1902 2242 1908 glass
-fill 2226 1890 2236 1892 wood
-fill 2222 1892 2240 1894 wood
-fill 2218 1894 2244 1896 wood
-fill 2214 1896 2248 1898 wood
-carve 2214 1890 2248 1918
-// wooden house, body 3
-fill 2271 1920 2303 1923 stone
-fill 2272 1904 2302 1920 wood
-fill 2276 1907 2282 1912 glass
-fill 2292 1907 2298 1912 glass
-fill 2283 1896 2291 1898 wood
-fill 2279 1898 2295 1900 wood
-fill 2275 1900 2299 1902 wood
-fill 2271 1902 2303 1904 wood
-carve 2271 1896 2303 1920
-// wooden house, body 4
-fill 2329 1919 2361 1922 stone
-fill 2330 1903 2360 1919 wood
-fill 2334 1906 2340 1911 glass
-fill 2350 1906 2356 1911 glass
-fill 2341 1895 2349 1897 wood
-fill 2337 1897 2353 1899 wood
-fill 2333 1899 2357 1901 wood
-fill 2329 1901 2361 1903 wood
-carve 2329 1895 2361 1919
-// a 40x10 lava pool in a basalt basin, held hot by lava sources in its floor and at its surface
-fill 2384 1910 2436 1922 basalt
-fill 2390 1910 2430 1920 lava
-fill 2404 1920 2416 1922 lava_source
-fill 2406 1910 2414 1912 lava_source
-// tree, body 5
-fill 2463 1907 2488 1912 soil
-fill 2473 1877 2477 1907 wood
-circle 2475 1877 12 leaves
-carve 2463 1865 2488 1907
-// brick house with a timber roof, body 6
-fill 2509 1898 2543 1906 stone
-fill 2510 1878 2542 1898 brick
-fill 2515 1882 2521 1888 glass
-fill 2531 1882 2537 1888 glass
-fill 2521 1870 2531 1872 wood
-fill 2517 1872 2535 1874 wood
-fill 2513 1874 2539 1876 wood
-fill 2509 1876 2543 1878 wood
-carve 2509 1870 2543 1898
-// wooden house, body 7
-fill 2569 1885 2601 1894 stone
-fill 2570 1869 2600 1885 wood
-fill 2574 1872 2580 1877 glass
-fill 2590 1872 2596 1877 glass
-fill 2581 1861 2589 1863 wood
-fill 2577 1863 2593 1865 wood
-fill 2573 1865 2597 1867 wood
-fill 2569 1867 2601 1869 wood
-carve 2569 1861 2601 1885
-// tree, body 8
-fill 2625 1871 2656 1881 soil
-fill 2638 1831 2642 1871 wood
-circle 2640 1831 15 leaves
-carve 2625 1816 2656 1871
-// The brick houses are pinned to the ground. Each wooden house and tree hangs
-// on a hinge to its nearest brick house, which also keeps it from merging into
-// the terrain while it waits; the hinge breaks when the water lifts it.
-pin 2 2231 1917
-pin 6 2526 1897
-joint 0 2 2178 1906 hinge 2000
-joint 1 2 2203 1912 hinge 2000
-joint 3 2 2259 1919 hinge 2000
-joint 4 2 2288 1918 hinge 2000
-joint 5 6 2500 1906 hinge 2000
-joint 7 6 2555 1884 hinge 2000
-joint 8 6 2583 1870 hinge 2000
+// Bedrock floor and walls.
+fill 0 1132 2048 1152 bedrock
+fill 0 0 8 1132 bedrock
+fill 2040 0 2048 1132 bedrock
+// The ground: stone under a 3.6 m soil skin, one run of columns per line.
+// A cliff closes the far end of the reservoir; the apron runs out from the
+// gate; the valley floor lies 10 m lower and a hillside closes it.
+fill 8 230 330 1132 stone
+fill 8 230 330 266 soil
+fill 330 750 1012 1132 stone
+fill 330 750 1012 786 soil
+fill 1012 751 1017 1132 stone
+fill 1012 751 1017 787 soil
+fill 1017 752 1021 1132 stone
+fill 1017 752 1021 788 soil
+fill 1021 753 1025 1132 stone
+fill 1021 753 1025 789 soil
+fill 1025 754 1028 1132 stone
+fill 1025 754 1028 790 soil
+fill 1028 755 1030 1132 stone
+fill 1028 755 1030 791 soil
+fill 1030 756 1033 1132 stone
+fill 1030 756 1033 792 soil
+fill 1033 757 1035 1132 stone
+fill 1033 757 1035 793 soil
+fill 1035 758 1037 1132 stone
+fill 1035 758 1037 794 soil
+fill 1037 759 1040 1132 stone
+fill 1037 759 1040 795 soil
+fill 1040 760 1042 1132 stone
+fill 1040 760 1042 796 soil
+fill 1042 761 1044 1132 stone
+fill 1042 761 1044 797 soil
+fill 1044 762 1046 1132 stone
+fill 1044 762 1046 798 soil
+fill 1046 763 1048 1132 stone
+fill 1046 763 1048 799 soil
+fill 1048 764 1050 1132 stone
+fill 1048 764 1050 800 soil
+fill 1050 765 1052 1132 stone
+fill 1050 765 1052 801 soil
+fill 1052 766 1054 1132 stone
+fill 1052 766 1054 802 soil
+fill 1054 767 1056 1132 stone
+fill 1054 767 1056 803 soil
+fill 1056 769 1058 1132 stone
+fill 1056 769 1058 805 soil
+fill 1058 770 1060 1132 stone
+fill 1058 770 1060 806 soil
+fill 1060 771 1062 1132 stone
+fill 1060 771 1062 807 soil
+fill 1062 772 1064 1132 stone
+fill 1062 772 1064 808 soil
+fill 1064 774 1066 1132 stone
+fill 1064 774 1066 810 soil
+fill 1066 775 1068 1132 stone
+fill 1066 775 1068 811 soil
+fill 1068 776 1070 1132 stone
+fill 1068 776 1070 812 soil
+fill 1070 778 1072 1132 stone
+fill 1070 778 1072 814 soil
+fill 1072 779 1074 1132 stone
+fill 1072 779 1074 815 soil
+fill 1074 780 1076 1132 stone
+fill 1074 780 1076 816 soil
+fill 1076 782 1078 1132 stone
+fill 1076 782 1078 818 soil
+fill 1078 783 1080 1132 stone
+fill 1078 783 1080 819 soil
+fill 1080 785 1082 1132 stone
+fill 1080 785 1082 821 soil
+fill 1082 786 1084 1132 stone
+fill 1082 786 1084 822 soil
+fill 1084 788 1086 1132 stone
+fill 1084 788 1086 824 soil
+fill 1086 789 1088 1132 stone
+fill 1086 789 1088 825 soil
+fill 1088 791 1090 1132 stone
+fill 1088 791 1090 827 soil
+fill 1090 792 1092 1132 stone
+fill 1090 792 1092 828 soil
+fill 1092 794 1094 1132 stone
+fill 1092 794 1094 830 soil
+fill 1094 795 1096 1132 stone
+fill 1094 795 1096 831 soil
+fill 1096 797 1098 1132 stone
+fill 1096 797 1098 833 soil
+fill 1098 798 1100 1132 stone
+fill 1098 798 1100 834 soil
+fill 1100 800 1102 1132 stone
+fill 1100 800 1102 836 soil
+fill 1102 801 1104 1132 stone
+fill 1102 801 1104 837 soil
+fill 1104 802 1106 1132 stone
+fill 1104 802 1106 838 soil
+fill 1106 804 1108 1132 stone
+fill 1106 804 1108 840 soil
+fill 1108 805 1110 1132 stone
+fill 1108 805 1110 841 soil
+fill 1110 807 1112 1132 stone
+fill 1110 807 1112 843 soil
+fill 1112 808 1114 1132 stone
+fill 1112 808 1114 844 soil
+fill 1114 810 1116 1132 stone
+fill 1114 810 1116 846 soil
+fill 1116 811 1118 1132 stone
+fill 1116 811 1118 847 soil
+fill 1118 813 1120 1132 stone
+fill 1118 813 1120 849 soil
+fill 1120 814 1122 1132 stone
+fill 1120 814 1122 850 soil
+fill 1122 816 1124 1132 stone
+fill 1122 816 1124 852 soil
+fill 1124 817 1126 1132 stone
+fill 1124 817 1126 853 soil
+fill 1126 819 1128 1132 stone
+fill 1126 819 1128 855 soil
+fill 1128 820 1130 1132 stone
+fill 1128 820 1130 856 soil
+fill 1130 821 1132 1132 stone
+fill 1130 821 1132 857 soil
+fill 1132 823 1134 1132 stone
+fill 1132 823 1134 859 soil
+fill 1134 824 1136 1132 stone
+fill 1134 824 1136 860 soil
+fill 1136 825 1138 1132 stone
+fill 1136 825 1138 861 soil
+fill 1138 827 1140 1132 stone
+fill 1138 827 1140 863 soil
+fill 1140 828 1142 1132 stone
+fill 1140 828 1142 864 soil
+fill 1142 829 1144 1132 stone
+fill 1142 829 1144 865 soil
+fill 1144 830 1146 1132 stone
+fill 1144 830 1146 866 soil
+fill 1146 832 1148 1132 stone
+fill 1146 832 1148 868 soil
+fill 1148 833 1150 1132 stone
+fill 1148 833 1150 869 soil
+fill 1150 834 1152 1132 stone
+fill 1150 834 1152 870 soil
+fill 1152 835 1154 1132 stone
+fill 1152 835 1154 871 soil
+fill 1154 836 1156 1132 stone
+fill 1154 836 1156 872 soil
+fill 1156 837 1158 1132 stone
+fill 1156 837 1158 873 soil
+fill 1158 838 1160 1132 stone
+fill 1158 838 1160 874 soil
+fill 1160 839 1162 1132 stone
+fill 1160 839 1162 875 soil
+fill 1162 840 1164 1132 stone
+fill 1162 840 1164 876 soil
+fill 1164 841 1166 1132 stone
+fill 1164 841 1166 877 soil
+fill 1166 842 1168 1132 stone
+fill 1166 842 1168 878 soil
+fill 1168 843 1171 1132 stone
+fill 1168 843 1171 879 soil
+fill 1171 844 1173 1132 stone
+fill 1171 844 1173 880 soil
+fill 1173 845 1176 1132 stone
+fill 1173 845 1176 881 soil
+fill 1176 846 1180 1132 stone
+fill 1176 846 1180 882 soil
+fill 1180 847 1184 1132 stone
+fill 1180 847 1184 883 soil
+fill 1184 848 1189 1132 stone
+fill 1184 848 1189 884 soil
+fill 1189 849 1200 1132 stone
+fill 1189 849 1200 885 soil
+fill 1200 850 1701 1132 stone
+fill 1200 850 1701 886 soil
+fill 1701 849 1703 1132 stone
+fill 1701 849 1703 885 soil
+fill 1703 848 1705 1132 stone
+fill 1703 848 1705 884 soil
+fill 1705 847 1707 1132 stone
+fill 1705 847 1707 883 soil
+fill 1707 846 1709 1132 stone
+fill 1707 846 1709 882 soil
+fill 1709 845 1711 1132 stone
+fill 1709 845 1711 881 soil
+fill 1711 844 1714 1132 stone
+fill 1711 844 1714 880 soil
+fill 1714 843 1716 1132 stone
+fill 1714 843 1716 879 soil
+fill 1716 842 1718 1132 stone
+fill 1716 842 1718 878 soil
+fill 1718 841 1720 1132 stone
+fill 1718 841 1720 877 soil
+fill 1720 840 1722 1132 stone
+fill 1720 840 1722 876 soil
+fill 1722 839 1724 1132 stone
+fill 1722 839 1724 875 soil
+fill 1724 838 1726 1132 stone
+fill 1724 838 1726 874 soil
+fill 1726 837 1728 1132 stone
+fill 1726 837 1728 873 soil
+fill 1728 835 1730 1132 stone
+fill 1728 835 1730 871 soil
+fill 1730 834 1732 1132 stone
+fill 1730 834 1732 870 soil
+fill 1732 833 1734 1132 stone
+fill 1732 833 1734 869 soil
+fill 1734 832 1736 1132 stone
+fill 1734 832 1736 868 soil
+fill 1736 830 1738 1132 stone
+fill 1736 830 1738 866 soil
+fill 1738 829 1740 1132 stone
+fill 1738 829 1740 865 soil
+fill 1740 828 1742 1132 stone
+fill 1740 828 1742 864 soil
+fill 1742 827 1744 1132 stone
+fill 1742 827 1744 863 soil
+fill 1744 825 1746 1132 stone
+fill 1744 825 1746 861 soil
+fill 1746 824 1748 1132 stone
+fill 1746 824 1748 860 soil
+fill 1748 822 1750 1132 stone
+fill 1748 822 1750 858 soil
+fill 1750 821 1752 1132 stone
+fill 1750 821 1752 857 soil
+fill 1752 820 1754 1132 stone
+fill 1752 820 1754 856 soil
+fill 1754 818 1756 1132 stone
+fill 1754 818 1756 854 soil
+fill 1756 817 1758 1132 stone
+fill 1756 817 1758 853 soil
+fill 1758 815 1760 1132 stone
+fill 1758 815 1760 851 soil
+fill 1760 814 1762 1132 stone
+fill 1760 814 1762 850 soil
+fill 1762 812 1764 1132 stone
+fill 1762 812 1764 848 soil
+fill 1764 810 1766 1132 stone
+fill 1764 810 1766 846 soil
+fill 1766 809 1768 1132 stone
+fill 1766 809 1768 845 soil
+fill 1768 807 1770 1132 stone
+fill 1768 807 1770 843 soil
+fill 1770 806 1772 1132 stone
+fill 1770 806 1772 842 soil
+fill 1772 804 1774 1132 stone
+fill 1772 804 1774 840 soil
+fill 1774 802 1776 1132 stone
+fill 1774 802 1776 838 soil
+fill 1776 801 1778 1132 stone
+fill 1776 801 1778 837 soil
+fill 1778 799 1780 1132 stone
+fill 1778 799 1780 835 soil
+fill 1780 797 1782 1132 stone
+fill 1780 797 1782 833 soil
+fill 1782 795 1784 1132 stone
+fill 1782 795 1784 831 soil
+fill 1784 793 1786 1132 stone
+fill 1784 793 1786 829 soil
+fill 1786 792 1788 1132 stone
+fill 1786 792 1788 828 soil
+fill 1788 790 1790 1132 stone
+fill 1788 790 1790 826 soil
+fill 1790 788 1792 1132 stone
+fill 1790 788 1792 824 soil
+fill 1792 786 1794 1132 stone
+fill 1792 786 1794 822 soil
+fill 1794 784 1796 1132 stone
+fill 1794 784 1796 820 soil
+fill 1796 782 1798 1132 stone
+fill 1796 782 1798 818 soil
+fill 1798 780 1800 1132 stone
+fill 1798 780 1800 816 soil
+fill 1800 778 1802 1132 stone
+fill 1800 778 1802 814 soil
+fill 1802 776 1804 1132 stone
+fill 1802 776 1804 812 soil
+fill 1804 774 1806 1132 stone
+fill 1804 774 1806 810 soil
+fill 1806 772 1808 1132 stone
+fill 1806 772 1808 808 soil
+fill 1808 770 1810 1132 stone
+fill 1808 770 1810 806 soil
+fill 1810 768 1812 1132 stone
+fill 1810 768 1812 804 soil
+fill 1812 766 1814 1132 stone
+fill 1812 766 1814 802 soil
+fill 1814 763 1816 1132 stone
+fill 1814 763 1816 799 soil
+fill 1816 761 1818 1132 stone
+fill 1816 761 1818 797 soil
+fill 1818 759 1820 1132 stone
+fill 1818 759 1820 795 soil
+fill 1820 757 1822 1132 stone
+fill 1820 757 1822 793 soil
+fill 1822 755 1824 1132 stone
+fill 1822 755 1824 791 soil
+fill 1824 752 1826 1132 stone
+fill 1824 752 1826 788 soil
+fill 1826 750 1828 1132 stone
+fill 1826 750 1828 786 soil
+fill 1828 748 1830 1132 stone
+fill 1828 748 1830 784 soil
+fill 1830 745 1832 1132 stone
+fill 1830 745 1832 781 soil
+fill 1832 743 1834 1132 stone
+fill 1832 743 1834 779 soil
+fill 1834 741 1836 1132 stone
+fill 1834 741 1836 777 soil
+fill 1836 738 1838 1132 stone
+fill 1836 738 1838 774 soil
+fill 1838 736 1840 1132 stone
+fill 1838 736 1840 772 soil
+fill 1840 733 1842 1132 stone
+fill 1840 733 1842 769 soil
+fill 1842 731 1844 1132 stone
+fill 1842 731 1844 767 soil
+fill 1844 728 1846 1132 stone
+fill 1844 728 1846 764 soil
+fill 1846 726 1848 1132 stone
+fill 1846 726 1848 762 soil
+fill 1848 723 1850 1132 stone
+fill 1848 723 1850 759 soil
+fill 1850 721 1852 1132 stone
+fill 1850 721 1852 757 soil
+fill 1852 718 1854 1132 stone
+fill 1852 718 1854 754 soil
+fill 1854 715 1856 1132 stone
+fill 1854 715 1856 751 soil
+fill 1856 713 1858 1132 stone
+fill 1856 713 1858 749 soil
+fill 1858 710 1860 1132 stone
+fill 1858 710 1860 746 soil
+fill 1860 707 1862 1132 stone
+fill 1860 707 1862 743 soil
+fill 1862 705 1864 1132 stone
+fill 1862 705 1864 741 soil
+fill 1864 702 1866 1132 stone
+fill 1864 702 1866 738 soil
+fill 1866 699 1868 1132 stone
+fill 1866 699 1868 735 soil
+fill 1868 696 1870 1132 stone
+fill 1868 696 1870 732 soil
+fill 1870 694 1872 1132 stone
+fill 1870 694 1872 730 soil
+fill 1872 691 1874 1132 stone
+fill 1872 691 1874 727 soil
+fill 1874 688 1876 1132 stone
+fill 1874 688 1876 724 soil
+fill 1876 685 1878 1132 stone
+fill 1876 685 1878 721 soil
+fill 1878 682 1880 1132 stone
+fill 1878 682 1880 718 soil
+fill 1880 679 1882 1132 stone
+fill 1880 679 1882 715 soil
+fill 1882 676 1884 1132 stone
+fill 1882 676 1884 712 soil
+fill 1884 673 1886 1132 stone
+fill 1884 673 1886 709 soil
+fill 1886 670 1888 1132 stone
+fill 1886 670 1888 706 soil
+fill 1888 667 1890 1132 stone
+fill 1888 667 1890 703 soil
+fill 1890 664 1892 1132 stone
+fill 1890 664 1892 700 soil
+fill 1892 661 1894 1132 stone
+fill 1892 661 1894 697 soil
+fill 1894 658 1896 1132 stone
+fill 1894 658 1896 694 soil
+fill 1896 655 1898 1132 stone
+fill 1896 655 1898 691 soil
+fill 1898 652 1900 1132 stone
+fill 1898 652 1900 688 soil
+fill 1900 649 1902 1132 stone
+fill 1900 649 1902 685 soil
+fill 1902 645 1904 1132 stone
+fill 1902 645 1904 681 soil
+fill 1904 642 1906 1132 stone
+fill 1904 642 1906 678 soil
+fill 1906 639 1908 1132 stone
+fill 1906 639 1908 675 soil
+fill 1908 636 1910 1132 stone
+fill 1908 636 1910 672 soil
+fill 1910 632 1912 1132 stone
+fill 1910 632 1912 668 soil
+fill 1912 629 1914 1132 stone
+fill 1912 629 1914 665 soil
+fill 1914 626 1916 1132 stone
+fill 1914 626 1916 662 soil
+fill 1916 622 1918 1132 stone
+fill 1916 622 1918 658 soil
+fill 1918 619 1920 1132 stone
+fill 1918 619 1920 655 soil
+fill 1920 616 1922 1132 stone
+fill 1920 616 1922 652 soil
+fill 1922 612 1924 1132 stone
+fill 1922 612 1924 648 soil
+fill 1924 609 1926 1132 stone
+fill 1924 609 1926 645 soil
+fill 1926 605 1928 1132 stone
+fill 1926 605 1928 641 soil
+fill 1928 602 1930 1132 stone
+fill 1928 602 1930 638 soil
+fill 1930 598 1932 1132 stone
+fill 1930 598 1932 634 soil
+fill 1932 595 1934 1132 stone
+fill 1932 595 1934 631 soil
+fill 1934 591 1936 1132 stone
+fill 1934 591 1936 627 soil
+fill 1936 588 1938 1132 stone
+fill 1936 588 1938 624 soil
+fill 1938 584 1940 1132 stone
+fill 1938 584 1940 620 soil
+fill 1940 580 1942 1132 stone
+fill 1940 580 1942 616 soil
+fill 1942 577 1944 1132 stone
+fill 1942 577 1944 613 soil
+fill 1944 573 1946 1132 stone
+fill 1944 573 1946 609 soil
+fill 1946 569 1948 1132 stone
+fill 1946 569 1948 605 soil
+fill 1948 566 1950 1132 stone
+fill 1948 566 1950 602 soil
+fill 1950 562 1952 1132 stone
+fill 1950 562 1952 598 soil
+fill 1952 558 1954 1132 stone
+fill 1952 558 1954 594 soil
+fill 1954 554 1956 1132 stone
+fill 1954 554 1956 590 soil
+fill 1956 551 1958 1132 stone
+fill 1956 551 1958 587 soil
+fill 1958 547 1960 1132 stone
+fill 1958 547 1960 583 soil
+fill 1960 543 1962 1132 stone
+fill 1960 543 1962 579 soil
+fill 1962 539 1964 1132 stone
+fill 1962 539 1964 575 soil
+fill 1964 535 1966 1132 stone
+fill 1964 535 1966 571 soil
+fill 1966 531 1968 1132 stone
+fill 1966 531 1968 567 soil
+fill 1968 527 1970 1132 stone
+fill 1968 527 1970 563 soil
+fill 1970 523 1972 1132 stone
+fill 1970 523 1972 559 soil
+fill 1972 519 1974 1132 stone
+fill 1972 519 1974 555 soil
+fill 1974 515 1976 1132 stone
+fill 1974 515 1976 551 soil
+fill 1976 511 1978 1132 stone
+fill 1976 511 1978 547 soil
+fill 1978 507 1980 1132 stone
+fill 1978 507 1980 543 soil
+fill 1980 503 1982 1132 stone
+fill 1980 503 1982 539 soil
+fill 1982 499 1984 1132 stone
+fill 1982 499 1984 535 soil
+fill 1984 495 1986 1132 stone
+fill 1984 495 1986 531 soil
+fill 1986 491 1988 1132 stone
+fill 1986 491 1988 527 soil
+fill 1988 486 1990 1132 stone
+fill 1988 486 1990 522 soil
+fill 1990 482 1992 1132 stone
+fill 1990 482 1992 518 soil
+fill 1992 478 1994 1132 stone
+fill 1992 478 1994 514 soil
+fill 1994 474 1996 1132 stone
+fill 1994 474 1996 510 soil
+fill 1996 469 1998 1132 stone
+fill 1996 469 1998 505 soil
+fill 1998 465 2000 1132 stone
+fill 1998 465 2000 501 soil
+fill 2000 461 2002 1132 stone
+fill 2000 461 2002 497 soil
+fill 2002 457 2004 1132 stone
+fill 2002 457 2004 493 soil
+fill 2004 452 2006 1132 stone
+fill 2004 452 2006 488 soil
+fill 2006 448 2008 1132 stone
+fill 2006 448 2008 484 soil
+fill 2008 443 2010 1132 stone
+fill 2008 443 2010 479 soil
+fill 2010 439 2012 1132 stone
+fill 2010 439 2012 475 soil
+fill 2012 434 2014 1132 stone
+fill 2012 434 2014 470 soil
+fill 2014 430 2016 1132 stone
+fill 2014 430 2016 466 soil
+fill 2016 425 2018 1132 stone
+fill 2016 425 2018 461 soil
+fill 2018 421 2020 1132 stone
+fill 2018 421 2020 457 soil
+fill 2020 416 2022 1132 stone
+fill 2020 416 2022 452 soil
+fill 2022 412 2024 1132 stone
+fill 2022 412 2024 448 soil
+fill 2024 407 2026 1132 stone
+fill 2024 407 2026 443 soil
+fill 2026 403 2028 1132 stone
+fill 2026 403 2028 439 soil
+fill 2028 398 2030 1132 stone
+fill 2028 398 2030 434 soil
+fill 2030 393 2032 1132 stone
+fill 2030 393 2032 429 soil
+fill 2032 389 2034 1132 stone
+fill 2032 389 2034 425 soil
+fill 2034 384 2036 1132 stone
+fill 2034 384 2036 420 soil
+fill 2036 379 2038 1132 stone
+fill 2036 379 2038 415 soil
+fill 2038 374 2040 1132 stone
+fill 2038 374 2040 410 soil
+// The concrete apron.
+fill 700 750 1010 780 concrete
+// The reservoir: 36 m of water, 41 m long.
+fill 330 390 744 750 water
+// The gate: a steel leaf 2.4 m thick standing on the sill, hung from the
+// housing of its hoist.
+fill 744 360 768 750 metal
+fill 732 0 780 360 concrete
+// Trees on the clifftop.
+decorate 8 150 340 240 moss 70 floor
+fill 228 186 233 232 wood
+circle 230 186 19 leaves
+fill 268 174 273 232 wood
+circle 270 174 23 leaves
+fill 306 190 311 232 wood
+circle 308 190 16 leaves
 
 [events]
-// Charges set in the water against the foot of the dam go off at tick 1. Set
-// upstream of the concrete and small enough not to reach the air beyond it,
-// they throw the concrete out into the valley as rubble and spray instead of
-// back into the reservoir, and light no fire for the flood to trap. The dam is
-// then gone; no water is deleted.
-at 1: explode 2040 1600 24 220
-at 1: explode 2040 1750 24 220
-at 1: explode 2040 1880 24 220
-at 1: fill 2048 0 2056 2000 air
+// At tick 40 the hoist's brake lets go and the counterweights fling the gate
+// up into its housing: it leaves at 8 rows a tick, speeds up by 2 rows a tick
+// every tick, and its foot clears the old water line 15 ticks later.
+at 40: fill 744 350 768 360 metal
+at 40: fill 744 740 768 750 air
+at 41: fill 744 338 768 350 metal
+at 41: fill 744 728 768 740 air
+at 42: fill 744 324 768 338 metal
+at 42: fill 744 714 768 728 air
+at 43: fill 744 308 768 324 metal
+at 43: fill 744 698 768 714 air
+at 44: fill 744 290 768 308 metal
+at 44: fill 744 680 768 698 air
+at 45: fill 744 270 768 290 metal
+at 45: fill 744 660 768 680 air
+at 46: fill 744 248 768 270 metal
+at 46: fill 744 638 768 660 air
+at 47: fill 744 224 768 248 metal
+at 47: fill 744 614 768 638 air
+at 48: fill 744 198 768 224 metal
+at 48: fill 744 588 768 614 air
+at 49: fill 744 170 768 198 metal
+at 49: fill 744 560 768 588 air
+at 50: fill 744 140 768 170 metal
+at 50: fill 744 530 768 560 air
+at 51: fill 744 108 768 140 metal
+at 51: fill 744 498 768 530 air
+at 52: fill 744 74 768 108 metal
+at 52: fill 744 464 768 498 air
+at 53: fill 744 38 768 74 metal
+at 53: fill 744 428 768 464 air
+at 54: fill 744 0 768 38 metal
+at 54: fill 744 390 768 428 air
+at 55: fill 744 -12 768 0 metal
+at 55: fill 744 378 768 390 air
 
 [camera]
 view 960 540
 scale 2
 sky day
-ambient 0.25 0.25 0.28
-at 0: 2048 1024 zoom=0.26
-at 150: 2150 1450 zoom=0.55
-at 360: 2250 1680 zoom=0.95
-at 720: 2300 1720 zoom=1.05
-at 1500: 2330 1730 zoom=1.15
+ambient 0.5 0.5 0.55
+// Open on the reservoir and its gate, follow the flood down the valley to
+// the run-up on the far hillside, then pull back to the whole valley for the
+// bore and the slosh.
+at 0: 600 500 zoom=0.8
+at 40: 640 530 zoom=0.86
+at 120: 820 600 zoom=0.82
+at 200: 1000 630 zoom=0.7
+at 280: 1200 650 zoom=0.66
+at 400: 1300 640 zoom=0.66
+at 520: 1250 640 zoom=0.62
+at 640: 1180 640 zoom=0.56
+at 1200: 1180 640 zoom=0.56
+
+[expect]
+// All the water is there at the start.
+after 1: count water in 0 0 2048 1152 == 149040
+// The gate holds until it goes: nothing has got past it.
+after 38: count water in 769 0 2040 1132 == 0
+// A second after the gate goes, the face has slumped out over the apron.
+after 100: count water in 769 0 1012 750 > 10000
+// Within 4.5 s of the gate going the front has crossed the valley to the foot
+// of the far hillside, 950 cells (95 m) away.
+after 300: count water in 1700 0 2040 850 > 2000
+// The surge runs up the hillside more than 10 m above the valley floor, and
+// more than 20 m.
+after 450: count water in 1800 0 2040 750 > 20000
+after 500: count water in 1850 0 2040 650 > 10000
+// The reservoir has emptied into the valley, and no water was made or lost.
+after 1200: count water in 330 0 744 650 == 0
+after 1200: count water in 330 0 744 750 < 40000
+after 1200: count water in 0 0 2048 1152 == 149040
