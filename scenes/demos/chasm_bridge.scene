@@ -1,29 +1,31 @@
 // Chasm Bridge: Rapier joints as a structure. A rope bridge of 20 timber
 // planks, each plank a rigid body hinged to the next and the end planks pinned
-// to two sea stacks, sags across a 24 m chasm 17 m above a lava lake. Loads
-// drop onto it from chutes in the roof: an iron-cornered wood crate (the deck
-// dips and sways under it), then a glass crate, a glass frame around a lattice
-// of glass blocks, that shatters by Voronoi fracture on the planks and rains
-// glittering shards into the lava. Charges rumble in the roof and knock loose
-// a pale concrete slab that lands mid-span. The deck bows, the centre hinge (the
-// only breakable joint, 20 kN) snaps, and both halves swing down like pendulums,
-// slap the stack faces and hang from their unbreakable pins. The crate, slab
-// and glass float on the lava (wood 60, concrete 240 vs lava 250); the crate
-// chars and burns, and a last crate tumbles in for the closing hold. Lit from
-// below: the lava, two lavafalls, two small lava spouts and torches, with blue
-// glowshrooms on the roof and stacks for a cool rim. 10 cells per metre, 60
-// ticks per second.
+// to two sea stacks, sags across a 24 m chasm 13 m above a lava lake. Loads
+// drop onto it, each bending the deck further. At once a wood crate with iron
+// corners and an iron ingot drops 3.5 m from a stone chute and the deck dips
+// into a V and sways. At 3 s a crate of glass bottles drops onto the right
+// stack's lip and bursts: its frame splits by Voronoi fracture and the glass
+// spills over the end of the deck. From 5 s three charges blast craters in
+// the roof and rain rubble on the planks. At 7 s two more cut the ledges under
+// an iron-strapped timber block (1.3 t) and it drops flat onto mid-span: the
+// deck bows into a deep V and the centre hinge, the only breakable joint
+// (17 kN), snaps. Both halves swing down like pendulums against the stack
+// faces and hang from their pins. The block plunges into the lava and burns
+// down to its iron straps while the crate floats high and chars (wood 60
+// against lava 250). At 14 s a last charge blows the right anchor and that
+// half drops into the lake and burns. Lit from below by the lava, embers and
+// torches, with blue glowshrooms for a cool rim. 10 cells per metre, 60 ticks
+// per second: 1260 ticks is 21 s.
 [scene]
 name = chasm bridge
-description = A 20-plank rope bridge of hinged rigid bodies sags over a lava lake. A wood crate, then a glass crate that shatters, then a concrete slab blasted from the roof land on it; the centre hinge snaps, the halves swing down and hang from their pins, and the wreckage floats and burns on the lava.
-size = 720 420
+description = A 20-plank rope bridge of hinged rigid bodies sags over a lava lake. A crate drops on it, a crate of glass bottles bursts at its end, roof charges rain rubble on it and an iron-strapped timber block lands mid-span; the centre hinge snaps, the halves swing down and hang from their pins, the wreckage floats and burns on the lava, and a last charge drops the right half into the lake.
+size = 720 380
 seed = 0xb21d
-ticks = 2100
-
+ticks = 1260
 [build]
-fill 0 0 720 420 stone
+fill 0 0 720 380 stone
 // one big cavern: ragged roof, open down to the lava lake
-terrain 0 720 50 10 37 air 318
+terrain 0 720 50 10 37 air 284
 circle 60 46 28 air
 circle 165 38 24 air
 circle 560 42 26 air
@@ -140,65 +142,58 @@ fill 464 30 466 63 stone
 fill 466 30 468 61 stone
 fill 468 30 470 58 stone
 fill 470 30 472 60 stone
-fill 328 40 348 42 air
-fill 327 42 347 44 air
-fill 329 44 349 46 air
-fill 327 46 347 48 air
-fill 328 48 348 50 air
-fill 327 50 347 52 air
-fill 327 52 347 54 air
-fill 328 54 348 56 air
-fill 327 56 347 58 air
-fill 329 58 349 60 air
-fill 327 60 347 62 air
-fill 328 62 348 64 air
-fill 328 64 348 66 air
-fill 328 66 348 68 air
-fill 327 68 347 70 air
-fill 327 70 347 72 air
-fill 328 72 348 74 air
-fill 328 74 348 76 air
-fill 329 76 349 78 air
-fill 328 78 348 80 air
-fill 327 80 347 82 air
-fill 328 82 348 84 air
-fill 329 84 349 86 air
-fill 328 86 348 88 air
-fill 329 88 349 90 air
-fill 328 90 348 92 air
-fill 344 78 376 80 air
-fill 345 80 377 82 air
-fill 344 82 376 84 air
-fill 343 84 375 86 air
-fill 343 86 375 88 air
-fill 343 88 375 90 air
-fill 343 90 375 92 air
-fill 404 40 434 42 air
-fill 404 42 434 44 air
-fill 406 44 436 46 air
-fill 404 46 434 48 air
-fill 404 48 434 50 air
-fill 405 50 435 52 air
-fill 406 52 436 54 air
-fill 404 54 434 56 air
-fill 405 56 435 58 air
-fill 405 58 435 60 air
-fill 404 60 434 62 air
-fill 404 62 434 64 air
-fill 405 64 435 66 air
-fill 406 66 436 68 air
-fill 405 68 435 70 air
-fill 406 70 436 72 air
-fill 406 72 436 74 air
-fill 405 74 435 76 air
-fill 404 76 434 78 air
-fill 406 78 436 80 air
-fill 406 80 436 82 air
-fill 406 82 436 84 air
-fill 406 84 436 86 air
-fill 406 86 436 88 air
-fill 406 88 436 90 air
-fill 404 90 434 92 air
+fill 296 40 316 42 air
+fill 295 42 315 44 air
+fill 297 44 317 46 air
+fill 295 46 315 48 air
+fill 296 48 316 50 air
+fill 295 50 315 52 air
+fill 295 52 315 54 air
+fill 296 54 316 56 air
+fill 295 56 315 58 air
+fill 297 58 317 60 air
+fill 295 60 315 62 air
+fill 296 62 316 64 air
+fill 296 64 316 66 air
+fill 296 66 316 68 air
+fill 295 68 315 70 air
+fill 295 70 315 72 air
+fill 296 72 316 74 air
+fill 296 74 316 76 air
+fill 297 76 317 78 air
+fill 296 78 316 80 air
+fill 295 80 315 82 air
+fill 296 82 316 84 air
+fill 297 84 317 86 air
+fill 296 86 316 88 air
+fill 297 88 317 90 air
+fill 296 90 316 92 air
+fill 464 40 492 42 air
+fill 465 42 493 44 air
+fill 464 44 492 46 air
+fill 463 46 491 48 air
+fill 463 48 491 50 air
+fill 463 50 491 52 air
+fill 463 52 491 54 air
+fill 463 54 491 56 air
+fill 463 56 491 58 air
+fill 465 58 493 60 air
+fill 463 60 491 62 air
+fill 463 62 491 64 air
+fill 464 64 492 66 air
+fill 465 66 493 68 air
+fill 463 68 491 70 air
+fill 464 70 492 72 air
+fill 464 72 492 74 air
+fill 463 74 491 76 air
+fill 463 76 491 78 air
+fill 464 78 492 80 air
+fill 465 80 493 82 air
+fill 464 82 492 84 air
+fill 465 84 493 86 air
+fill 465 86 493 88 air
+fill 464 88 492 90 air
+fill 463 90 491 92 air
 fill 24 56 36 57 stone
 fill 24 57 36 58 stone
 fill 24 58 36 59 stone
@@ -436,887 +431,784 @@ fill 693 101 695 102 stone
 fill 693 102 695 103 stone
 fill 693 103 695 104 stone
 // two sea stacks rising from the lava: vertical inner faces, sloping ragged outer faces
-fill 209 150 240 152 stone
+fill 208 150 240 152 stone
 fill 480 150 512 152 stone
-fill 209 152 240 154 stone
+fill 212 152 240 154 stone
 fill 480 152 511 154 stone
-fill 209 154 240 156 stone
+fill 208 154 240 156 stone
 fill 480 154 511 156 stone
-fill 212 156 240 158 stone
+fill 209 156 240 158 stone
 fill 480 156 511 158 stone
 fill 209 158 240 160 stone
 fill 480 158 508 160 stone
-fill 211 160 240 162 stone
-fill 480 160 508 162 stone
-fill 211 162 240 164 stone
-fill 480 162 511 164 stone
-fill 211 164 240 166 stone
-fill 480 164 508 166 stone
-fill 210 166 240 168 stone
-fill 480 166 512 168 stone
-fill 212 168 240 170 stone
-fill 480 168 508 170 stone
-fill 212 170 240 172 stone
-fill 480 170 512 172 stone
-fill 210 172 240 174 stone
-fill 480 172 513 174 stone
-fill 211 174 240 176 stone
-fill 480 174 511 176 stone
-fill 207 176 240 178 stone
-fill 480 176 509 178 stone
-fill 211 178 240 180 stone
-fill 480 178 510 180 stone
-fill 207 180 240 182 stone
-fill 480 180 512 182 stone
-fill 209 182 240 184 stone
-fill 480 182 512 184 stone
-fill 208 184 240 186 stone
-fill 480 184 514 186 stone
-fill 208 186 240 188 stone
+fill 209 160 240 162 stone
+fill 480 160 511 162 stone
+fill 212 162 240 164 stone
+fill 480 162 509 164 stone
+fill 212 164 240 166 stone
+fill 480 164 509 166 stone
+fill 208 166 240 168 stone
+fill 480 166 510 168 stone
+fill 211 168 240 170 stone
+fill 480 168 511 170 stone
+fill 207 170 240 172 stone
+fill 480 170 509 172 stone
+fill 211 172 240 174 stone
+fill 480 172 509 174 stone
+fill 207 174 240 176 stone
+fill 480 174 510 176 stone
+fill 206 176 240 178 stone
+fill 480 176 510 178 stone
+fill 208 178 240 180 stone
+fill 480 178 514 180 stone
+fill 210 180 240 182 stone
+fill 480 180 510 182 stone
+fill 208 182 240 184 stone
+fill 480 182 515 184 stone
+fill 206 184 240 186 stone
+fill 480 184 512 186 stone
+fill 207 186 240 188 stone
 fill 480 186 513 188 stone
-fill 210 188 240 190 stone
-fill 480 188 510 190 stone
-fill 206 190 240 192 stone
-fill 480 190 514 192 stone
-fill 206 192 240 194 stone
-fill 480 192 514 194 stone
-fill 207 194 240 196 stone
-fill 480 194 511 196 stone
-fill 208 196 240 198 stone
-fill 480 196 511 198 stone
-fill 206 198 240 200 stone
+fill 205 188 240 190 stone
+fill 480 188 513 190 stone
+fill 205 190 240 192 stone
+fill 480 190 512 192 stone
+fill 208 192 240 194 stone
+fill 480 192 515 194 stone
+fill 204 194 240 196 stone
+fill 480 194 516 196 stone
+fill 204 196 240 198 stone
+fill 480 196 515 198 stone
+fill 207 198 240 200 stone
 fill 480 198 514 200 stone
-fill 205 200 240 202 stone
-fill 480 200 513 202 stone
+fill 206 200 240 202 stone
+fill 480 200 516 202 stone
 fill 204 202 240 204 stone
-fill 480 202 512 204 stone
-fill 207 204 240 206 stone
-fill 480 204 516 206 stone
+fill 480 202 517 204 stone
+fill 204 204 240 206 stone
+fill 480 204 519 206 stone
 fill 205 206 240 208 stone
-fill 480 206 514 208 stone
-fill 203 208 240 210 stone
-fill 480 208 513 210 stone
+fill 480 206 516 208 stone
+fill 201 208 240 210 stone
+fill 480 208 517 210 stone
 fill 203 210 240 212 stone
-fill 480 210 515 212 stone
-fill 206 212 240 214 stone
-fill 480 212 516 214 stone
-fill 202 214 240 216 stone
-fill 480 214 516 216 stone
-fill 205 216 240 218 stone
-fill 480 216 516 218 stone
-fill 204 218 240 220 stone
+fill 480 210 520 212 stone
+fill 204 212 240 214 stone
+fill 480 212 520 214 stone
+fill 201 214 240 216 stone
+fill 480 214 517 216 stone
+fill 201 216 240 218 stone
+fill 480 216 521 218 stone
+fill 200 218 240 220 stone
 fill 480 218 519 220 stone
-fill 201 220 240 222 stone
+fill 200 220 240 222 stone
 fill 480 220 519 222 stone
-fill 203 222 240 224 stone
-fill 480 222 516 224 stone
-fill 200 224 240 226 stone
-fill 480 224 517 226 stone
-fill 203 226 240 228 stone
-fill 480 226 519 228 stone
-fill 203 228 240 230 stone
-fill 480 228 517 230 stone
-fill 199 230 240 232 stone
-fill 480 230 520 232 stone
-fill 201 232 240 234 stone
-fill 480 232 517 234 stone
-fill 203 234 240 236 stone
-fill 480 234 519 236 stone
-fill 199 236 240 238 stone
-fill 480 236 520 238 stone
-fill 201 238 240 240 stone
-fill 480 238 522 240 stone
-fill 199 240 240 242 stone
-fill 480 240 522 242 stone
-fill 199 242 240 244 stone
-fill 480 242 521 244 stone
-fill 201 244 240 246 stone
-fill 480 244 520 246 stone
-fill 200 246 240 248 stone
-fill 480 246 521 248 stone
-fill 197 248 240 250 stone
-fill 480 248 521 250 stone
-fill 197 250 240 252 stone
-fill 480 250 522 252 stone
-fill 196 252 240 254 stone
-fill 480 252 525 254 stone
-fill 195 254 240 256 stone
-fill 480 254 521 256 stone
-fill 195 256 240 258 stone
-fill 480 256 524 258 stone
-fill 198 258 240 260 stone
-fill 480 258 522 260 stone
-fill 194 260 240 262 stone
-fill 480 260 524 262 stone
-fill 194 262 240 264 stone
-fill 480 262 524 264 stone
-fill 193 264 240 266 stone
-fill 480 264 526 266 stone
-fill 196 266 240 268 stone
-fill 480 266 527 268 stone
-fill 192 268 240 270 stone
-fill 480 268 528 270 stone
-fill 195 270 240 272 stone
-fill 480 270 526 272 stone
-fill 194 272 240 274 stone
-fill 480 272 526 274 stone
-fill 194 274 240 276 stone
-fill 480 274 527 276 stone
-fill 190 276 240 278 stone
-fill 480 276 529 278 stone
-fill 192 278 240 280 stone
-fill 480 278 531 280 stone
-fill 189 280 240 282 stone
-fill 480 280 530 282 stone
-fill 190 282 240 284 stone
-fill 480 282 529 284 stone
-fill 188 284 240 286 stone
-fill 480 284 532 286 stone
-fill 190 286 240 288 stone
-fill 480 286 529 288 stone
-fill 191 288 240 290 stone
-fill 480 288 529 290 stone
-fill 186 290 240 292 stone
-fill 480 290 531 292 stone
-fill 187 292 240 294 stone
-fill 480 292 531 294 stone
-fill 188 294 240 296 stone
-fill 480 294 531 296 stone
-fill 187 296 240 298 stone
-fill 480 296 532 298 stone
-fill 186 298 240 300 stone
-fill 480 298 536 300 stone
-fill 186 300 240 302 stone
-fill 480 300 537 302 stone
-fill 185 302 240 304 stone
-fill 480 302 535 304 stone
-fill 182 304 240 306 stone
-fill 480 304 537 306 stone
-fill 185 306 240 308 stone
-fill 480 306 534 308 stone
-fill 183 308 240 310 stone
-fill 480 308 538 310 stone
-fill 181 310 240 312 stone
-fill 480 310 539 312 stone
-fill 181 312 240 314 stone
-fill 480 312 540 314 stone
-fill 183 314 240 316 stone
-fill 480 314 540 316 stone
-fill 182 316 240 318 stone
-fill 480 316 541 318 stone
-fill 178 318 240 320 stone
-fill 480 318 538 320 stone
-fill 179 320 240 322 stone
-fill 480 320 539 322 stone
-fill 177 322 240 324 stone
-fill 480 322 539 324 stone
-fill 180 324 240 326 stone
-fill 480 324 540 326 stone
-fill 179 326 240 328 stone
-fill 480 326 543 328 stone
-fill 176 328 240 330 stone
-fill 480 328 540 330 stone
-fill 175 330 240 332 stone
-fill 480 330 541 332 stone
-fill 176 332 240 334 stone
-fill 480 332 546 334 stone
-fill 174 334 240 336 stone
-fill 480 334 546 336 stone
-fill 174 336 240 338 stone
-fill 480 336 543 338 stone
-fill 173 338 240 340 stone
-fill 480 338 543 340 stone
-fill 175 340 240 342 stone
-fill 480 340 545 342 stone
-fill 173 342 240 344 stone
-fill 480 342 545 344 stone
-fill 175 344 240 346 stone
-fill 480 344 549 346 stone
-fill 171 346 240 348 stone
-fill 480 346 550 348 stone
-fill 173 348 240 350 stone
-fill 480 348 547 350 stone
-fill 170 350 240 352 stone
-fill 480 350 549 352 stone
-fill 168 352 240 354 stone
-fill 480 352 552 354 stone
-fill 168 354 240 356 stone
-fill 480 354 552 356 stone
-fill 171 356 240 358 stone
-fill 480 356 550 358 stone
-fill 169 358 240 360 stone
-fill 480 358 552 360 stone
-fill 168 360 240 362 stone
-fill 480 360 551 362 stone
-fill 168 362 240 364 stone
-fill 480 362 549 364 stone
-fill 168 364 240 366 stone
-fill 480 364 550 366 stone
-fill 168 366 240 368 stone
-fill 480 366 549 368 stone
-fill 169 368 240 370 stone
-fill 480 368 549 370 stone
-fill 169 370 240 372 stone
-fill 480 370 548 372 stone
-fill 169 372 240 374 stone
-fill 480 372 551 374 stone
-fill 170 374 240 376 stone
-fill 480 374 548 376 stone
-fill 171 376 240 378 stone
-fill 480 376 551 378 stone
-fill 172 378 240 380 stone
-fill 480 378 549 380 stone
-fill 170 380 240 382 stone
-fill 480 380 548 382 stone
-fill 171 382 240 384 stone
-fill 480 382 550 384 stone
-fill 171 384 240 386 stone
-fill 480 384 550 386 stone
-fill 171 386 240 388 stone
-fill 480 386 551 388 stone
-fill 171 388 240 390 stone
-fill 480 388 548 390 stone
-fill 169 390 240 392 stone
-fill 480 390 551 392 stone
-fill 171 392 240 394 stone
-fill 480 392 549 394 stone
-fill 171 394 240 396 stone
-fill 480 394 551 396 stone
-fill 168 396 240 398 stone
-fill 480 396 551 398 stone
-fill 170 398 240 400 stone
-fill 480 398 551 400 stone
-fill 171 400 240 402 stone
-fill 480 400 550 402 stone
-fill 170 402 240 404 stone
-fill 480 402 548 404 stone
-fill 234 158 240 404 basalt
-fill 480 158 486 404 basalt
-// low rock shelves at the far walls
-fill 0 200 20 202 stone
-fill 702 200 720 202 stone
-fill 0 202 20 204 stone
-fill 698 202 720 204 stone
-fill 0 204 22 206 stone
-fill 698 204 720 206 stone
-fill 0 206 20 208 stone
-fill 697 206 720 208 stone
-fill 0 208 22 210 stone
-fill 696 208 720 210 stone
-fill 0 210 25 212 stone
-fill 697 210 720 212 stone
-fill 0 212 26 214 stone
-fill 698 212 720 214 stone
-fill 0 214 22 216 stone
-fill 697 214 720 216 stone
-fill 0 216 23 218 stone
-fill 697 216 720 218 stone
-fill 0 218 26 220 stone
-fill 694 218 720 220 stone
-fill 0 220 24 222 stone
-fill 695 220 720 222 stone
-fill 0 222 27 224 stone
-fill 694 222 720 224 stone
-fill 0 224 29 226 stone
-fill 692 224 720 226 stone
-fill 0 226 29 228 stone
-fill 693 226 720 228 stone
-fill 0 228 31 230 stone
-fill 689 228 720 230 stone
-fill 0 230 32 232 stone
-fill 689 230 720 232 stone
-fill 0 232 30 234 stone
-fill 692 232 720 234 stone
-fill 0 234 31 236 stone
-fill 691 234 720 236 stone
-fill 0 236 31 238 stone
-fill 687 236 720 238 stone
-fill 0 238 30 240 stone
-fill 688 238 720 240 stone
-fill 0 240 31 242 stone
-fill 689 240 720 242 stone
-fill 0 242 34 244 stone
-fill 688 242 720 244 stone
-fill 0 244 36 246 stone
-fill 687 244 720 246 stone
-fill 0 246 33 248 stone
-fill 685 246 720 248 stone
-fill 0 248 34 250 stone
-fill 683 248 720 250 stone
-fill 0 250 34 252 stone
-fill 684 250 720 252 stone
-fill 0 252 39 254 stone
-fill 682 252 720 254 stone
-fill 0 254 38 256 stone
-fill 680 254 720 256 stone
-fill 0 256 37 258 stone
-fill 684 256 720 258 stone
-fill 0 258 41 260 stone
-fill 682 258 720 260 stone
-fill 0 260 38 262 stone
-fill 681 260 720 262 stone
-fill 0 262 41 264 stone
-fill 681 262 720 264 stone
-fill 0 264 40 266 stone
-fill 680 264 720 266 stone
-fill 0 266 42 268 stone
-fill 678 266 720 268 stone
-fill 0 268 45 270 stone
-fill 678 268 720 270 stone
-fill 0 270 43 272 stone
-fill 676 270 720 272 stone
-fill 0 272 46 274 stone
-fill 677 272 720 274 stone
-fill 0 274 45 276 stone
-fill 675 274 720 276 stone
-fill 0 276 43 278 stone
-fill 675 276 720 278 stone
-fill 0 278 44 280 stone
-fill 676 278 720 280 stone
-fill 0 280 45 282 stone
-fill 671 280 720 282 stone
-fill 0 282 49 284 stone
-fill 674 282 720 284 stone
-fill 0 284 50 286 stone
-fill 671 284 720 286 stone
-fill 0 286 48 288 stone
-fill 670 286 720 288 stone
-fill 0 288 47 290 stone
-fill 670 288 720 290 stone
-fill 0 290 51 292 stone
-fill 668 290 720 292 stone
-fill 0 292 52 294 stone
-fill 667 292 720 294 stone
-fill 0 294 51 296 stone
-fill 670 294 720 296 stone
-fill 0 296 51 298 stone
-fill 668 296 720 298 stone
-fill 0 298 52 300 stone
-fill 668 298 720 300 stone
-fill 0 300 54 302 stone
-fill 667 300 720 302 stone
-fill 0 302 52 304 stone
-fill 667 302 720 304 stone
-fill 0 304 53 306 stone
-fill 667 304 720 306 stone
-fill 0 306 55 308 stone
-fill 664 306 720 308 stone
-fill 0 308 55 310 stone
-fill 666 308 720 310 stone
-fill 0 310 55 312 stone
-fill 662 310 720 312 stone
-fill 0 312 59 314 stone
-fill 663 312 720 314 stone
-fill 0 314 60 316 stone
-fill 663 314 720 316 stone
-fill 0 316 59 318 stone
-fill 663 316 720 318 stone
-fill 0 318 61 320 stone
-fill 661 318 720 320 stone
-fill 0 320 59 322 stone
-fill 660 320 720 322 stone
-fill 0 322 62 324 stone
-fill 661 322 720 324 stone
-fill 0 324 62 326 stone
-fill 658 324 720 326 stone
-fill 0 326 62 328 stone
-fill 656 326 720 328 stone
-fill 0 328 63 330 stone
-fill 658 328 720 330 stone
-fill 0 330 62 332 stone
-fill 656 330 720 332 stone
-fill 0 332 63 334 stone
-fill 656 332 720 334 stone
-fill 0 334 64 336 stone
-fill 657 334 720 336 stone
-fill 0 336 66 338 stone
-fill 653 336 720 338 stone
-fill 0 338 64 340 stone
-fill 653 338 720 340 stone
-fill 0 340 67 342 stone
-fill 651 340 720 342 stone
-fill 0 342 67 344 stone
-fill 653 342 720 344 stone
-fill 0 344 70 346 stone
-fill 654 344 720 346 stone
-fill 0 346 67 348 stone
-fill 651 346 720 348 stone
-fill 0 348 68 350 stone
-fill 651 348 720 350 stone
-fill 0 350 71 352 stone
-fill 648 350 720 352 stone
-fill 0 352 69 354 stone
-fill 648 352 720 354 stone
-fill 0 354 70 356 stone
-fill 648 354 720 356 stone
-fill 0 356 72 358 stone
-fill 649 356 720 358 stone
-fill 0 358 71 360 stone
-fill 645 358 720 360 stone
-fill 0 360 76 362 stone
-fill 647 360 720 362 stone
-fill 0 362 76 364 stone
-fill 645 362 720 364 stone
-fill 0 364 75 366 stone
-fill 644 364 720 366 stone
-fill 0 366 75 368 stone
-fill 644 366 720 368 stone
-fill 0 368 78 370 stone
-fill 645 368 720 370 stone
-fill 0 370 75 372 stone
-fill 641 370 720 372 stone
-fill 0 372 79 374 stone
-fill 640 372 720 374 stone
-fill 0 374 77 376 stone
-fill 640 374 720 376 stone
-fill 0 376 81 378 stone
-fill 639 376 720 378 stone
-fill 0 378 78 380 stone
-fill 638 378 720 380 stone
-fill 0 380 80 382 stone
-fill 641 380 720 382 stone
-fill 0 382 79 384 stone
-fill 641 382 720 384 stone
-fill 0 384 81 386 stone
-fill 638 384 720 386 stone
-fill 0 386 81 388 stone
-fill 636 386 720 388 stone
-fill 0 388 84 390 stone
-fill 635 388 720 390 stone
-fill 0 390 82 392 stone
-fill 638 390 720 392 stone
-fill 0 392 87 394 stone
-fill 636 392 720 394 stone
-fill 0 394 86 396 stone
-fill 635 394 720 396 stone
-fill 0 396 84 398 stone
-fill 633 396 720 398 stone
-fill 0 398 85 400 stone
-fill 631 398 720 400 stone
-fill 0 400 89 402 stone
-fill 635 400 720 402 stone
-fill 0 402 90 404 stone
-fill 634 402 720 404 stone
-// the lava lake
-fill 0 318 720 400 lava
-temp 0 318 720 404 870
-temp 240 318 480 404 920
-temp 495 318 502 322 1150
-temp 250 318 264 321 1100
-temp 675 318 685 323 760
-temp 88 318 98 320 780
-temp 641 318 654 320 1100
-temp 624 318 629 322 780
-temp 677 318 691 324 780
-temp 591 318 596 323 1150
-temp 72 318 82 325 780
-temp 111 318 125 325 1100
-temp 511 318 518 323 780
-temp 487 318 497 324 1150
-temp 214 318 221 323 1150
-temp 27 318 34 320 760
-temp 528 318 538 323 780
-temp 224 318 230 324 1150
-temp 102 318 107 322 780
-temp 145 318 157 320 780
-temp 383 318 389 323 760
-temp 413 318 416 320 1100
-temp 513 318 526 323 760
-temp 319 318 333 323 1100
-temp 362 318 371 320 780
-temp 349 318 352 322 780
-temp 417 318 421 325 1100
-temp 22 318 36 322 780
-temp 391 318 395 323 760
-temp 613 318 617 323 780
-temp 291 318 294 320 780
-temp 62 318 75 325 780
-temp 162 318 168 323 780
-temp 533 318 541 322 1100
-temp 448 318 451 324 760
-temp 572 318 578 320 1150
-temp 430 318 440 325 1100
-temp 303 318 313 324 1150
-temp 140 318 145 323 760
-temp 361 318 368 322 780
-temp 678 318 685 325 760
-temp 254 318 261 324 760
-temp 413 318 417 325 1100
-temp 175 318 179 324 1100
-temp 519 318 530 323 1100
-temp 350 318 360 321 760
-temp 570 318 576 320 1100
-temp 188 318 196 322 1150
-temp 254 318 262 324 780
-temp 216 318 219 323 760
-temp 433 318 447 323 1100
-temp 286 318 294 323 1150
-temp 294 318 306 321 780
-temp 525 318 536 320 1100
-temp 287 318 293 323 760
-temp 671 318 681 322 760
-temp 32 318 37 323 1150
-temp 494 318 506 320 760
-temp 84 318 93 323 760
-temp 264 318 268 321 1100
-temp 165 318 176 325 1150
-temp 672 318 682 324 1150
-temp 50 318 53 321 1100
-temp 593 318 596 321 780
-temp 651 318 658 325 760
-temp 124 318 128 322 1150
-temp 547 318 559 323 1100
-temp 277 318 283 320 1150
-temp 560 318 567 322 760
-temp 333 318 346 323 1100
-temp 548 318 554 320 1100
-temp 431 318 445 320 780
-temp 32 318 38 325 760
-temp 672 318 681 322 1150
-temp 243 318 256 322 760
-temp 242 318 252 325 1150
-temp 356 318 370 322 760
-temp 415 318 421 322 1150
-temp 526 318 530 323 1100
-temp 215 318 222 321 1100
-temp 486 318 492 322 780
-temp 121 318 133 324 760
-temp 201 318 207 323 760
-temp 67 318 79 323 1100
-temp 65 318 71 324 1150
-temp 155 318 164 325 1150
-temp 71 318 76 323 760
-temp 331 318 345 320 1150
-temp 179 318 187 321 1100
-temp 678 318 689 320 760
-temp 329 318 342 322 760
-temp 349 318 359 320 1100
-fill 0 318 60 320 stone
-fill 660 318 720 320 stone
-fill 180 318 240 320 stone
-fill 480 318 540 320 stone
-fill 0 320 60 322 stone
-fill 660 320 720 322 stone
-fill 180 320 240 322 stone
-fill 480 320 540 322 stone
-fill 0 322 61 324 stone
-fill 659 322 720 324 stone
-fill 179 322 240 324 stone
-fill 480 322 541 324 stone
-fill 0 324 62 326 stone
-fill 658 324 720 326 stone
-fill 179 324 240 326 stone
-fill 480 324 541 326 stone
-fill 0 326 62 328 stone
-fill 658 326 720 328 stone
-fill 178 326 240 328 stone
-fill 480 326 542 328 stone
-fill 0 328 63 330 stone
-fill 657 328 720 330 stone
-fill 178 328 240 330 stone
-fill 480 328 542 330 stone
-fill 0 330 64 332 stone
-fill 656 330 720 332 stone
-fill 177 330 240 332 stone
-fill 480 330 543 332 stone
-fill 0 332 64 334 stone
-fill 656 332 720 334 stone
-fill 176 332 240 334 stone
-fill 480 332 544 334 stone
-fill 0 334 65 336 stone
-fill 655 334 720 336 stone
-fill 176 334 240 336 stone
-fill 480 334 544 336 stone
-fill 0 336 66 338 stone
-fill 654 336 720 338 stone
-fill 175 336 240 338 stone
-fill 480 336 545 338 stone
-fill 0 338 66 340 stone
-fill 654 338 720 340 stone
-fill 175 338 240 340 stone
-fill 480 338 545 340 stone
-fill 0 340 67 342 stone
-fill 653 340 720 342 stone
-fill 174 340 240 342 stone
-fill 480 340 546 342 stone
-fill 0 342 68 344 stone
-fill 652 342 720 344 stone
-fill 173 342 240 344 stone
-fill 480 342 547 344 stone
-fill 0 344 68 346 stone
-fill 652 344 720 346 stone
-fill 173 344 240 346 stone
-fill 480 344 547 346 stone
-fill 0 346 69 348 stone
-fill 651 346 720 348 stone
+fill 197 222 240 224 stone
+fill 480 222 523 224 stone
+fill 197 224 240 226 stone
+fill 480 224 521 226 stone
+fill 199 226 240 228 stone
+fill 480 226 524 228 stone
+fill 199 228 240 230 stone
+fill 480 228 521 230 stone
+fill 196 230 240 232 stone
+fill 480 230 522 232 stone
+fill 198 232 240 234 stone
+fill 480 232 525 234 stone
+fill 195 234 240 236 stone
+fill 480 234 524 236 stone
+fill 198 236 240 238 stone
+fill 480 236 522 238 stone
+fill 195 238 240 240 stone
+fill 480 238 526 240 stone
+fill 195 240 240 242 stone
+fill 480 240 524 242 stone
+fill 192 242 240 244 stone
+fill 480 242 526 244 stone
+fill 192 244 240 246 stone
+fill 480 244 527 246 stone
+fill 193 246 240 248 stone
+fill 480 246 525 248 stone
+fill 193 248 240 250 stone
+fill 480 248 526 250 stone
+fill 193 250 240 252 stone
+fill 480 250 529 252 stone
+fill 192 252 240 254 stone
+fill 480 252 529 254 stone
+fill 192 254 240 256 stone
+fill 480 254 530 256 stone
+fill 188 256 240 258 stone
+fill 480 256 532 258 stone
+fill 191 258 240 260 stone
+fill 480 258 532 260 stone
+fill 189 260 240 262 stone
+fill 480 260 529 262 stone
+fill 190 262 240 264 stone
+fill 480 262 533 264 stone
+fill 188 264 240 266 stone
+fill 480 264 534 266 stone
+fill 188 266 240 268 stone
+fill 480 266 534 268 stone
+fill 186 268 240 270 stone
+fill 480 268 532 270 stone
+fill 184 270 240 272 stone
+fill 480 270 536 272 stone
+fill 184 272 240 274 stone
+fill 480 272 533 274 stone
+fill 185 274 240 276 stone
+fill 480 274 535 276 stone
+fill 184 276 240 278 stone
+fill 480 276 535 278 stone
+fill 184 278 240 280 stone
+fill 480 278 539 280 stone
+fill 181 280 240 282 stone
+fill 480 280 537 282 stone
+fill 179 282 240 284 stone
+fill 480 282 541 284 stone
+fill 179 284 240 286 stone
+fill 480 284 540 286 stone
+fill 181 286 240 288 stone
+fill 480 286 542 288 stone
+fill 177 288 240 290 stone
+fill 480 288 540 290 stone
+fill 180 290 240 292 stone
+fill 480 290 540 292 stone
+fill 180 292 240 294 stone
+fill 480 292 544 294 stone
+fill 178 294 240 296 stone
+fill 480 294 544 296 stone
+fill 177 296 240 298 stone
+fill 480 296 543 298 stone
+fill 177 298 240 300 stone
+fill 480 298 545 300 stone
+fill 176 300 240 302 stone
+fill 480 300 545 302 stone
+fill 172 302 240 304 stone
+fill 480 302 545 304 stone
+fill 171 304 240 306 stone
+fill 480 304 547 306 stone
+fill 172 306 240 308 stone
+fill 480 306 550 308 stone
+fill 170 308 240 310 stone
+fill 480 308 548 310 stone
+fill 173 310 240 312 stone
+fill 480 310 549 312 stone
+fill 169 312 240 314 stone
+fill 480 312 552 314 stone
+fill 168 314 240 316 stone
+fill 480 314 551 316 stone
+fill 168 316 240 318 stone
+fill 480 316 549 318 stone
+fill 168 318 240 320 stone
+fill 480 318 549 320 stone
+fill 168 320 240 322 stone
+fill 480 320 552 322 stone
+fill 172 322 240 324 stone
+fill 480 322 551 324 stone
+fill 171 324 240 326 stone
+fill 480 324 552 326 stone
+fill 172 326 240 328 stone
+fill 480 326 549 328 stone
+fill 171 328 240 330 stone
+fill 480 328 549 330 stone
+fill 169 330 240 332 stone
+fill 480 330 552 332 stone
+fill 172 332 240 334 stone
+fill 480 332 552 334 stone
+fill 172 334 240 336 stone
+fill 480 334 550 336 stone
+fill 168 336 240 338 stone
+fill 480 336 552 338 stone
+fill 168 338 240 340 stone
+fill 480 338 551 340 stone
+fill 172 340 240 342 stone
+fill 480 340 552 342 stone
+fill 172 342 240 344 stone
+fill 480 342 549 344 stone
+fill 171 344 240 346 stone
+fill 480 344 550 346 stone
 fill 172 346 240 348 stone
 fill 480 346 548 348 stone
-fill 0 348 70 350 stone
-fill 650 348 720 350 stone
-fill 171 348 240 350 stone
-fill 480 348 549 350 stone
-fill 0 350 70 352 stone
-fill 650 350 720 352 stone
-fill 171 350 240 352 stone
-fill 480 350 549 352 stone
-fill 0 352 71 354 stone
-fill 649 352 720 354 stone
+fill 168 348 240 350 stone
+fill 480 348 551 350 stone
+fill 168 350 240 352 stone
+fill 480 350 548 352 stone
+fill 172 352 240 354 stone
+fill 480 352 551 354 stone
+fill 170 354 240 356 stone
+fill 480 354 552 356 stone
+fill 168 356 240 358 stone
+fill 480 356 552 358 stone
+fill 168 358 240 360 stone
+fill 480 358 549 360 stone
+fill 170 360 240 362 stone
+fill 480 360 551 362 stone
+fill 168 362 240 364 stone
+fill 480 362 552 364 stone
+fill 169 364 240 366 stone
+fill 480 364 552 366 stone
+fill 234 158 240 366 basalt
+fill 480 158 486 366 basalt
+// low rock shelves at the far walls
+fill 0 200 19 202 stone
+fill 698 200 720 202 stone
+fill 0 202 20 204 stone
+fill 698 202 720 204 stone
+fill 0 204 20 206 stone
+fill 698 204 720 206 stone
+fill 0 206 21 208 stone
+fill 697 206 720 208 stone
+fill 0 208 21 210 stone
+fill 696 208 720 210 stone
+fill 0 210 25 212 stone
+fill 696 210 720 212 stone
+fill 0 212 23 214 stone
+fill 696 212 720 214 stone
+fill 0 214 27 216 stone
+fill 696 214 720 216 stone
+fill 0 216 26 218 stone
+fill 693 216 720 218 stone
+fill 0 218 26 220 stone
+fill 693 218 720 220 stone
+fill 0 220 29 222 stone
+fill 692 220 720 222 stone
+fill 0 222 30 224 stone
+fill 691 222 720 224 stone
+fill 0 224 32 226 stone
+fill 690 224 720 226 stone
+fill 0 226 30 228 stone
+fill 687 226 720 228 stone
+fill 0 228 34 230 stone
+fill 688 228 720 230 stone
+fill 0 230 33 232 stone
+fill 687 230 720 232 stone
+fill 0 232 36 234 stone
+fill 683 232 720 234 stone
+fill 0 234 37 236 stone
+fill 684 234 720 236 stone
+fill 0 236 38 238 stone
+fill 684 236 720 238 stone
+fill 0 238 38 240 stone
+fill 682 238 720 240 stone
+fill 0 240 37 242 stone
+fill 681 240 720 242 stone
+fill 0 242 38 244 stone
+fill 680 242 720 244 stone
+fill 0 244 42 246 stone
+fill 679 244 720 246 stone
+fill 0 246 42 248 stone
+fill 681 246 720 248 stone
+fill 0 248 43 250 stone
+fill 678 248 720 250 stone
+fill 0 250 45 252 stone
+fill 675 250 720 252 stone
+fill 0 252 44 254 stone
+fill 674 252 720 254 stone
+fill 0 254 43 256 stone
+fill 677 254 720 256 stone
+fill 0 256 45 258 stone
+fill 676 256 720 258 stone
+fill 0 258 45 260 stone
+fill 673 258 720 260 stone
+fill 0 260 48 262 stone
+fill 674 260 720 262 stone
+fill 0 262 48 264 stone
+fill 671 262 720 264 stone
+fill 0 264 49 266 stone
+fill 669 264 720 266 stone
+fill 0 266 51 268 stone
+fill 668 266 720 268 stone
+fill 0 268 51 270 stone
+fill 666 268 720 270 stone
+fill 0 270 55 272 stone
+fill 665 270 720 272 stone
+fill 0 272 55 274 stone
+fill 666 272 720 274 stone
+fill 0 274 53 276 stone
+fill 665 274 720 276 stone
+fill 0 276 54 278 stone
+fill 665 276 720 278 stone
+fill 0 278 58 280 stone
+fill 665 278 720 280 stone
+fill 0 280 58 282 stone
+fill 664 280 720 282 stone
+fill 0 282 57 284 stone
+fill 661 282 720 284 stone
+fill 0 284 58 286 stone
+fill 658 284 720 286 stone
+fill 0 286 59 288 stone
+fill 662 286 720 288 stone
+fill 0 288 61 290 stone
+fill 661 288 720 290 stone
+fill 0 290 63 292 stone
+fill 660 290 720 292 stone
+fill 0 292 63 294 stone
+fill 655 292 720 294 stone
+fill 0 294 65 296 stone
+fill 656 294 720 296 stone
+fill 0 296 67 298 stone
+fill 656 296 720 298 stone
+fill 0 298 64 300 stone
+fill 652 298 720 300 stone
+fill 0 300 66 302 stone
+fill 655 300 720 302 stone
+fill 0 302 67 304 stone
+fill 652 302 720 304 stone
+fill 0 304 67 306 stone
+fill 652 304 720 306 stone
+fill 0 306 69 308 stone
+fill 650 306 720 308 stone
+fill 0 308 71 310 stone
+fill 647 308 720 310 stone
+fill 0 310 71 312 stone
+fill 648 310 720 312 stone
+fill 0 312 74 314 stone
+fill 645 312 720 314 stone
+fill 0 314 73 316 stone
+fill 646 314 720 316 stone
+fill 0 316 75 318 stone
+fill 647 316 720 318 stone
+fill 0 318 76 320 stone
+fill 646 318 720 320 stone
+fill 0 320 75 322 stone
+fill 645 320 720 322 stone
+fill 0 322 80 324 stone
+fill 640 322 720 324 stone
+fill 0 324 78 326 stone
+fill 639 324 720 326 stone
+fill 0 326 81 328 stone
+fill 641 326 720 328 stone
+fill 0 328 81 330 stone
+fill 642 328 720 330 stone
+fill 0 330 82 332 stone
+fill 638 330 720 332 stone
+fill 0 332 84 334 stone
+fill 637 332 720 334 stone
+fill 0 334 85 336 stone
+fill 637 334 720 336 stone
+fill 0 336 83 338 stone
+fill 637 336 720 338 stone
+fill 0 338 85 340 stone
+fill 636 338 720 340 stone
+fill 0 340 85 342 stone
+fill 633 340 720 342 stone
+fill 0 342 87 344 stone
+fill 635 342 720 344 stone
+fill 0 344 87 346 stone
+fill 634 344 720 346 stone
+fill 0 346 87 348 stone
+fill 631 346 720 348 stone
+fill 0 348 91 350 stone
+fill 631 348 720 350 stone
+fill 0 350 89 352 stone
+fill 631 350 720 352 stone
+fill 0 352 93 354 stone
+fill 626 352 720 354 stone
+fill 0 354 93 356 stone
+fill 625 354 720 356 stone
+fill 0 356 93 358 stone
+fill 626 356 720 358 stone
+fill 0 358 93 360 stone
+fill 624 358 720 360 stone
+fill 0 360 95 362 stone
+fill 625 360 720 362 stone
+fill 0 362 97 364 stone
+fill 622 362 720 364 stone
+fill 0 364 96 366 stone
+fill 622 364 720 366 stone
+// the lava lake
+fill 0 284 720 362 lava
+temp 0 284 720 366 870
+temp 240 284 480 366 920
+temp 382 284 390 287 780
+temp 45 284 52 288 1100
+temp 197 284 200 289 780
+temp 95 284 105 290 780
+temp 681 284 687 290 1100
+temp 15 284 19 286 780
+temp 157 284 166 289 1150
+temp 33 284 40 291 780
+temp 248 284 252 291 1100
+temp 620 284 629 291 780
+temp 516 284 521 291 780
+temp 643 284 656 286 1100
+temp 535 284 548 291 760
+temp 527 284 532 291 1150
+temp 608 284 622 286 1100
+temp 41 284 44 291 1100
+temp 379 284 383 289 760
+temp 581 284 584 291 1150
+temp 554 284 567 289 1100
+temp 280 284 283 286 760
+temp 525 284 536 291 1150
+temp 548 284 552 288 760
+temp 86 284 93 291 1100
+temp 220 284 226 289 760
+temp 401 284 405 291 760
+temp 304 284 307 286 1100
+temp 624 284 629 288 780
+temp 677 284 691 290 780
+temp 591 284 596 289 1150
+temp 72 284 82 291 780
+temp 111 284 125 291 1100
+temp 511 284 518 289 780
+temp 487 284 497 290 1150
+temp 214 284 221 289 1150
+temp 27 284 34 286 760
+temp 528 284 538 289 780
+temp 224 284 230 290 1150
+temp 102 284 107 288 780
+temp 145 284 157 286 780
+temp 383 284 389 289 760
+temp 413 284 416 286 1100
+temp 513 284 526 289 760
+temp 319 284 333 289 1100
+temp 362 284 371 286 780
+temp 349 284 352 288 780
+temp 417 284 421 291 1100
+temp 22 284 36 288 780
+temp 391 284 395 289 760
+temp 613 284 617 289 780
+temp 291 284 294 286 780
+temp 62 284 75 291 780
+temp 162 284 168 289 780
+temp 533 284 541 288 1100
+temp 448 284 451 290 760
+temp 572 284 578 286 1150
+temp 430 284 440 291 1100
+temp 303 284 313 290 1150
+temp 140 284 145 289 760
+temp 361 284 368 288 780
+temp 678 284 685 291 760
+temp 254 284 261 290 760
+temp 413 284 417 291 1100
+temp 175 284 179 290 1100
+temp 519 284 530 289 1100
+temp 350 284 360 287 760
+temp 570 284 576 286 1100
+temp 188 284 196 288 1150
+temp 254 284 262 290 780
+temp 216 284 219 289 760
+temp 433 284 447 289 1100
+temp 286 284 294 289 1150
+temp 294 284 306 287 780
+temp 525 284 536 286 1100
+temp 287 284 293 289 760
+temp 671 284 681 288 760
+temp 32 284 37 289 1150
+temp 494 284 506 286 760
+temp 84 284 93 289 760
+temp 264 284 268 287 1100
+temp 165 284 176 291 1150
+temp 672 284 682 290 1150
+temp 50 284 53 287 1100
+temp 593 284 596 287 780
+temp 651 284 658 291 760
+temp 124 284 128 288 1150
+temp 547 284 559 289 1100
+temp 277 284 283 286 1150
+temp 560 284 567 288 760
+temp 333 284 346 289 1100
+temp 548 284 554 286 1100
+fill 0 284 60 286 stone
+fill 660 284 720 286 stone
+fill 180 284 240 286 stone
+fill 480 284 540 286 stone
+fill 0 286 60 288 stone
+fill 660 286 720 288 stone
+fill 180 286 240 288 stone
+fill 480 286 540 288 stone
+fill 0 288 61 290 stone
+fill 659 288 720 290 stone
+fill 179 288 240 290 stone
+fill 480 288 541 290 stone
+fill 0 290 62 292 stone
+fill 658 290 720 292 stone
+fill 178 290 240 292 stone
+fill 480 290 542 292 stone
+fill 0 292 63 294 stone
+fill 657 292 720 294 stone
+fill 178 292 240 294 stone
+fill 480 292 542 294 stone
+fill 0 294 64 296 stone
+fill 656 294 720 296 stone
+fill 177 294 240 296 stone
+fill 480 294 543 296 stone
+fill 0 296 65 298 stone
+fill 655 296 720 298 stone
+fill 176 296 240 298 stone
+fill 480 296 544 298 stone
+fill 0 298 66 300 stone
+fill 654 298 720 300 stone
+fill 175 298 240 300 stone
+fill 480 298 545 300 stone
+fill 0 300 67 302 stone
+fill 653 300 720 302 stone
+fill 175 300 240 302 stone
+fill 480 300 545 302 stone
+fill 0 302 68 304 stone
+fill 652 302 720 304 stone
+fill 174 302 240 304 stone
+fill 480 302 546 304 stone
+fill 0 304 69 306 stone
+fill 651 304 720 306 stone
+fill 173 304 240 306 stone
+fill 480 304 547 306 stone
+fill 0 306 70 308 stone
+fill 650 306 720 308 stone
+fill 172 306 240 308 stone
+fill 480 306 548 308 stone
+fill 0 308 71 310 stone
+fill 649 308 720 310 stone
+fill 171 308 240 310 stone
+fill 480 308 549 310 stone
+fill 0 310 72 312 stone
+fill 648 310 720 312 stone
+fill 171 310 240 312 stone
+fill 480 310 549 312 stone
+fill 0 312 73 314 stone
+fill 647 312 720 314 stone
+fill 170 312 240 314 stone
+fill 480 312 550 314 stone
+fill 0 314 74 316 stone
+fill 646 314 720 316 stone
+fill 170 314 240 316 stone
+fill 480 314 550 316 stone
+fill 0 316 75 318 stone
+fill 645 316 720 318 stone
+fill 170 316 240 318 stone
+fill 480 316 550 318 stone
+fill 0 318 76 320 stone
+fill 644 318 720 320 stone
+fill 170 318 240 320 stone
+fill 480 318 550 320 stone
+fill 0 320 77 322 stone
+fill 643 320 720 322 stone
+fill 170 320 240 322 stone
+fill 480 320 550 322 stone
+fill 0 322 78 324 stone
+fill 642 322 720 324 stone
+fill 170 322 240 324 stone
+fill 480 322 550 324 stone
+fill 0 324 79 326 stone
+fill 641 324 720 326 stone
+fill 170 324 240 326 stone
+fill 480 324 550 326 stone
+fill 0 326 80 328 stone
+fill 640 326 720 328 stone
+fill 170 326 240 328 stone
+fill 480 326 550 328 stone
+fill 0 328 80 330 stone
+fill 640 328 720 330 stone
+fill 170 328 240 330 stone
+fill 480 328 550 330 stone
+fill 0 330 81 332 stone
+fill 639 330 720 332 stone
+fill 170 330 240 332 stone
+fill 480 330 550 332 stone
+fill 0 332 82 334 stone
+fill 638 332 720 334 stone
+fill 170 332 240 334 stone
+fill 480 332 550 334 stone
+fill 0 334 83 336 stone
+fill 637 334 720 336 stone
+fill 170 334 240 336 stone
+fill 480 334 550 336 stone
+fill 0 336 84 338 stone
+fill 636 336 720 338 stone
+fill 170 336 240 338 stone
+fill 480 336 550 338 stone
+fill 0 338 85 340 stone
+fill 635 338 720 340 stone
+fill 170 338 240 340 stone
+fill 480 338 550 340 stone
+fill 0 340 86 342 stone
+fill 634 340 720 342 stone
+fill 170 340 240 342 stone
+fill 480 340 550 342 stone
+fill 0 342 87 344 stone
+fill 633 342 720 344 stone
+fill 170 342 240 344 stone
+fill 480 342 550 344 stone
+fill 0 344 88 346 stone
+fill 632 344 720 346 stone
+fill 170 344 240 346 stone
+fill 480 344 550 346 stone
+fill 0 346 89 348 stone
+fill 631 346 720 348 stone
+fill 170 346 240 348 stone
+fill 480 346 550 348 stone
+fill 0 348 90 350 stone
+fill 630 348 720 350 stone
+fill 170 348 240 350 stone
+fill 480 348 550 350 stone
+fill 0 350 91 352 stone
+fill 629 350 720 352 stone
+fill 170 350 240 352 stone
+fill 480 350 550 352 stone
+fill 0 352 92 354 stone
+fill 628 352 720 354 stone
 fill 170 352 240 354 stone
 fill 480 352 550 354 stone
-fill 0 354 72 356 stone
-fill 648 354 720 356 stone
+fill 0 354 93 356 stone
+fill 627 354 720 356 stone
 fill 170 354 240 356 stone
 fill 480 354 550 356 stone
-fill 0 356 72 358 stone
-fill 648 356 720 358 stone
+fill 0 356 94 358 stone
+fill 626 356 720 358 stone
 fill 170 356 240 358 stone
 fill 480 356 550 358 stone
-fill 0 358 73 360 stone
-fill 647 358 720 360 stone
+fill 0 358 95 360 stone
+fill 625 358 720 360 stone
 fill 170 358 240 360 stone
 fill 480 358 550 360 stone
-fill 0 360 74 362 stone
-fill 646 360 720 362 stone
+fill 0 360 96 362 stone
+fill 624 360 720 362 stone
 fill 170 360 240 362 stone
 fill 480 360 550 362 stone
-fill 0 362 74 364 stone
-fill 646 362 720 364 stone
+fill 0 362 97 364 stone
+fill 623 362 720 364 stone
 fill 170 362 240 364 stone
 fill 480 362 550 364 stone
-fill 0 364 75 366 stone
-fill 645 364 720 366 stone
+fill 0 364 98 366 stone
+fill 622 364 720 366 stone
 fill 170 364 240 366 stone
 fill 480 364 550 366 stone
-fill 0 366 76 368 stone
-fill 644 366 720 368 stone
-fill 170 366 240 368 stone
-fill 480 366 550 368 stone
-fill 0 368 76 370 stone
-fill 644 368 720 370 stone
-fill 170 368 240 370 stone
-fill 480 368 550 370 stone
-fill 0 370 77 372 stone
-fill 643 370 720 372 stone
-fill 170 370 240 372 stone
-fill 480 370 550 372 stone
-fill 0 372 78 374 stone
-fill 642 372 720 374 stone
-fill 170 372 240 374 stone
-fill 480 372 550 374 stone
-fill 0 374 78 376 stone
-fill 642 374 720 376 stone
-fill 170 374 240 376 stone
-fill 480 374 550 376 stone
-fill 0 376 79 378 stone
-fill 641 376 720 378 stone
-fill 170 376 240 378 stone
-fill 480 376 550 378 stone
-fill 0 378 80 380 stone
-fill 640 378 720 380 stone
-fill 170 378 240 380 stone
-fill 480 378 550 380 stone
-fill 0 380 81 382 stone
-fill 639 380 720 382 stone
-fill 170 380 240 382 stone
-fill 480 380 550 382 stone
-fill 0 382 81 384 stone
-fill 639 382 720 384 stone
-fill 170 382 240 384 stone
-fill 480 382 550 384 stone
-fill 0 384 82 386 stone
-fill 638 384 720 386 stone
-fill 170 384 240 386 stone
-fill 480 384 550 386 stone
-fill 0 386 83 388 stone
-fill 637 386 720 388 stone
-fill 170 386 240 388 stone
-fill 480 386 550 388 stone
-fill 0 388 83 390 stone
-fill 637 388 720 390 stone
-fill 170 388 240 390 stone
-fill 480 388 550 390 stone
-fill 0 390 84 392 stone
-fill 636 390 720 392 stone
-fill 170 390 240 392 stone
-fill 480 390 550 392 stone
-fill 0 392 85 394 stone
-fill 635 392 720 394 stone
-fill 170 392 240 394 stone
-fill 480 392 550 394 stone
-fill 0 394 85 396 stone
-fill 635 394 720 396 stone
-fill 170 394 240 396 stone
-fill 480 394 550 396 stone
-fill 0 396 86 398 stone
-fill 634 396 720 398 stone
-fill 170 396 240 398 stone
-fill 480 396 550 398 stone
-fill 0 398 87 400 stone
-fill 633 398 720 400 stone
-fill 170 398 240 400 stone
-fill 480 398 550 400 stone
-fill 0 400 87 402 stone
-fill 633 400 720 402 stone
-fill 170 400 240 402 stone
-fill 480 400 550 402 stone
-fill 0 402 88 404 stone
-fill 632 402 720 404 stone
-fill 170 402 240 404 stone
-fill 480 402 550 404 stone
-fill 0 400 720 402 lava_source
-// a few cool basalt rafts on the lake surface
-fill 6 318 10 319 basalt
-fill 130 318 141 319 basalt
-fill 132 319 139 320 basalt
-fill 216 318 225 319 basalt
-fill 218 319 223 320 basalt
-fill 369 318 376 319 basalt
-fill 371 319 374 320 basalt
-fill 488 318 494 319 basalt
-fill 385 318 396 319 basalt
-fill 387 319 394 320 basalt
-fill 201 318 209 319 basalt
-fill 203 319 207 320 basalt
-fill 424 318 430 319 basalt
-fill 479 318 483 319 basalt
-fill 67 318 74 319 basalt
-fill 69 319 72 320 basalt
-fill 203 318 207 319 basalt
-fill 624 318 632 319 basalt
-fill 626 319 630 320 basalt
-fill 635 318 638 319 basalt
-fill 272 318 280 319 basalt
-fill 274 319 278 320 basalt
-fill 308 318 311 319 basalt
-fill 613 318 617 319 basalt
-fill 28 318 34 319 basalt
-fill 113 318 123 319 basalt
-fill 115 319 121 320 basalt
-fill 480 318 489 319 basalt
-fill 482 319 487 320 basalt
-fill 512 318 517 319 basalt
-fill 12 318 19 319 basalt
-fill 14 319 17 320 basalt
-fill 158 318 170 319 basalt
-fill 160 319 168 320 basalt
-fill 245 318 253 319 basalt
-fill 247 319 251 320 basalt
-fill 475 318 483 319 basalt
-fill 477 319 481 320 basalt
-fill 614 318 618 319 basalt
-fill 528 318 534 319 basalt
-fill 70 318 73 319 basalt
-fill 497 318 508 319 basalt
-fill 499 319 506 320 basalt
-fill 561 318 569 319 basalt
-fill 563 319 567 320 basalt
-fill 168 318 177 319 basalt
-fill 170 319 175 320 basalt
-fill 111 318 115 319 basalt
-fill 102 318 111 319 basalt
-fill 104 319 109 320 basalt
-fill 0 402 720 420 basalt
-// lavafalls from roof fissures
-fill 93 30 99 70 air
-fill 94 32 98 35 lava_source
-fill 623 30 629 70 air
-fill 624 32 628 35 lava_source
+fill 0 362 720 364 lava_source
+// a few cool basalt rafts on the outer lake
+fill 60 284 63 285 basalt
+fill 694 284 703 285 basalt
+fill 87 284 94 285 basalt
+fill 73 284 79 285 basalt
+fill 642 284 652 285 basalt
+fill 628 284 633 285 basalt
+fill 613 284 618 285 basalt
+fill 614 284 619 285 basalt
+fill 65 284 70 285 basalt
+fill 85 284 90 285 basalt
+fill 115 284 118 285 basalt
+fill 84 284 91 285 basalt
+fill 86 284 94 285 basalt
+fill 0 364 720 380 basalt
 decorate 0 0 720 110 glowshroom 5 ceiling
-// two small lava spouts low on the chasm faces, below the reach of the deck halves
-fill 235 292 240 297 air
-fill 236 293 238 296 lava_source
-fill 480 292 485 297 air
-fill 482 293 484 296 lava_source
-decorate 170 160 220 318 glowshroom 5 walls
-decorate 500 160 550 318 glowshroom 5 walls
-decorate 480 180 483 270 glowshroom 12 walls
-decorate 237 180 240 270 glowshroom 12 walls
-fill 228 136 230 150 wood
-fill 228 130 230 136 torch
-fill 490 136 492 150 wood
-fill 490 130 492 136 torch
-fill 208 136 210 150 wood
-fill 208 130 210 136 torch
-fill 510 136 512 150 wood
-fill 510 130 512 136 torch
-// the concrete slab, wedged in the centre chute until the charges carve it loose
-fill 346 78 374 88 concrete
-// The deck: 20 planks of 1.1 x 0.4 m along a parabola 2.2 m deep with 1-cell gaps,
-// so it hangs slack. Two iron bolts per plank put the wood under half its mass, so
-// a plank never shatters on a jolt: only the hinges decide where the bridge fails.
-// Pins are unbreakable; so is every hinge but the centre one.
+decorate 170 160 220 284 glowshroom 5 walls
+decorate 500 160 550 284 glowshroom 5 walls
+fill 222 136 224 150 wood
+fill 222 130 224 136 torch
+fill 498 136 500 150 wood
+fill 498 130 500 136 torch
+fill 212 136 214 150 wood
+fill 212 130 214 136 torch
+fill 508 136 510 150 wood
+fill 508 130 510 136 torch
+// The block chute: open below, the block resting on two stone ledges under its ends.
+fill 333 53 387 100 air
+fill 333 74 341 78 stone
+fill 379 74 387 78 stone
+// an iron-strapped timber block, 4.8 x 1.8 m and 1.3 t
+fill 336 56 384 74 wood
+fill 345 56 348 74 metal
+fill 372 56 375 74 metal
+// A stone chute hangs from the roof over the left of the span, holding a wood crate
+// packed with an iron ingot; it is let go at once and drops 3.5 m onto the deck.
+fill 294 60 297 136 stone
+fill 315 60 318 136 stone
+fill 297 60 315 136 air
+fill 298 118 314 134 wood
+fill 300 120 312 132 air
+fill 300 131 302 132 wood
+fill 301 130 303 131 wood
+fill 302 129 304 130 wood
+fill 303 128 305 129 wood
+fill 304 127 306 128 wood
+fill 305 126 307 127 wood
+fill 306 125 308 126 wood
+fill 307 124 309 125 wood
+fill 308 123 310 124 wood
+fill 309 122 311 123 wood
+fill 310 121 312 122 wood
+fill 311 120 313 121 wood
+fill 298 118 301 121 metal
+fill 311 118 314 121 metal
+fill 298 131 301 134 metal
+fill 311 131 314 134 metal
+fill 300 131 312 132 metal
+// The deck: 20 planks of 1.1 x 0.4 m along a parabola with 1-cell gaps, so it
+// hangs slack. Two iron bolts per plank put the wood under half its mass, so a
+// plank never shatters on a jolt: only the hinges decide where the bridge fails.
+// Every hinge but the centre one is unbreakable.
 fill 240 152 251 156 wood
 fill 241 153 242 155 metal
 fill 249 153 250 155 metal
 carve 240 152 251 156
-fill 252 156 263 160 wood
-fill 253 157 254 159 metal
-fill 261 157 262 159 metal
-carve 252 156 263 160
+fill 252 155 263 159 wood
+fill 253 156 254 158 metal
+fill 261 156 262 158 metal
+carve 252 155 263 159
 fill 264 159 275 163 wood
 fill 265 160 266 162 metal
 fill 273 160 274 162 metal
 carve 264 159 275 163
-fill 276 163 287 167 wood
-fill 277 164 278 166 metal
-fill 285 164 286 166 metal
-carve 276 163 287 167
-fill 288 165 299 169 wood
-fill 289 166 290 168 metal
-fill 297 166 298 168 metal
-carve 288 165 299 169
-fill 300 167 311 171 wood
-fill 301 168 302 170 metal
-fill 309 168 310 170 metal
-carve 300 167 311 171
-fill 312 169 323 173 wood
-fill 313 170 314 172 metal
-fill 321 170 322 172 metal
-carve 312 169 323 173
-fill 324 171 335 175 wood
-fill 325 172 326 174 metal
-fill 333 172 334 174 metal
-carve 324 171 335 175
-fill 336 171 347 175 wood
-fill 337 172 338 174 metal
-fill 345 172 346 174 metal
-carve 336 171 347 175
-fill 348 172 359 176 wood
-fill 349 173 350 175 metal
-fill 357 173 358 175 metal
-carve 348 172 359 176
-fill 360 172 371 176 wood
-fill 361 173 362 175 metal
-fill 369 173 370 175 metal
-carve 360 172 371 176
-fill 372 172 383 176 wood
-fill 373 173 374 175 metal
-fill 381 173 382 175 metal
-carve 372 172 383 176
-fill 384 171 395 175 wood
-fill 385 172 386 174 metal
-fill 393 172 394 174 metal
-carve 384 171 395 175
-fill 396 169 407 173 wood
-fill 397 170 398 172 metal
-fill 405 170 406 172 metal
-carve 396 169 407 173
-fill 408 168 419 172 wood
-fill 409 169 410 171 metal
-fill 417 169 418 171 metal
-carve 408 168 419 172
-fill 420 165 431 169 wood
-fill 421 166 422 168 metal
-fill 429 166 430 168 metal
-carve 420 165 431 169
-fill 432 163 443 167 wood
-fill 433 164 434 166 metal
-fill 441 164 442 166 metal
-carve 432 163 443 167
-fill 444 160 455 164 wood
-fill 445 161 446 163 metal
-fill 453 161 454 163 metal
-carve 444 160 455 164
+fill 276 161 287 165 wood
+fill 277 162 278 164 metal
+fill 285 162 286 164 metal
+carve 276 161 287 165
+fill 288 164 299 168 wood
+fill 289 165 290 167 metal
+fill 297 165 298 167 metal
+carve 288 164 299 168
+fill 300 166 311 170 wood
+fill 301 167 302 169 metal
+fill 309 167 310 169 metal
+carve 300 166 311 170
+fill 312 167 323 171 wood
+fill 313 168 314 170 metal
+fill 321 168 322 170 metal
+carve 312 167 323 171
+fill 324 169 335 173 wood
+fill 325 170 326 172 metal
+fill 333 170 334 172 metal
+carve 324 169 335 173
+fill 336 170 347 174 wood
+fill 337 171 338 173 metal
+fill 345 171 346 173 metal
+carve 336 170 347 174
+fill 348 170 359 174 wood
+fill 349 171 350 173 metal
+fill 357 171 358 173 metal
+carve 348 170 359 174
+fill 360 170 371 174 wood
+fill 361 171 362 173 metal
+fill 369 171 370 173 metal
+carve 360 170 371 174
+fill 372 170 383 174 wood
+fill 373 171 374 173 metal
+fill 381 171 382 173 metal
+carve 372 170 383 174
+fill 384 169 395 173 wood
+fill 385 170 386 172 metal
+fill 393 170 394 172 metal
+carve 384 169 395 173
+fill 396 168 407 172 wood
+fill 397 169 398 171 metal
+fill 405 169 406 171 metal
+carve 396 168 407 172
+fill 408 166 419 170 wood
+fill 409 167 410 169 metal
+fill 417 167 418 169 metal
+carve 408 166 419 170
+fill 420 164 431 168 wood
+fill 421 165 422 167 metal
+fill 429 165 430 167 metal
+carve 420 164 431 168
+fill 432 162 443 166 wood
+fill 433 163 434 165 metal
+fill 441 163 442 165 metal
+carve 432 162 443 166
+fill 444 159 455 163 wood
+fill 445 160 446 162 metal
+fill 453 160 454 162 metal
+carve 444 159 455 163
 fill 456 156 467 160 wood
 fill 457 157 458 159 metal
 fill 465 157 466 159 metal
@@ -1326,122 +1218,96 @@ fill 469 153 470 155 metal
 fill 477 153 478 155 metal
 carve 468 152 479 156
 pin 0 240 154 0
-pin 19 479 154 0
-joint 0 1 251 156 hinge 0
+pin 19 479 154 0.0
+joint 0 1 251 155 hinge 0
 joint 1 2 263 159 hinge 0
-joint 2 3 275 163 hinge 0
-joint 3 4 287 166 hinge 0
-joint 4 5 299 168 hinge 0
-joint 5 6 311 170 hinge 0
-joint 6 7 323 172 hinge 0
-joint 7 8 335 173 hinge 0
-joint 8 9 347 173 hinge 0
-joint 9 10 359 174 hinge 20000.0
-joint 10 11 371 174 hinge 0
-joint 11 12 383 173 hinge 0
-joint 12 13 395 172 hinge 0
-joint 13 14 407 170 hinge 0
-joint 14 15 419 168 hinge 0
-joint 15 16 431 166 hinge 0
-joint 16 17 443 163 hinge 0
-joint 17 18 455 160 hinge 0
+joint 2 3 275 162 hinge 0
+joint 3 4 287 164 hinge 0
+joint 4 5 299 167 hinge 0
+joint 5 6 311 168 hinge 0
+joint 6 7 323 170 hinge 0
+joint 7 8 335 171 hinge 0
+joint 8 9 347 172 hinge 0
+joint 9 10 359 172 hinge 17000.0
+joint 10 11 371 172 hinge 0
+joint 11 12 383 171 hinge 0
+joint 12 13 395 170 hinge 0
+joint 13 14 407 169 hinge 0
+joint 14 15 419 167 hinge 0
+joint 15 16 431 165 hinge 0
+joint 16 17 443 162 hinge 0
+joint 17 18 455 159 hinge 0
 joint 18 19 467 156 hinge 0
 // Run one tick in setup so the deck is stamped into the world on the first frame.
 run 1
 [events]
-// hollow wood crate, 16x16: 2-cell frame, one diagonal brace, iron corner plates
-at 120: fill 330 78 346 94 wood
-at 120: fill 332 80 344 92 air
-at 120: fill 332 91 334 92 wood
-at 120: fill 333 90 335 91 wood
-at 120: fill 334 89 336 90 wood
-at 120: fill 335 88 337 89 wood
-at 120: fill 336 87 338 88 wood
-at 120: fill 337 86 339 87 wood
-at 120: fill 338 85 340 86 wood
-at 120: fill 339 84 341 85 wood
-at 120: fill 340 83 342 84 wood
-at 120: fill 341 82 343 83 wood
-at 120: fill 342 81 344 82 wood
-at 120: fill 343 80 345 81 wood
-at 120: fill 330 78 333 81 metal
-at 120: fill 343 78 346 81 metal
-at 120: fill 330 91 333 94 metal
-at 120: fill 343 91 346 94 metal
-at 121: carve 330 78 346 94
-// a last crate tumbles out of the chute straight into the lava for the closing hold
-at 1600: fill 330 78 346 94 wood
-at 1600: fill 332 80 344 92 air
-at 1600: fill 332 80 334 81 wood
-at 1600: fill 333 81 335 82 wood
-at 1600: fill 334 82 336 83 wood
-at 1600: fill 335 83 337 84 wood
-at 1600: fill 336 84 338 85 wood
-at 1600: fill 337 85 339 86 wood
-at 1600: fill 338 86 340 87 wood
-at 1600: fill 339 87 341 88 wood
-at 1600: fill 340 88 342 89 wood
-at 1600: fill 341 89 343 90 wood
-at 1600: fill 342 90 344 91 wood
-at 1600: fill 343 91 345 92 wood
-at 1600: fill 330 78 333 81 metal
-at 1600: fill 343 78 346 81 metal
-at 1600: fill 330 91 333 94 metal
-at 1600: fill 343 91 346 94 metal
-at 1601: carve 330 78 346 94
-// glass crate: a 1-cell glass frame around a lattice of glass blocks with 1-cell gaps,
-// all carved as one rigid body; on impact the Voronoi split frees each block
-at 500: fill 407 66 433 85 glass
-at 500: fill 408 67 432 84 air
-at 500: fill 409 68 413 71 glass
-at 500: fill 414 68 418 71 glass
-at 500: fill 419 68 423 71 glass
-at 500: fill 424 68 428 71 glass
-at 500: fill 429 68 433 71 glass
-at 500: fill 409 72 413 75 glass
-at 500: fill 414 72 418 75 glass
-at 500: fill 419 72 423 75 glass
-at 500: fill 424 72 428 75 glass
-at 500: fill 429 72 433 75 glass
-at 500: fill 409 76 413 79 glass
-at 500: fill 414 76 418 79 glass
-at 500: fill 419 76 423 79 glass
-at 500: fill 424 76 428 79 glass
-at 500: fill 429 76 433 79 glass
-at 500: fill 409 80 413 83 glass
-at 500: fill 414 80 418 83 glass
-at 500: fill 419 80 423 83 glass
-at 500: fill 424 80 428 83 glass
-at 500: fill 429 80 433 83 glass
-at 501: carve 407 66 433 85
-// 12.5 s on: charges rumble in the roof, then two blasts beside the slab knock it loose.
-at 750: explode 296 80 3 40
-at 785: explode 428 76 3 45
-at 815: explode 330 86 4 50
-at 840: explode 343 80 5 90
-at 840: explode 376 80 5 90
-at 841: carve 346 78 374 88
+at 2: carve 298 118 314 134
+// a crate of glass bottles drops onto the right stack's lip and bursts: the wood frame
+// splits by Voronoi fracture and the bottles, loose inside it, scatter down the deck
+at 170: fill 467 62 489 76 wood
+at 170: fill 469 64 487 74 air
+at 170: fill 471 65 473 68 glass
+at 170: fill 474 65 476 68 glass
+at 170: fill 477 65 479 68 glass
+at 170: fill 480 65 482 68 glass
+at 170: fill 483 65 485 68 glass
+at 170: fill 471 69 473 72 glass
+at 170: fill 474 69 476 72 glass
+at 170: fill 477 69 479 72 glass
+at 170: fill 480 69 482 72 glass
+at 170: fill 483 69 485 72 glass
+at 171: carve 467 62 489 76
+// charges blow craters in the roof and rain rubble on the deck
+at 300: explode 268 68 14 250
+at 335: explode 432 70 14 250
+at 370: explode 405 86 14 255
+// two charges cut the ledges under the block, and it drops flat onto mid-span
+at 420: fill 333 74 341 78 air
+at 420: fill 379 74 387 78 air
+at 420: carve 336 56 384 74
+at 420: explode 328 75 5 250
+at 420: explode 392 75 5 250
+// the last charge blows the right anchor, and that half drops into the lake
+at 860: explode 478 156 9 220
 // sparks lifting off the lake
-every 37 from 0 to 2100: paint 60 316 1 ember
-every 44 from 5 to 2100: paint 150 316 1 ember
-every 51 from 10 to 2100: paint 205 316 1 ember
-every 37 from 15 to 2100: paint 268 316 1 ember
-every 44 from 20 to 2100: paint 330 316 1 ember
-every 51 from 25 to 2100: paint 395 316 1 ember
-every 37 from 30 to 2100: paint 452 316 1 ember
-every 44 from 35 to 2100: paint 515 316 1 ember
-every 51 from 40 to 2100: paint 570 316 1 ember
-every 37 from 45 to 2100: paint 655 316 1 ember
+every 37 from 0 to 1260: paint 60 282 1 ember
+every 44 from 5 to 1260: paint 150 282 1 ember
+every 51 from 10 to 1260: paint 205 282 1 ember
+every 37 from 15 to 1260: paint 268 282 1 ember
+every 44 from 20 to 1260: paint 330 282 1 ember
+every 51 from 25 to 1260: paint 395 282 1 ember
+every 37 from 30 to 1260: paint 452 282 1 ember
+every 44 from 35 to 1260: paint 515 282 1 ember
+every 51 from 40 to 1260: paint 570 282 1 ember
+every 37 from 45 to 1260: paint 655 282 1 ember
 [camera]
 view 960 540
 scale 2
 sky cave
-// High-ish ambient with moderate exposure keeps the lava orange instead of blown out.
 ambient 0.08 0.1 0.15
 exposure 1.45
-// Open wide on the chasm, ease in on the deck for the crate and glass, pull back
-// for the break, then hold on the dangling halves.
-at 0: 360 212 zoom=1.5
-at 480: 360 200 zoom=1.9
-at 900: 360 214 zoom=1.6
-at 2100: 360 214 zoom=1.6
+// Close on the deck for the loads, ease out a little for the break and the lake.
+at 0: 360 176 zoom=2.2
+at 380: 360 178 zoom=2.15
+at 480: 360 186 zoom=2.0
+at 1260: 360 190 zoom=1.95
+[expect]
+// The deck is stamped into the first frame.
+after 1: count wood in 240 140 480 200 > 700
+// Before the block drops the deck spans the chasm with the crate on it, and the
+// bottle crate has burst into glass shards.
+after 400: count wood in 300 120 420 250 > 350
+after 400: count shards in 0 0 720 380 > 20
+// The block lands mid-span and the centre hinge snaps: the middle is empty.
+after 600: count wood in 300 120 420 250 < 200
+// Both halves hang from their pins down the stack faces.
+after 700: count wood in 240 150 280 284 > 250
+after 700: count wood in 440 150 480 284 > 250
+// The last charge drops the right half; the left one still hangs.
+after 1000: count wood in 240 150 280 250 > 250
+after 1000: count wood in 440 150 480 250 < 60
+// The wreckage burns on the lava; the block's iron straps are left in it.
+after 1259: count metal in 330 260 420 300 > 50
+after 1259: count burning_wood in 240 230 480 300 >= 30
+after 1259: count fire in 240 200 480 300 >= 20
+
