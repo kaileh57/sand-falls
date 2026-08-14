@@ -1,23 +1,27 @@
-// Demolition: a 16 x 36 m brick tower with timber floors and glass windows
-// (10 cells per metre), brought down in real time under real gravity.
+// Demolition at night: a 16 x 36 m brick tower (10 cells per metre) with
+// 1.2 m brick walls, brick floor slabs on timber joists, timber columns,
+// wooden furniture and glass windows, brought down in real time under real
+// gravity.
 //
 // The charges are explode events; no explosive is packed in the build. Over
-// about two seconds they cut the right wall and the right core on floors 1-3,
-// then the left core on floor 1, then, half a second later, the left wall on
-// floor 1. The right half of the tower has nothing under it for three storeys,
-// so when the left wall goes the tower comes free as one rigid body (tick 215),
-// drops two metres onto the stump of its left wall and pivots right into the
-// gap. It takes about four seconds to lean past 45 degrees. Then a row of
-// delayed charges on floors 4 and 6 fires (tick 445): they cut the falling
-// tower in the air and push the sections apart. The sections hit the pad and
-// the soil bank on the right and break up where they land, into small pieces
-// at the impact and larger slabs further away, raising dust. The charges
-// light the crates on floors 2-5 and the oil films on floors 1 and 2, the
-// timber floors catch, and the scene ends on a smoking pile of burning and
-// smouldering timber.
+// about two seconds they blow out the right wall and the right half of the
+// floors on storeys 1-3, then the left timber column on storey 1, then, half a
+// second later, the left wall. With nothing under its right half the tower
+// comes free as one rigid body (tick 215), drops onto the stump of its left
+// wall and pivots right into the gap, taking about four and a half seconds to
+// fall. It lands flat on the pad at tick 479; the impact shatters it into
+// brick chunks, and a ripple of charges on its slabs and walls, fired over
+// the next quarter second, breaks the chunks into rubble, throws sparks and
+// lights the timber. The landing raises a dust cloud that billows up off the
+// pad (the engine's impact and crack dust plus scripted puffs, see the events)
+// and drifts away over about ten seconds, lit by the fire. The scene ends on a
+// low, burning, smoking heap of brick and charred timber.
+//
+// The night sky is deliberate: under dusk or day the sky dome lights dust and
+// smoke nearly the colour of the sky, so the cloud does not read.
 [scene]
 name = demolition
-description = Staggered charges cut a brick tower's base; it pivots right on its last wall, breaks into three sections in the air, shatters at the far end and burns.
+description = Staggered charges cut a brick tower's base at night; it pivots on its last wall, falls for four and a half seconds, shatters on impact in a cloud of dust and burns.
 size = 960 540
 seed = 0xde30
 ticks = 1500
@@ -29,150 +33,312 @@ fill 300 440 880 500 concrete
 // A soil bank on the right stops sliding wreckage before it leaves the world.
 circle 1090 620 280 soil
 
-// Floors 1-8: brick walls, timber columns and floor beams, a brick slab per
-// floor, glass only in the window panes. A hollow brick plant room on the
-// roof with a glass lantern on top.
-fill 400 400 408 440 brick
-fill 552 400 560 440 brick
-fill 452 406 458 440 wood
-fill 502 406 508 440 wood
-fill 400 400 560 404 brick
-fill 408 404 552 406 wood
-fill 400 416 408 426 glass
-fill 552 416 560 426 glass
-fill 400 360 408 400 brick
-fill 552 360 560 400 brick
-fill 452 366 458 400 wood
-fill 502 366 508 400 wood
-fill 400 360 560 364 brick
-fill 408 364 552 366 wood
-fill 400 376 408 386 glass
-fill 552 376 560 386 glass
-fill 400 320 408 360 brick
-fill 552 320 560 360 brick
-fill 452 326 458 360 wood
-fill 502 326 508 360 wood
-fill 400 320 560 324 brick
-fill 408 324 552 326 wood
-fill 400 336 408 346 glass
-fill 552 336 560 346 glass
-fill 400 280 408 320 brick
-fill 552 280 560 320 brick
-fill 452 286 458 320 wood
-fill 502 286 508 320 wood
-fill 400 280 560 284 brick
-fill 408 284 552 286 wood
-fill 400 296 408 306 glass
-fill 552 296 560 306 glass
-fill 400 240 408 280 brick
-fill 552 240 560 280 brick
-fill 452 246 458 280 wood
-fill 502 246 508 280 wood
-fill 400 240 560 244 brick
-fill 408 244 552 246 wood
-fill 400 256 408 266 glass
-fill 552 256 560 266 glass
-fill 400 200 408 240 brick
-fill 552 200 560 240 brick
-fill 452 206 458 240 wood
-fill 502 206 508 240 wood
-fill 400 200 560 204 brick
-fill 408 204 552 206 wood
-fill 400 216 408 226 glass
-fill 552 216 560 226 glass
-fill 400 160 408 200 brick
-fill 552 160 560 200 brick
-fill 452 166 458 200 wood
-fill 502 166 508 200 wood
-fill 400 160 560 164 brick
-fill 408 164 552 166 wood
-fill 400 176 408 186 glass
-fill 552 176 560 186 glass
-fill 400 120 408 160 brick
-fill 552 120 560 160 brick
-fill 452 126 458 160 wood
-fill 502 126 508 160 wood
-fill 400 120 560 124 brick
-fill 408 124 552 126 wood
-fill 400 136 408 146 glass
-fill 552 136 560 146 glass
+// Storeys 1-8, 40 cells each: brick walls 12 thick, a brick slab 6 thick on
+// 4-cell timber joists, two 10-cell timber columns, glass in the outer walls,
+// and wooden furniture on storeys 2-8. A hollow brick plant room and a glass
+// lantern on the roof.
+fill 400 400 412 440 brick
+fill 548 400 560 440 brick
+fill 400 400 560 406 brick
+fill 412 406 548 410 wood
+fill 449 410 459 440 wood
+fill 501 410 511 440 wood
+fill 400 416 412 427 glass
+fill 548 416 560 427 glass
+fill 400 360 412 400 brick
+fill 548 360 560 400 brick
+fill 400 360 560 366 brick
+fill 412 366 548 370 wood
+fill 449 370 459 400 wood
+fill 501 370 511 400 wood
+fill 400 376 412 387 glass
+fill 548 376 560 387 glass
+fill 423 390 436 400 wood
+fill 471 391 486 400 wood
+fill 521 389 534 400 wood
+fill 400 320 412 360 brick
+fill 548 320 560 360 brick
+fill 400 320 560 326 brick
+fill 412 326 548 330 wood
+fill 449 330 459 360 wood
+fill 501 330 511 360 wood
+fill 400 336 412 347 glass
+fill 548 336 560 347 glass
+fill 416 350 429 360 wood
+fill 476 351 491 360 wood
+fill 524 349 537 360 wood
+fill 400 280 412 320 brick
+fill 548 280 560 320 brick
+fill 400 280 560 286 brick
+fill 412 286 548 290 wood
+fill 449 290 459 320 wood
+fill 501 290 511 320 wood
+fill 400 296 412 307 glass
+fill 548 296 560 307 glass
+fill 423 310 436 320 wood
+fill 481 311 496 320 wood
+fill 527 309 540 320 wood
+fill 400 240 412 280 brick
+fill 548 240 560 280 brick
+fill 400 240 560 246 brick
+fill 412 246 548 250 wood
+fill 449 250 459 280 wood
+fill 501 250 511 280 wood
+fill 400 256 412 267 glass
+fill 548 256 560 267 glass
+fill 416 270 429 280 wood
+fill 470 271 485 280 wood
+fill 520 269 533 280 wood
+fill 400 200 412 240 brick
+fill 548 200 560 240 brick
+fill 400 200 560 206 brick
+fill 412 206 548 210 wood
+fill 449 210 459 240 wood
+fill 501 210 511 240 wood
+fill 400 216 412 227 glass
+fill 548 216 560 227 glass
+fill 423 230 436 240 wood
+fill 475 231 490 240 wood
+fill 523 229 536 240 wood
+fill 400 160 412 200 brick
+fill 548 160 560 200 brick
+fill 400 160 560 166 brick
+fill 412 166 548 170 wood
+fill 449 170 459 200 wood
+fill 501 170 511 200 wood
+fill 400 176 412 187 glass
+fill 548 176 560 187 glass
+fill 416 190 429 200 wood
+fill 480 191 495 200 wood
+fill 526 189 539 200 wood
+fill 400 120 412 160 brick
+fill 548 120 560 160 brick
+fill 400 120 560 126 brick
+fill 412 126 548 130 wood
+fill 449 130 459 160 wood
+fill 501 130 511 160 wood
+fill 400 136 412 147 glass
+fill 548 136 560 147 glass
+fill 423 150 436 160 wood
+fill 469 151 484 160 wood
+fill 519 149 532 160 wood
 fill 420 96 540 120 brick
-fill 426 100 534 120 air
-fill 460 76 500 96 glass
+fill 428 102 532 120 air
+fill 460 80 500 96 glass
 
-// Fuel: wooden crates and furniture (6-12 cell wood blocks) on floors 2-5,
-// standing on the slab below, and a 2-row oil film on floors 1 and 2 under
-// the left half of the tower, where the charges light them.
-// floor 1 (ground, y 440)
-fill 412 438 448 440 oil
-// floor 2 (slab top y 400)
-fill 414 392 424 400 wood
-fill 428 394 436 400 wood
-fill 470 390 482 400 wood
-fill 520 392 530 400 wood
-fill 438 398 468 400 oil
-// floor 3 (slab top y 360)
-fill 418 350 428 360 wood
-fill 440 352 450 360 wood
-fill 476 352 486 360 wood
-fill 530 350 540 360 wood
-// floor 4 (slab top y 320)
-fill 412 312 424 320 wood
-fill 468 310 478 320 wood
-fill 484 314 494 320 wood
-fill 526 312 538 320 wood
-// floor 5 (slab top y 280)
-fill 416 270 426 280 wood
-fill 440 272 450 280 wood
-fill 470 272 482 280 wood
-fill 492 274 500 280 wood
-fill 528 270 538 280 wood
 
 [events]
-// Right wall and right core on floors 1-3, a quarter second apart. The core
-// charges sit at slab level, so they cut the floor slabs as well as the
-// timber column, and nothing is left under the right half of the tower below
-// floor 4.
-at 90: explode 556 424 16 240
-at 105: explode 505 410 16 220
-at 120: explode 556 384 16 240
-at 135: explode 505 370 16 220
-at 150: explode 556 344 16 240
-at 165: explode 505 338 14 220
-// Left core on floor 1.
-at 185: explode 455 422 14 220
-// Left wall on floor 1, half a second later. The tower comes free, drops onto
-// the stump of the left wall and pivots right into the three-storey gap.
-at 215: explode 404 420 12 240
-// Delayed charges, timed to the falling tower. At tick 445 it leans about 52
-// degrees; these sit on its walls and timber columns at the floor 6 and
-// floor 4 windows (building y 221 and y 301, moved with the tower's pose at
-// that tick) and cut it into three sections.
-at 445: explode 573 246 12 200
-at 445: explode 605 286 12 200
-at 445: explode 636 326 12 200
-at 445: explode 667 366 12 200
-at 445: explode 510 296 12 200
-at 445: explode 542 336 12 200
-at 445: explode 573 375 12 200
-at 445: explode 604 415 12 200
+// Right wall, right column and the right half of the slabs on storeys 1-3.
+at 90: explode 556 426 16 240
+at 98: explode 556 404 16 240
+at 105: explode 506 412 16 220
+at 112: explode 482 404 14 220
+at 120: explode 556 382 16 240
+at 135: explode 506 372 16 220
+at 142: explode 482 364 14 220
+at 150: explode 556 350 16 240
+at 158: explode 556 330 14 240
+at 165: explode 506 336 14 220
+// Left timber column on storey 1.
+at 185: explode 454 424 14 220
+// Left wall on storey 1, half a second later: the tower comes free.
+at 215: explode 406 422 12 240
+// Landing charges (impact at tick 479): placed on the slab-column junctions
+// and walls of the fallen tower, using the tower's pose at the impact, and
+// fired as a ripple from the base to the roof over the next quarter second.
+// They break the shattered chunks into rubble and set the timber alight.
+at 488: explode 788 331 18 255
+at 488: explode 771 435 16 255
+at 487: explode 746 329 16 255
+at 487: explode 733 287 16 255
+at 486: explode 708 337 16 255
+at 489: explode 714 391 18 255
+at 487: explode 699 435 16 255
+at 485: explode 668 385 16 255
+at 487: explode 650 287 16 255
+at 485: explode 632 339 16 255
+at 484: explode 633 389 18 255
+at 485: explode 610 435 16 255
+at 486: explode 588 337 18 255
+at 484: explode 589 388 18 255
+at 484: explode 567 287 16 255
+at 484: explode 553 332 18 255
+at 482: explode 547 386 18 255
+at 485: explode 538 435 16 255
+at 481: explode 508 387 16 255
+at 483: explode 487 286 16 255
+// Dust puffs along the 36 m footprint of the landing, rising and spreading
+// for 0.7 s. The engine's own impact dust only fills a band 1.7 m above the
+// face that hit (see engine_requests), too thin to read as a cloud.
+at 479: paint 631 431 5 dust
+at 479: paint 643 431 9 dust
+at 479: paint 655 431 8 dust
+at 479: paint 667 431 11 dust
+at 479: paint 679 431 9 dust
+at 479: paint 682 431 8 dust
+at 479: paint 694 431 10 dust
+at 479: paint 706 431 8 dust
+at 479: paint 718 431 11 dust
+at 479: paint 721 431 8 dust
+at 479: paint 733 431 5 dust
+at 482: paint 621 435 6 dust
+at 482: paint 635 434 11 dust
+at 482: paint 649 433 10 dust
+at 482: paint 663 432 13 dust
+at 482: paint 669 431 12 dust
+at 482: paint 683 431 10 dust
+at 482: paint 697 431 13 dust
+at 482: paint 711 432 10 dust
+at 482: paint 725 433 13 dust
+at 482: paint 731 434 10 dust
+at 482: paint 745 435 6 dust
+at 485: paint 611 432 8 dust
+at 485: paint 627 429 13 dust
+at 485: paint 644 427 12 dust
+at 485: paint 660 425 16 dust
+at 485: paint 667 424 14 dust
+at 485: paint 684 424 12 dust
+at 485: paint 700 424 15 dust
+at 485: paint 717 425 13 dust
+at 485: paint 724 427 15 dust
+at 485: paint 740 429 12 dust
+at 485: paint 757 432 8 dust
+at 488: paint 601 430 10 dust
+at 488: paint 619 425 15 dust
+at 488: paint 638 422 14 dust
+at 488: paint 648 419 18 dust
+at 488: paint 666 418 17 dust
+at 488: paint 685 417 15 dust
+at 488: paint 703 418 18 dust
+at 488: paint 722 419 15 dust
+at 488: paint 732 422 17 dust
+at 488: paint 750 425 14 dust
+at 488: paint 769 430 10 dust
+at 491: paint 591 427 12 dust
+at 491: paint 612 421 17 dust
+at 491: paint 632 416 16 dust
+at 491: paint 644 413 20 dust
+at 491: paint 665 411 19 dust
+at 491: paint 686 410 17 dust
+at 491: paint 707 411 20 dust
+at 491: paint 718 413 17 dust
+at 491: paint 739 416 19 dust
+at 491: paint 760 421 16 dust
+at 491: paint 781 427 12 dust
+at 494: paint 581 424 13 dust
+at 494: paint 604 416 19 dust
+at 494: paint 618 411 18 dust
+at 494: paint 641 406 23 dust
+at 494: paint 664 404 21 dust
+at 494: paint 687 403 20 dust
+at 494: paint 710 404 22 dust
+at 494: paint 724 406 20 dust
+at 494: paint 747 411 21 dust
+at 494: paint 770 416 18 dust
+at 494: paint 793 424 13 dust
+at 497: paint 571 421 15 dust
+at 497: paint 596 412 21 dust
+at 497: paint 612 405 20 dust
+at 497: paint 637 400 25 dust
+at 497: paint 663 397 24 dust
+at 497: paint 688 396 22 dust
+at 497: paint 704 397 25 dust
+at 497: paint 729 400 22 dust
+at 497: paint 754 405 23 dust
+at 497: paint 780 412 20 dust
+at 497: paint 805 421 15 dust
+at 500: paint 561 418 17 dust
+at 500: paint 579 408 22 dust
+at 500: paint 607 400 23 dust
+at 500: paint 634 394 27 dust
+at 500: paint 661 390 26 dust
+at 500: paint 689 389 24 dust
+at 500: paint 707 390 27 dust
+at 500: paint 735 394 24 dust
+at 500: paint 762 400 26 dust
+at 500: paint 789 408 21 dust
+at 500: paint 808 418 17 dust
+at 503: paint 551 423 18 dust
+at 503: paint 571 411 24 dust
+at 503: paint 601 401 25 dust
+at 503: paint 631 394 29 dust
+at 503: paint 660 390 28 dust
+at 503: paint 681 389 27 dust
+at 503: paint 710 390 29 dust
+at 503: paint 740 394 26 dust
+at 503: paint 770 401 28 dust
+at 503: paint 799 411 23 dust
+at 503: paint 820 423 18 dust
+at 506: paint 532 420 20 dust
+at 506: paint 564 406 26 dust
+at 506: paint 595 396 27 dust
+at 506: paint 627 388 32 dust
+at 506: paint 659 384 31 dust
+at 506: paint 682 382 29 dust
+at 506: paint 714 384 32 dust
+at 506: paint 745 388 29 dust
+at 506: paint 777 396 30 dust
+at 506: paint 800 406 25 dust
+at 506: paint 832 420 20 dust
+at 509: paint 522 417 22 dust
+at 509: paint 556 402 28 dust
+at 509: paint 590 390 29 dust
+at 509: paint 624 382 34 dust
+at 509: paint 649 377 33 dust
+at 509: paint 683 375 32 dust
+at 509: paint 717 377 34 dust
+at 509: paint 751 382 31 dust
+at 509: paint 785 390 32 dust
+at 509: paint 810 402 27 dust
+at 509: paint 844 417 22 dust
+at 512: paint 512 414 24 dust
+at 512: paint 548 398 30 dust
+at 512: paint 584 385 31 dust
+at 512: paint 620 375 36 dust
+at 512: paint 648 370 36 dust
+at 512: paint 684 368 34 dust
+at 512: paint 720 370 37 dust
+at 512: paint 756 375 33 dust
+at 512: paint 783 385 34 dust
+at 512: paint 820 398 29 dust
+at 512: paint 856 414 24 dust
+at 515: paint 502 411 25 dust
+at 515: paint 540 393 32 dust
+at 515: paint 579 379 33 dust
+at 515: paint 608 369 39 dust
+at 515: paint 646 363 38 dust
+at 515: paint 685 361 36 dust
+at 515: paint 723 363 39 dust
+at 515: paint 762 369 36 dust
+at 515: paint 791 379 36 dust
+at 515: paint 829 393 31 dust
+at 515: paint 868 411 25 dust
+at 518: paint 492 409 27 dust
+at 518: paint 532 389 34 dust
+at 518: paint 573 374 36 dust
+at 518: paint 605 363 41 dust
+at 518: paint 645 356 40 dust
+at 518: paint 686 354 39 dust
+at 518: paint 726 356 41 dust
+at 518: paint 758 363 38 dust
+at 518: paint 799 374 39 dust
+at 518: paint 839 389 33 dust
+at 518: paint 880 409 27 dust
 
 [camera]
 view 960 540
 scale 2
-sky dusk
-ambient 0.12 0.1 0.11
-exposure 1.4
-// Wide shot with the glass lantern in frame and 2.5 tower widths of ground on
-// either side, then a slow pan right with the fall and a push in on the pile.
+sky night
+ambient 0.22 0.2 0.26
+exposure 1.6
 at 0: 480 280 zoom=1.1
 at 380: 480 280 zoom=1.1
-at 560: 524 300 zoom=1.1
-at 850: 576 330 zoom=1.25
-at 1500: 640 360 zoom=1.5
+at 560: 560 310 zoom=1.1
+at 850: 640 345 zoom=1.3
+at 1500: 680 370 zoom=1.5
 
 [expect]
-// The pile is still burning and smouldering at the end.
-after 1500: count burning_wood in 0 0 960 500 >= 30
-after 1500: count charcoal in 0 0 960 500 >= 100
+after 530: count dust in 0 0 960 500 >= 8000
+after 1500: count burning_wood in 0 0 960 500 >= 150
+after 1500: count charcoal in 0 0 960 500 >= 150
 after 1500: count smoke in 0 0 960 500 >= 1000
