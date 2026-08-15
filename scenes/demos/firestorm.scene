@@ -1,82 +1,102 @@
 // Firestorm: a forest on a hillside catches fire in a crosswind. Crowns flash,
-// trunks burn down to smoking stumps, and where the burning willow and a log
-// meet the water they hiss into steam: the fire front stops at the river.
+// the fire runs down the ivy on the trunks and burns them to smouldering
+// stumps, smoke streams downwind, and the fire front stops at the river: the
+// willow on the bank burns out over the water and the far forest stays green.
 [scene]
 name = firestorm
 description = A wind-driven fire sweeps a hillside forest; the fire front stops at the river.
 size = 960 576
 seed = 0xf12e
-wind = 3
-ticks = 2700
+wind = 4
+ticks = 1900
 
 [build]
 fill 0 540 960 576 bedrock
 terrain 0 960 430 26 90 soil 540
 terrain 0 960 470 14 60 stone 540
-// The river.
-fill 425 400 475 470 air
-fill 425 440 475 470 water
-// The left-bank forest: low, broad crowns on short trunks. A trunk burns down
-// from its crown about two cells a second, so the first trees are ash long
-// before the end, and the trees by the river, which catch last, stand taller
-// so they are still smoking stumps when the scene ends.
+// The river: a channel that narrows to a deep middle, too wide for flames to jump.
+fill 425 400 475 440 air
+fill 425 440 475 452 water
+fill 427 452 473 462 water
+fill 430 462 470 472 water
+fill 434 472 466 482 water
+fill 439 482 461 490 water
+// The left-bank forest: low, broad crowns on trunks with a strip of ivy down
+// their downwind side. Bare wood burns down from the crown only about two
+// cells a second; the ivy carries the fire down the trunk in a few seconds, so
+// a trunk burns along its length and is left a short smouldering stump.
 fill 30 374 34 418 wood
+fill 34 374 35 410 leaves
 circle 32 374 23 leaves
 circle 21 385 15 leaves
 circle 43 381 15 leaves
 fill 63 380 67 420 wood
+fill 67 380 68 412 leaves
 circle 65 380 18 leaves
 circle 57 388 12 leaves
 circle 73 385 12 leaves
 fill 89 375 93 421 wood
+fill 93 375 94 413 leaves
 circle 91 375 22 leaves
 circle 81 385 15 leaves
 circle 101 382 15 leaves
 fill 118 372 122 417 wood
+fill 122 372 123 409 leaves
 circle 120 372 20 leaves
 circle 111 381 13 leaves
 circle 129 378 13 leaves
 fill 137 365 141 414 wood
+fill 141 365 142 406 leaves
 circle 139 365 23 leaves
 circle 128 376 15 leaves
 circle 150 372 15 leaves
 fill 171 361 175 408 wood
+fill 175 361 176 400 leaves
 circle 173 361 20 leaves
 circle 164 370 13 leaves
 circle 182 367 13 leaves
 fill 194 357 198 410 wood
+fill 198 357 199 402 leaves
 circle 196 357 23 leaves
 circle 185 368 15 leaves
 circle 207 364 15 leaves
 fill 221 356 225 416 wood
+fill 225 356 226 408 leaves
 circle 223 356 18 leaves
 circle 215 364 12 leaves
 circle 231 361 12 leaves
 fill 252 357 256 423 wood
+fill 256 357 257 415 leaves
 circle 254 357 19 leaves
 circle 245 366 13 leaves
 circle 263 363 13 leaves
 fill 286 353 290 429 wood
+fill 290 353 291 421 leaves
 circle 288 353 23 leaves
 circle 277 364 15 leaves
 circle 299 360 15 leaves
 fill 305 360 309 432 wood
+fill 309 360 310 424 leaves
 circle 307 360 17 leaves
 circle 299 368 11 leaves
 circle 315 365 11 leaves
 fill 341 360 345 438 wood
+fill 345 360 346 430 leaves
 circle 343 360 21 leaves
 circle 333 370 14 leaves
 circle 353 366 14 leaves
 fill 367 364 371 440 wood
+fill 371 364 372 432 leaves
 circle 369 364 18 leaves
 circle 361 372 12 leaves
 circle 377 369 12 leaves
 fill 395 359 399 435 wood
+fill 399 359 400 427 leaves
 circle 397 359 18 leaves
 circle 389 367 12 leaves
 circle 405 364 12 leaves
-// A willow on the bank leans out over the water, its fronds trailing down to it.
+// A willow on the bank leans out over the water, its fronds trailing down
+// toward it. They end above the surface, so the fire never boils the river.
 circle 412 387 13 leaves
 circle 413 398 11 leaves
 circle 425 390 9 leaves
@@ -89,12 +109,7 @@ fill 427 408 429 411 leaves
 fill 427 411 429 414 leaves
 fill 428 414 430 417 leaves
 fill 428 417 430 420 leaves
-fill 427 420 429 423 leaves
-fill 427 423 429 426 leaves
-fill 426 426 428 429 leaves
-fill 427 429 429 432 leaves
-fill 427 432 429 435 leaves
-fill 427 435 429 438 leaves
+fill 427 420 429 422 leaves
 fill 432 399 434 402 leaves
 fill 432 402 434 405 leaves
 fill 432 405 434 408 leaves
@@ -102,13 +117,7 @@ fill 432 408 434 411 leaves
 fill 431 411 433 414 leaves
 fill 432 414 434 417 leaves
 fill 431 417 433 420 leaves
-fill 431 420 433 423 leaves
-fill 431 423 433 426 leaves
-fill 431 426 433 429 leaves
-fill 432 429 434 432 leaves
-fill 433 432 435 435 leaves
-fill 433 435 435 438 leaves
-fill 434 438 436 440 leaves
+fill 431 420 433 422 leaves
 fill 437 399 439 402 leaves
 fill 436 402 438 405 leaves
 fill 436 405 438 408 leaves
@@ -116,12 +125,7 @@ fill 435 408 437 411 leaves
 fill 435 411 437 414 leaves
 fill 436 414 438 417 leaves
 fill 436 417 438 420 leaves
-fill 436 420 438 423 leaves
-fill 437 423 439 426 leaves
-fill 437 426 439 429 leaves
-fill 439 429 441 432 leaves
-fill 439 432 441 435 leaves
-fill 439 435 441 438 leaves
+fill 436 420 438 422 leaves
 fill 440 399 442 402 leaves
 fill 440 402 442 405 leaves
 fill 440 405 442 408 leaves
@@ -129,13 +133,7 @@ fill 440 408 442 411 leaves
 fill 440 411 442 414 leaves
 fill 442 414 444 417 leaves
 fill 442 417 444 420 leaves
-fill 443 420 445 423 leaves
-fill 443 423 445 426 leaves
-fill 443 426 445 429 leaves
-fill 444 429 446 432 leaves
-fill 444 432 446 435 leaves
-fill 443 435 445 438 leaves
-fill 443 438 445 440 leaves
+fill 443 420 445 422 leaves
 fill 445 399 447 402 leaves
 fill 445 402 447 405 leaves
 fill 446 405 448 408 leaves
@@ -143,12 +141,7 @@ fill 446 408 448 411 leaves
 fill 447 411 449 414 leaves
 fill 448 414 450 417 leaves
 fill 448 417 450 420 leaves
-fill 448 420 450 423 leaves
-fill 448 423 450 426 leaves
-fill 447 426 449 429 leaves
-fill 448 429 450 432 leaves
-fill 447 432 449 435 leaves
-fill 447 435 449 438 leaves
+fill 448 420 450 422 leaves
 fill 451 399 453 402 leaves
 fill 452 402 454 405 leaves
 fill 452 405 454 408 leaves
@@ -156,17 +149,7 @@ fill 452 408 454 411 leaves
 fill 452 411 454 414 leaves
 fill 453 414 455 417 leaves
 fill 452 417 454 420 leaves
-fill 452 420 454 423 leaves
-fill 451 423 453 426 leaves
-fill 451 426 453 429 leaves
-fill 452 429 454 432 leaves
-fill 452 432 454 435 leaves
-fill 452 435 454 438 leaves
-// A dead trunk has fallen from the bank into the shallows, under the fronds.
-fill 416 431 426 434 wood
-fill 426 433 436 436 wood
-fill 436 435 446 438 wood
-fill 446 437 458 440 wood
+fill 452 420 454 422 leaves
 // The right-bank forest, across the firebreak.
 fill 494 333 498 432 wood
 circle 496 333 18 leaves
@@ -238,11 +221,11 @@ circle 915 364 14 leaves
 circle 937 360 14 leaves
 decorate 0 300 421 540 leaves 30 floor
 decorate 479 300 960 540 leaves 30 floor
-// The sparks: the first canopy is already alight, and a spot fire has caught
-// a crown further down the slope.
-circle 36 376 9 burning_leaves
-fill 14 411 26 416 burning_wood
-circle 175 363 6 burning_leaves
+// The sparks: a few cells of the first canopy are alight, and an ember has
+// started a spot fire in a crown further down the slope.
+circle 11 382 2 burning_leaves
+circle 15 377 1 burning_leaves
+circle 161 352 2 burning_leaves
 
 [camera]
 view 960 540
@@ -251,17 +234,19 @@ sky night
 ambient 0.07 0.06 0.08
 exposure 1.8
 at 0: 300 360 zoom=1.6
-at 1200: 330 360 zoom=1.6
-at 2000: 400 372 zoom=1.8
-at 2700: 430 376 zoom=2.0
+at 700: 320 362 zoom=1.6
+at 1300: 392 368 zoom=1.8
+at 1900: 418 372 zoom=2.0
 
 [expect]
 // Nothing burns across the river, and the right-bank forest is intact.
-after 2700: count burning_leaves in 470 0 960 576 == 0
-after 2700: count burning_wood in 470 0 960 576 == 0
-after 2700: count leaves in 470 0 960 576 >= 19000
+after 1900: count burning_leaves in 470 0 960 576 == 0
+after 1900: count burning_wood in 470 0 960 576 == 0
+after 1900: count leaves in 470 0 960 576 >= 19000
 // Burnt fuel leaves a thin dusting of ash, not piles.
-after 2700: count ash in 0 0 470 576 <= 1500
-// The river is still there; a little of it boils off as steam where the
-// burning willow and the log fall in and the embers land.
-after 2700: count water in 425 440 475 470 >= 1250
+after 1900: count ash in 0 0 470 576 <= 1500
+// The river is still full and cold. Embers that land in it hiss into a wisp of
+// steam, but nothing boils off in bulk to fall back as streaks of rain.
+after 1900: count water in 420 430 480 495 >= 1450
+after 1900: count water in 380 0 560 436 <= 10
+after 1900: count steam in 0 0 960 576 <= 40
