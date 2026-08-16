@@ -1,371 +1,1049 @@
 // Glowcave: magma breach.
 //
-// A dark cavern lit only by blue glowshroom clusters, violet crystal spikes
-// and lava. At first it is calm: mist drifts off the shore of a black lake
-// and water drips from the stalactites. At tick 290 the obsidian plug that
-// holds back a magma chamber is blown out with a flash, and its red-hot
-// fragments fly out over the cave as glowing particles. The lava pours down
-// a stepped ramp. It holds a lot of heat and gives off latent heat before it
-// freezes, so it stays molten all the way down, and the rock beside it glows
-// where it heats by conduction. Where it runs into the lake the water flashes
-// to steam; the obsidian skin crumbles to gravel and sinks, so fresh lava
-// keeps reaching the water and the steam plume keeps rising. The feeder in the chamber
-// roof is cut off at tick 480, so the flow thins and dims from yellow toward
-// red as it cools. At tick 1100 blasts cut the neck of a ceiling slab
-// studded with crystals: it falls as a rigid body, its crystals still lighting
-// the cave around it, and plunges into the lake, throwing the water up over
-// it. At tick 720 a flooded fissure in the roof over the ramp cracks open,
-// and a waterfall pours onto the lava, boiling off in a column of steam while
-// the lava under it crusts black. In the aftermath a stalactite over the cooling
-// front starts to drip.
-// A light draft carries the steam out over the lake.
+// A dark cavern lit by violet crystals and blue glowshrooms, over a black
+// lake. At tick 90 the obsidian skin between a magma chamber and the lake
+// gives way: the lava pours out under the chamber's own weight, runs over a
+// rock apron and breaks into the lake. Where it meets the water it boils
+// the lake in a column of steam lit orange from below, and its crust breaks
+// up into gravel that sinks to the bottom while the lava keeps coming. At
+// tick 480 a spring bursts from the back wall, runs over the clifftop and
+// falls onto the flow, crusting it and feeding the steam. At tick 940 the
+// roof over the far side of the lake cracks and a magma dyke pours through
+// it in a glowing curtain that boils its own plume off the lake and lights
+// the crystals around it. At tick 1180 the rest of the plug gives way and a
+// second surge floods out, and at tick 1420 the great crystal stalactite
+// breaks from the roof and plunges into the lake, its crystals still
+// glowing under the water.
+//
+// The rows above the frame hold two hidden attics: the steam rises up two
+// chimneys in the roof and is vented there, so it leaves the cave instead
+// of raining back down. The air over the lava is kept hot, as the lava
+// would keep it, so the steam stays steam while it rises.
+// Built by a generator script; 60 ticks a second, so 1800 ticks is 30 s.
 [scene]
 name = glowcave
-description = Magma breaks into a dark cavern lit by glowing fungus and crystals: the plug blows out in a shower of sparks, lava runs down a stepped ramp and quenches in the lake in a rising steam plume, its crust crumbling to gravel, then a crystal-studded slab breaks from the ceiling and plunges into the water.
-size = 960 576
+description = Magma breaks into a dark cavern lit by glowing crystals and fungus: lava bursts from a chamber and pours into a black lake in a column of orange-lit steam, a spring falls onto the flow from the clifftop, a magma dyke breaks through the roof in a glowing curtain, and the great crystal stalactite plunges into the lake.
+size = 960 600
 seed = 0x91c4
 ticks = 1800
-wind = 2
+wind = 0
 
 [build]
-fill 0 0 960 576 stone
-// The cavern: many overlapping hollows of different sizes, so its outline
-// is ragged rather than a few smooth domes.
-circle 352 228 30 air
-circle 395 182 38 air
-circle 452 158 42 air
-circle 520 150 36 air
-circle 566 176 30 air
-circle 742 158 38 air
-circle 800 140 44 air
-circle 858 152 36 air
-circle 905 186 30 air
-circle 330 268 30 air
-circle 392 252 46 air
-circle 470 236 54 air
-circle 548 240 50 air
-circle 626 262 44 air
-circle 700 262 46 air
-circle 774 232 52 air
-circle 846 236 48 air
-circle 910 250 30 air
-circle 440 330 50 air
-circle 520 330 56 air
-circle 600 336 54 air
-circle 680 330 56 air
-circle 760 330 56 air
-circle 840 330 54 air
-circle 905 326 36 air
-circle 470 384 36 air
-circle 540 388 30 air
-circle 610 384 34 air
-circle 680 388 30 air
-circle 750 384 36 air
-circle 820 388 30 air
-circle 880 384 28 air
-circle 920 390 22 air
-circle 486 133 4 air
-circle 512 188 29 air
-circle 836 186 43 air
-circle 777 178 6 air
-circle 588 203 21 air
-circle 725 202 21 air
-circle 431 197 5 air
-circle 878 200 2 air
-circle 428 202 2 air
-circle 426 204 2 air
-circle 805 280 19 air
-circle 509 274 4 air
-circle 433 278 7 air
-circle 573 285 16 air
-circle 744 276 3 air
-circle 481 289 2 air
-circle 475 292 6 air
-circle 402 297 2 air
-circle 929 299 2 air
-circle 896 361 2 air
-circle 642 372 2 air
-circle 646 386 15 air
-circle 712 386 15 air
-circle 787 387 14 air
-circle 573 390 11 air
-circle 852 391 10 air
-circle 507 392 9 air
-circle 714 184 2 air
-// Small bites to roughen the ceiling and walls.
-circle 372 150 16 air
-circle 488 112 20 air
-circle 548 118 14 air
-circle 770 108 18 air
-circle 834 104 14 air
-circle 884 118 18 air
-circle 930 222 12 air
-circle 934 290 10 air
-circle 410 214 18 air
-circle 318 236 14 air
-// Magma chamber in the rock at the upper left, behind an obsidian plug.
-circle 180 258 46 air
-fill 140 262 252 318 air
-fill 140 268 252 318 lava
-fill 252 262 264 318 obsidian
-// Fresh lava trickles in from the chamber roof and keeps the pool molten.
-fill 170 214 190 216 lava_source
-// Stepped ramp from the plug down to the lake: three treads tilted toward
-// the lake, each 16 cells below the last, then a slope that runs on under
-// the water, so the lava never falls far.
-fill 252 318 470 576 stone
-fill 264 246 420 318 air
-fill 264 300 288 322 air
-fill 264 322 267 322 air
-fill 267 322 270 322 air
-fill 270 322 273 323 air
-fill 273 322 276 323 air
-fill 276 322 279 324 air
-fill 279 322 282 325 air
-fill 282 322 285 325 air
-fill 285 322 288 326 air
-fill 288 300 312 339 air
-fill 288 339 291 339 air
-fill 291 339 294 339 air
-fill 294 339 297 340 air
-fill 297 339 300 340 air
-fill 300 339 303 341 air
-fill 303 339 306 342 air
-fill 306 339 309 342 air
-fill 309 339 312 343 air
-fill 312 300 336 356 air
-fill 312 356 315 356 air
-fill 315 356 318 356 air
-fill 318 356 321 357 air
-fill 321 356 324 357 air
-fill 324 356 327 358 air
-fill 327 356 330 359 air
-fill 330 356 333 359 air
-fill 333 356 336 360 air
-fill 336 300 420 364 air
-// The lake, with an uneven floor, and a rocky shore on the right.
-fill 470 400 944 576 stone
-fill 336 300 870 420 air
-fill 336 420 870 500 water
-terrain 440 870 500 7 29 stone 576
-// The last tread runs on as a slope under the water.
-fill 336 364 339 576 stone
-fill 339 370 342 576 stone
-fill 342 376 345 576 stone
-fill 345 382 348 576 stone
-fill 348 388 351 576 stone
-fill 351 394 354 576 stone
-fill 354 400 357 576 stone
-fill 357 406 360 576 stone
-fill 360 412 363 576 stone
-fill 363 418 366 576 stone
-fill 366 424 369 576 stone
-fill 369 430 372 576 stone
-fill 372 436 375 576 stone
-fill 375 442 378 576 stone
-fill 378 448 381 576 stone
-fill 381 454 384 576 stone
-fill 384 460 387 576 stone
-fill 387 466 390 576 stone
-fill 390 472 393 576 stone
-fill 393 478 396 576 stone
-fill 396 484 399 576 stone
-fill 399 490 402 576 stone
-fill 402 496 405 576 stone
-fill 405 502 408 576 stone
-fill 408 508 411 576 stone
-fill 411 514 414 576 stone
-fill 870 414 944 576 stone
-circle 904 428 18 stone
-fill 944 0 960 576 stone
-// Ledges: over the breach, a shelf under the ceiling, and high on the right wall.
-fill 264 238 324 246 stone
-circle 300 247 6 stone
-fill 430 182 500 190 stone
-circle 470 191 6 stone
-fill 456 100 474 160 stone
-fill 460 160 470 182 stone
-fill 878 300 944 308 stone
-circle 912 309 6 stone
-// Stalactites over the lake, each with a drip at its tip.
-fill 532 96 548 144 stone
-fill 535 144 545 168 stone
-fill 537 168 543 182 stone
-fill 539 182 542 192 stone
-fill 539 192 542 193 rain_cloud
-fill 783 90 801 140 stone
-fill 786 140 798 165 stone
-fill 789 165 796 180 stone
-fill 791 180 794 190 stone
-fill 791 190 794 191 rain_cloud
-fill 859 100 873 142 stone
-fill 862 142 871 163 stone
-fill 864 163 869 175 stone
-fill 865 175 868 184 stone
-fill 865 184 868 185 rain_cloud
-// A dry stalactite over the shore where the lava will run into the lake.
-fill 384 120 396 176 stone
-fill 387 176 393 200 stone
-fill 389 200 391 214 stone
-// The slab: hung from the ceiling by a 14-cell neck, with an air moat on
-// every side, and crystals growing beneath it.
-fill 590 60 720 150 stone
-fill 596 150 714 240 air
-fill 648 150 662 170 stone
-fill 610 170 700 212 stone
-fill 614 212 617 218 crystal
-fill 615 218 616 222 crystal
-fill 624 212 628 222 crystal
-fill 625 222 627 230 crystal
-fill 638 212 641 216 crystal
-fill 639 216 640 220 crystal
-fill 650 212 654 225 crystal
-fill 651 225 653 234 crystal
-fill 664 212 667 219 crystal
-fill 665 219 666 224 crystal
-fill 676 212 680 221 crystal
-fill 677 221 679 228 crystal
-fill 690 212 693 216 crystal
-fill 691 216 692 220 crystal
-// Crystal spikes on the shore and hanging under the ledges.
-fill 874 409 877 414 crystal
-fill 875 405 876 409 crystal
-fill 879 405 883 414 crystal
-fill 880 398 882 405 crystal
-fill 885 402 889 414 crystal
-fill 886 394 888 402 crystal
-fill 892 408 895 414 crystal
-fill 893 404 894 408 crystal
-fill 915 406 919 414 crystal
-fill 916 400 918 406 crystal
-fill 920 402 924 414 crystal
-fill 921 394 923 402 crystal
-fill 926 408 929 414 crystal
-fill 927 404 928 408 crystal
-fill 936 410 939 414 crystal
-fill 937 407 938 410 crystal
-fill 442 190 445 196 crystal
-fill 443 196 444 200 crystal
-fill 452 190 456 199 crystal
-fill 453 199 455 206 crystal
-fill 486 190 489 197 crystal
-fill 487 197 488 202 crystal
-fill 290 246 293 253 crystal
-fill 291 253 292 258 crystal
-fill 310 246 313 250 crystal
-fill 311 250 312 254 crystal
-fill 892 308 896 316 crystal
-fill 893 316 895 322 crystal
-fill 906 308 909 312 crystal
-fill 907 312 908 316 crystal
-fill 926 308 929 314 crystal
-fill 927 314 928 318 crystal
-// Glowshroom clusters: caps on one-cell stems.
-// Over the breach.
-fill 272 234 273 238 glowshroom
-fill 271 232 274 234 glowshroom
-fill 277 231 278 238 glowshroom
-fill 275 229 280 231 glowshroom
-fill 283 235 284 238 glowshroom
-fill 282 233 285 235 glowshroom
-fill 300 233 301 238 glowshroom
-fill 299 231 302 233 glowshroom
-fill 306 229 307 238 glowshroom
-fill 304 227 309 229 glowshroom
-fill 312 234 313 238 glowshroom
-fill 311 232 314 234 glowshroom
-// On the shelf under the ceiling.
-fill 436 179 437 182 glowshroom
-fill 435 177 438 179 glowshroom
-fill 441 175 442 182 glowshroom
-fill 439 173 444 175 glowshroom
-fill 447 178 448 182 glowshroom
-fill 446 176 449 178 glowshroom
-fill 488 176 489 182 glowshroom
-fill 486 174 491 176 glowshroom
-fill 494 179 495 182 glowshroom
-fill 493 177 496 179 glowshroom
-// High on the right wall.
-fill 884 296 885 300 glowshroom
-fill 883 294 886 296 glowshroom
-fill 890 292 891 300 glowshroom
-fill 888 290 893 292 glowshroom
-fill 896 297 897 300 glowshroom
-fill 895 295 898 297 glowshroom
-fill 926 294 927 300 glowshroom
-fill 924 292 929 294 glowshroom
-fill 933 297 934 300 glowshroom
-fill 932 295 935 297 glowshroom
-// On the shore among the crystals.
-fill 897 410 898 414 glowshroom
-fill 896 408 899 410 glowshroom
-fill 903 406 904 414 glowshroom
-fill 901 404 906 406 glowshroom
-fill 909 411 910 414 glowshroom
-fill 908 409 911 411 glowshroom
-fill 930 408 931 414 glowshroom
-fill 928 406 933 408 glowshroom
-fill 940 411 941 414 glowshroom
-fill 939 409 942 411 glowshroom
-// Mist rising off the shore rock just above the waterline.
-scatter 870 408 944 414 mist_source 25
-// A little moss and vine, sparse enough not to outline every surface. They
-// stay off the slab: decorations left behind would pin it once it is cut loose.
-decorate 264 90 588 400 moss 2 ceiling
-decorate 264 90 588 400 vine 1 ceiling
-decorate 722 90 944 400 moss 2 ceiling
-decorate 722 90 944 400 vine 1 ceiling
-decorate 588 244 722 400 moss 2 ceiling
-decorate 588 244 722 400 vine 1 ceiling
-run 60
+// Solid rock, then the cavern carved out of it.
+fill 0 0 960 600 stone
+fill 60 174 930 470 air
+circle 110 200 30 air
+circle 170 188 34 air
+circle 240 192 36 air
+circle 310 178 34 air
+circle 370 172 34 air
+circle 436 164 34 air
+circle 490 152 30 air
+circle 536 160 36 air
+circle 590 146 40 air
+circle 650 158 34 air
+circle 705 144 42 air
+circle 760 160 34 air
+circle 812 148 40 air
+circle 868 164 36 air
+circle 905 190 26 air
+circle 450 200 22 air
+circle 742 192 20 air
+circle 640 190 22 air
+circle 912 260 18 air
+circle 70 230 18 air
+circle 90 184 20 air
+// The roof arches up into two chimneys, so the rising steam finds its way out.
+fill 60 48 62 206 stone
+fill 62 48 64 206 stone
+fill 64 48 66 205 stone
+fill 66 48 68 205 stone
+fill 68 48 70 204 stone
+fill 70 48 72 204 stone
+fill 72 48 74 204 stone
+fill 74 48 76 204 stone
+fill 76 48 78 205 stone
+fill 78 48 80 205 stone
+fill 80 48 82 206 stone
+fill 82 48 84 206 stone
+fill 84 48 86 205 stone
+fill 86 48 88 203 stone
+fill 88 48 90 201 stone
+fill 90 48 92 199 stone
+fill 92 48 94 197 stone
+fill 94 48 96 195 stone
+fill 96 48 98 194 stone
+fill 98 48 100 194 stone
+fill 100 48 102 195 stone
+fill 102 48 104 196 stone
+fill 104 48 106 198 stone
+fill 106 48 108 200 stone
+fill 108 48 110 202 stone
+fill 110 48 112 203 stone
+fill 112 48 114 203 stone
+fill 114 48 116 203 stone
+fill 116 48 118 203 stone
+fill 118 48 120 203 stone
+fill 120 48 122 202 stone
+fill 122 48 124 203 stone
+fill 124 48 126 203 stone
+fill 126 48 128 205 stone
+fill 128 48 130 206 stone
+fill 130 48 132 207 stone
+fill 132 48 134 208 stone
+fill 134 48 136 208 stone
+fill 136 48 138 207 stone
+fill 138 48 140 206 stone
+fill 140 48 142 203 stone
+fill 142 48 144 201 stone
+fill 144 48 146 198 stone
+fill 146 48 148 196 stone
+fill 148 48 150 195 stone
+fill 150 48 152 195 stone
+fill 152 48 154 195 stone
+fill 154 48 156 196 stone
+fill 156 48 158 198 stone
+fill 158 48 160 199 stone
+fill 160 48 162 200 stone
+fill 162 48 164 201 stone
+fill 164 48 166 201 stone
+fill 166 48 168 201 stone
+fill 168 48 170 200 stone
+fill 170 48 172 200 stone
+fill 172 48 174 200 stone
+fill 174 48 176 201 stone
+fill 176 48 178 202 stone
+fill 178 48 180 204 stone
+fill 180 48 182 206 stone
+fill 182 48 184 208 stone
+fill 184 48 186 209 stone
+fill 186 48 188 209 stone
+fill 188 48 190 209 stone
+fill 190 48 192 207 stone
+fill 192 48 194 205 stone
+fill 194 48 196 203 stone
+fill 196 48 198 201 stone
+fill 198 48 200 199 stone
+fill 200 48 202 197 stone
+fill 202 48 204 197 stone
+fill 204 48 206 197 stone
+fill 206 48 208 198 stone
+fill 208 48 210 198 stone
+fill 210 48 212 199 stone
+fill 212 48 214 199 stone
+fill 214 48 216 199 stone
+fill 216 48 218 199 stone
+fill 218 48 220 198 stone
+fill 220 48 222 198 stone
+fill 222 48 224 197 stone
+fill 224 48 226 197 stone
+fill 226 48 228 198 stone
+fill 228 48 230 200 stone
+fill 230 48 232 202 stone
+fill 232 48 234 205 stone
+fill 234 48 236 207 stone
+fill 236 48 238 208 stone
+fill 238 48 240 209 stone
+fill 240 48 242 209 stone
+fill 242 48 244 208 stone
+fill 244 48 246 207 stone
+fill 246 48 248 205 stone
+fill 248 48 250 203 stone
+fill 250 48 252 201 stone
+fill 252 48 254 200 stone
+fill 254 48 256 199 stone
+fill 256 48 258 199 stone
+fill 258 48 260 200 stone
+fill 260 48 262 200 stone
+fill 262 48 264 200 stone
+fill 264 48 266 200 stone
+fill 266 48 268 199 stone
+fill 268 48 270 198 stone
+fill 270 48 272 197 stone
+fill 272 48 274 195 stone
+fill 274 48 276 195 stone
+fill 276 48 278 195 stone
+fill 278 48 280 196 stone
+fill 280 48 282 197 stone
+fill 282 48 284 199 stone
+fill 284 48 286 202 stone
+fill 286 48 288 204 stone
+fill 288 48 290 206 stone
+fill 290 48 292 207 stone
+fill 292 48 294 207 stone
+fill 294 48 296 206 stone
+fill 296 48 298 205 stone
+fill 298 48 300 203 stone
+fill 300 48 302 202 stone
+fill 302 48 304 200 stone
+fill 304 48 306 200 stone
+fill 306 48 308 199 stone
+fill 308 48 310 199 stone
+fill 310 48 312 199 stone
+fill 312 48 314 199 stone
+fill 314 48 316 198 stone
+fill 316 48 318 197 stone
+fill 318 48 320 195 stone
+fill 320 48 322 193 stone
+fill 322 48 324 190 stone
+fill 324 48 326 188 stone
+fill 326 48 328 186 stone
+fill 328 48 330 185 stone
+fill 330 48 332 185 stone
+fill 332 48 334 185 stone
+fill 334 48 336 186 stone
+fill 336 48 338 188 stone
+fill 338 48 340 189 stone
+fill 340 48 342 190 stone
+fill 342 48 344 190 stone
+fill 344 48 346 189 stone
+fill 346 48 348 188 stone
+fill 348 48 350 186 stone
+fill 350 48 352 183 stone
+fill 352 48 354 181 stone
+fill 354 48 356 179 stone
+fill 354 179 356 180 air
+fill 356 48 358 178 stone
+fill 356 178 358 180 air
+fill 358 48 360 177 stone
+fill 358 177 360 180 air
+fill 360 48 362 176 stone
+fill 360 176 362 180 air
+fill 362 48 364 175 stone
+fill 362 175 364 180 air
+fill 364 48 366 173 stone
+fill 364 173 366 180 air
+fill 366 48 368 171 stone
+fill 366 171 368 180 air
+fill 368 48 370 168 stone
+fill 368 168 370 180 air
+fill 370 48 372 165 stone
+fill 370 165 372 180 air
+fill 372 48 374 161 stone
+fill 372 161 374 180 air
+fill 374 48 376 157 stone
+fill 374 157 376 180 air
+fill 376 48 378 153 stone
+fill 376 153 378 180 air
+fill 378 48 380 149 stone
+fill 378 149 380 180 air
+fill 380 48 382 147 stone
+fill 380 147 382 180 air
+fill 382 48 384 146 stone
+fill 382 146 384 180 air
+fill 384 48 386 145 stone
+fill 384 145 386 180 air
+fill 386 48 388 145 stone
+fill 386 145 388 180 air
+fill 388 48 390 146 stone
+fill 388 146 390 180 air
+fill 390 48 392 146 stone
+fill 390 146 392 180 air
+fill 392 48 394 147 stone
+fill 392 147 394 180 air
+fill 394 48 396 146 stone
+fill 394 146 396 180 air
+fill 396 48 398 145 stone
+fill 396 145 398 180 air
+fill 398 48 400 144 stone
+fill 398 144 400 180 air
+fill 400 48 402 143 stone
+fill 400 143 402 180 air
+fill 402 48 404 142 stone
+fill 402 142 404 180 air
+fill 426 48 428 138 stone
+fill 426 138 428 180 air
+fill 428 48 430 136 stone
+fill 428 136 430 180 air
+fill 430 48 432 135 stone
+fill 430 135 432 180 air
+fill 432 48 434 135 stone
+fill 432 135 434 180 air
+fill 434 48 436 136 stone
+fill 434 136 436 180 air
+fill 436 48 438 138 stone
+fill 436 138 438 180 air
+fill 438 48 440 141 stone
+fill 438 141 440 180 air
+fill 440 48 442 144 stone
+fill 440 144 442 180 air
+fill 442 48 444 146 stone
+fill 442 146 444 180 air
+fill 444 48 446 149 stone
+fill 444 149 446 180 air
+fill 446 48 448 151 stone
+fill 446 151 448 180 air
+fill 448 48 450 153 stone
+fill 448 153 450 180 air
+fill 450 48 452 154 stone
+fill 450 154 452 180 air
+fill 452 48 454 156 stone
+fill 452 156 454 180 air
+fill 454 48 456 157 stone
+fill 454 157 456 180 air
+fill 456 48 458 159 stone
+fill 456 159 458 180 air
+fill 458 48 460 162 stone
+fill 458 162 460 180 air
+fill 460 48 462 165 stone
+fill 460 165 462 180 air
+fill 462 48 464 169 stone
+fill 462 169 464 180 air
+fill 464 48 466 172 stone
+fill 464 172 466 180 air
+fill 466 48 468 175 stone
+fill 466 175 468 180 air
+fill 468 48 470 178 stone
+fill 468 178 470 180 air
+fill 470 48 472 180 stone
+fill 472 48 474 181 stone
+fill 474 48 476 181 stone
+fill 476 48 478 180 stone
+fill 478 48 480 179 stone
+fill 478 179 480 180 air
+fill 480 48 482 178 stone
+fill 480 178 482 180 air
+fill 482 48 484 178 stone
+fill 482 178 484 180 air
+fill 484 48 486 178 stone
+fill 484 178 486 180 air
+fill 486 48 488 179 stone
+fill 486 179 488 180 air
+fill 488 48 490 180 stone
+fill 490 48 492 182 stone
+fill 492 48 494 184 stone
+fill 494 48 496 186 stone
+fill 496 48 498 187 stone
+fill 498 48 500 188 stone
+fill 500 48 502 188 stone
+fill 502 48 504 188 stone
+fill 504 48 506 189 stone
+fill 506 48 508 189 stone
+fill 508 48 510 190 stone
+fill 510 48 512 192 stone
+fill 512 48 514 194 stone
+fill 514 48 516 197 stone
+fill 516 48 518 199 stone
+fill 518 48 520 202 stone
+fill 520 48 522 203 stone
+fill 522 48 524 204 stone
+fill 524 48 526 204 stone
+fill 526 48 528 202 stone
+fill 528 48 530 201 stone
+fill 530 48 532 199 stone
+fill 532 48 534 197 stone
+fill 534 48 536 195 stone
+fill 536 48 538 194 stone
+fill 538 48 540 194 stone
+fill 540 48 542 194 stone
+fill 542 48 544 194 stone
+fill 544 48 546 194 stone
+fill 546 48 548 194 stone
+fill 548 48 550 194 stone
+fill 550 48 552 193 stone
+fill 552 48 554 191 stone
+fill 554 48 556 190 stone
+fill 556 48 558 188 stone
+fill 558 48 560 188 stone
+fill 560 48 562 188 stone
+fill 562 48 564 189 stone
+fill 564 48 566 190 stone
+fill 566 48 568 192 stone
+fill 568 48 570 194 stone
+fill 570 48 572 196 stone
+fill 572 48 574 198 stone
+fill 574 48 576 198 stone
+fill 576 48 578 198 stone
+fill 578 48 580 196 stone
+fill 580 48 582 195 stone
+fill 582 48 584 193 stone
+fill 584 48 586 191 stone
+fill 586 48 588 190 stone
+fill 588 48 590 189 stone
+fill 590 48 592 188 stone
+fill 592 48 594 188 stone
+fill 594 48 596 188 stone
+fill 596 48 598 188 stone
+fill 598 48 600 188 stone
+fill 600 48 602 186 stone
+fill 602 48 604 185 stone
+fill 604 48 606 183 stone
+fill 606 48 608 181 stone
+fill 608 48 610 179 stone
+fill 608 179 610 180 air
+fill 610 48 612 178 stone
+fill 610 178 612 180 air
+fill 612 48 614 178 stone
+fill 612 178 614 180 air
+fill 614 48 616 179 stone
+fill 614 179 616 180 air
+fill 616 48 618 181 stone
+fill 618 48 620 183 stone
+fill 620 48 622 186 stone
+fill 622 48 624 188 stone
+fill 624 48 626 190 stone
+fill 626 48 628 191 stone
+fill 628 48 630 191 stone
+fill 630 48 632 191 stone
+fill 632 48 634 190 stone
+fill 634 48 636 189 stone
+fill 636 48 638 189 stone
+fill 638 48 640 188 stone
+fill 640 48 642 189 stone
+fill 642 48 644 190 stone
+fill 644 48 646 190 stone
+fill 646 48 648 191 stone
+fill 648 48 650 192 stone
+fill 650 48 652 191 stone
+fill 652 48 654 190 stone
+fill 654 48 656 189 stone
+fill 656 48 658 187 stone
+fill 658 48 660 185 stone
+fill 660 48 662 183 stone
+fill 662 48 664 183 stone
+fill 664 48 666 183 stone
+fill 666 48 668 184 stone
+fill 668 48 670 186 stone
+fill 670 48 672 188 stone
+fill 672 48 674 190 stone
+fill 674 48 676 193 stone
+fill 676 48 678 195 stone
+fill 678 48 680 196 stone
+fill 680 48 682 196 stone
+fill 682 48 684 197 stone
+fill 684 48 686 196 stone
+fill 686 48 688 196 stone
+fill 688 48 690 197 stone
+fill 690 48 692 197 stone
+fill 692 48 694 199 stone
+fill 694 48 696 200 stone
+fill 696 48 698 202 stone
+fill 698 48 700 203 stone
+fill 700 48 702 203 stone
+fill 702 48 704 203 stone
+fill 704 48 706 202 stone
+fill 706 48 708 200 stone
+fill 708 48 710 198 stone
+fill 710 48 712 195 stone
+fill 712 48 714 193 stone
+fill 714 48 716 192 stone
+fill 716 48 718 192 stone
+fill 718 48 720 192 stone
+fill 720 48 722 193 stone
+fill 722 48 724 195 stone
+fill 724 48 726 196 stone
+fill 726 48 728 198 stone
+fill 728 48 730 199 stone
+fill 730 48 732 199 stone
+fill 732 48 734 199 stone
+fill 734 48 736 199 stone
+fill 736 48 738 199 stone
+fill 738 48 740 199 stone
+fill 740 48 742 199 stone
+fill 742 48 744 200 stone
+fill 744 48 746 201 stone
+fill 746 48 748 203 stone
+fill 748 48 750 205 stone
+fill 750 48 752 206 stone
+fill 752 48 754 206 stone
+fill 754 48 756 205 stone
+fill 756 48 758 204 stone
+fill 758 48 760 202 stone
+fill 760 48 762 199 stone
+fill 762 48 764 196 stone
+fill 764 48 766 193 stone
+fill 766 48 768 191 stone
+fill 768 48 770 190 stone
+fill 770 48 772 189 stone
+fill 772 48 774 189 stone
+fill 774 48 776 189 stone
+fill 776 48 778 190 stone
+fill 778 48 780 189 stone
+fill 780 48 782 189 stone
+fill 782 48 784 188 stone
+fill 784 48 786 186 stone
+fill 786 48 788 185 stone
+fill 788 48 790 183 stone
+fill 790 48 792 182 stone
+fill 792 48 794 181 stone
+fill 794 48 796 181 stone
+fill 796 48 798 182 stone
+fill 798 48 800 183 stone
+fill 800 48 802 184 stone
+fill 802 48 804 184 stone
+fill 804 48 806 183 stone
+fill 806 48 808 182 stone
+fill 808 48 810 179 stone
+fill 808 179 810 180 air
+fill 810 48 812 176 stone
+fill 810 176 812 180 air
+fill 812 48 814 172 stone
+fill 812 172 814 180 air
+fill 814 48 816 169 stone
+fill 814 169 816 180 air
+fill 816 48 818 165 stone
+fill 816 165 818 180 air
+fill 818 48 820 162 stone
+fill 818 162 820 180 air
+fill 820 48 822 159 stone
+fill 820 159 822 180 air
+fill 822 48 824 157 stone
+fill 822 157 824 180 air
+fill 824 48 826 156 stone
+fill 824 156 826 180 air
+fill 826 48 828 155 stone
+fill 826 155 828 180 air
+fill 828 48 830 153 stone
+fill 828 153 830 180 air
+fill 830 48 832 152 stone
+fill 830 152 832 180 air
+fill 832 48 834 150 stone
+fill 832 150 834 180 air
+fill 834 48 836 147 stone
+fill 834 147 836 180 air
+fill 836 48 838 145 stone
+fill 836 145 838 180 air
+fill 838 48 840 142 stone
+fill 838 142 840 180 air
+fill 840 48 842 140 stone
+fill 840 140 842 180 air
+fill 842 48 844 138 stone
+fill 842 138 844 180 air
+fill 844 48 846 138 stone
+fill 844 138 846 180 air
+fill 846 48 848 138 stone
+fill 846 138 848 180 air
+fill 848 48 850 140 stone
+fill 848 140 850 180 air
+fill 850 48 852 141 stone
+fill 850 141 852 180 air
+fill 874 48 876 140 stone
+fill 874 140 876 180 air
+fill 876 48 878 141 stone
+fill 876 141 878 180 air
+fill 878 48 880 142 stone
+fill 878 142 880 180 air
+fill 880 48 882 143 stone
+fill 880 143 882 180 air
+fill 882 48 884 143 stone
+fill 882 143 884 180 air
+fill 884 48 886 143 stone
+fill 884 143 886 180 air
+fill 886 48 888 143 stone
+fill 886 143 888 180 air
+fill 888 48 890 143 stone
+fill 888 143 890 180 air
+fill 890 48 892 143 stone
+fill 890 143 892 180 air
+fill 892 48 894 143 stone
+fill 892 143 894 180 air
+fill 894 48 896 144 stone
+fill 894 144 896 180 air
+fill 896 48 898 146 stone
+fill 896 146 898 180 air
+fill 898 48 900 149 stone
+fill 898 149 900 180 air
+fill 900 48 902 153 stone
+fill 900 153 902 180 air
+fill 902 48 904 157 stone
+fill 902 157 904 180 air
+fill 904 48 906 161 stone
+fill 904 161 906 180 air
+fill 906 48 908 165 stone
+fill 906 165 908 180 air
+fill 908 48 910 168 stone
+fill 908 168 910 180 air
+fill 910 48 912 171 stone
+fill 910 171 912 180 air
+fill 912 48 914 173 stone
+fill 912 173 914 180 air
+fill 914 48 916 174 stone
+fill 914 174 916 180 air
+fill 916 48 918 174 stone
+fill 916 174 918 180 air
+fill 918 48 920 175 stone
+fill 918 175 920 180 air
+fill 920 48 922 176 stone
+fill 920 176 922 180 air
+fill 922 48 924 177 stone
+fill 922 177 924 180 air
+fill 924 48 926 179 stone
+fill 924 179 926 180 air
+fill 926 48 928 181 stone
+fill 928 48 930 183 stone
+// Two chimneys in the roof lead to a hidden attic over the frame, where the
+// steam goes and condenses out of sight.
+fill 320 8 560 48 air
+fill 680 8 910 48 air
+fill 404 46 426 140 air
+temp 374 40 466 210 400
+fill 852 46 874 140 air
+temp 822 40 914 210 400
+// The rock massif on the left, its top sloping down to a cliff over the lake.
+fill 0 295 4 600 stone
+fill 4 295 8 600 stone
+fill 8 295 12 600 stone
+fill 12 296 16 600 stone
+fill 16 296 20 600 stone
+fill 20 296 24 600 stone
+fill 24 296 28 600 stone
+fill 28 296 32 600 stone
+fill 32 296 36 600 stone
+fill 36 297 40 600 stone
+fill 40 297 44 600 stone
+fill 44 297 48 600 stone
+fill 48 297 52 600 stone
+fill 52 297 56 600 stone
+fill 56 297 60 600 stone
+fill 60 298 64 600 stone
+fill 64 298 68 600 stone
+fill 68 298 72 600 stone
+fill 72 298 76 600 stone
+fill 76 298 80 600 stone
+fill 80 298 84 600 stone
+fill 84 298 88 600 stone
+fill 88 299 92 600 stone
+fill 92 299 96 600 stone
+fill 96 299 100 600 stone
+fill 100 299 104 600 stone
+fill 104 299 108 600 stone
+fill 108 299 112 600 stone
+fill 112 300 116 600 stone
+fill 116 300 120 600 stone
+fill 120 300 124 600 stone
+fill 124 300 128 600 stone
+fill 128 300 132 600 stone
+fill 132 300 136 600 stone
+fill 136 301 140 600 stone
+fill 140 301 144 600 stone
+fill 144 301 148 600 stone
+fill 148 301 152 600 stone
+fill 152 301 156 600 stone
+fill 156 301 160 600 stone
+fill 160 302 164 600 stone
+fill 164 302 168 600 stone
+fill 168 302 172 600 stone
+fill 172 302 176 600 stone
+fill 176 302 180 600 stone
+fill 180 302 184 600 stone
+fill 184 303 188 600 stone
+fill 188 303 192 600 stone
+fill 192 303 196 600 stone
+fill 196 303 200 600 stone
+fill 200 303 204 600 stone
+fill 204 303 208 600 stone
+fill 208 304 212 600 stone
+fill 212 304 216 600 stone
+fill 216 304 220 600 stone
+fill 220 304 224 600 stone
+fill 224 304 228 600 stone
+fill 228 304 232 600 stone
+fill 232 305 236 600 stone
+fill 236 305 240 600 stone
+fill 240 305 244 600 stone
+fill 244 305 248 600 stone
+fill 248 305 252 600 stone
+fill 252 305 256 600 stone
+fill 256 306 260 600 stone
+fill 260 306 264 600 stone
+fill 264 306 268 600 stone
+fill 268 306 272 600 stone
+fill 272 306 276 600 stone
+fill 276 306 280 600 stone
+fill 280 307 284 600 stone
+fill 284 307 288 600 stone
+fill 288 307 292 600 stone
+fill 292 307 296 600 stone
+fill 296 307 300 600 stone
+fill 300 307 304 600 stone
+fill 304 308 308 600 stone
+fill 308 308 312 600 stone
+fill 312 308 316 600 stone
+fill 316 308 320 600 stone
+fill 320 308 324 600 stone
+fill 324 308 328 600 stone
+fill 328 309 332 600 stone
+fill 332 309 336 600 stone
+fill 336 309 340 600 stone
+fill 340 309 344 600 stone
+fill 344 309 348 600 stone
+fill 348 309 352 600 stone
+fill 352 310 356 600 stone
+fill 356 310 360 600 stone
+fill 360 310 364 600 stone
+fill 364 310 368 600 stone
+fill 368 310 372 600 stone
+fill 372 310 376 600 stone
+fill 376 311 380 600 stone
+fill 380 311 384 600 stone
+fill 384 311 388 600 stone
+fill 388 311 392 600 stone
+fill 392 311 396 600 stone
+fill 396 311 400 600 stone
+circle 398 315 3 stone
+// The lake, deep under the cliff.
+fill 400 460 930 584 water
+terrain 430 930 560 14 50 stone 600
+// A magma chamber inside the massif behind the cliff, walled from the
+// lake by a skin of obsidian and fed from a vent in its roof.
+temp 220 330 400 470 450
+circle 300 378 30 air
+circle 350 382 26 air
+fill 262 378 384 452 air
+fill 250 372 384 452 lava
+circle 262 412 26 lava
+circle 286 452 12 lava
+circle 334 454 10 lava
+circle 366 452 8 lava
+fill 294 336 306 360 air
+fill 296 337 304 339 lava_source
+fill 384 410 400 444 obsidian
+temp 384 410 400 444 900
+// A rock apron at the foot of the plug, just over the water.
+fill 400 446 404 600 stone
+fill 404 447 408 600 stone
+fill 408 448 412 600 stone
+fill 412 449 416 600 stone
+fill 416 450 420 600 stone
+fill 420 451 424 600 stone
+fill 424 452 428 600 stone
+fill 428 453 432 600 stone
+fill 432 454 436 600 stone
+fill 436 455 440 600 stone
+temp 400 444 440 460 500
+// An island of rock in the lake.
+fill 690 440 732 600 stone
+circle 711 442 20 stone
+circle 700 530 46 stone
+// A great stalactite over the lake, studded with crystals.
+fill 593 175 619 200 stone
+fill 596 200 616 230 stone
+fill 599 230 613 256 stone
+fill 602 256 611 276 stone
+fill 604 276 609 292 stone
+fill 605 292 608 302 stone
+fill 595 203 596 210 crystal
+fill 594 203 595 210 crystal
+fill 593 203 594 210 crystal
+fill 592 203 593 210 crystal
+fill 591 203 592 210 crystal
+fill 590 204 591 209 crystal
+fill 589 204 590 209 crystal
+fill 588 204 589 209 crystal
+fill 587 204 588 209 crystal
+fill 586 204 587 209 crystal
+fill 585 205 586 208 crystal
+fill 584 205 585 208 crystal
+fill 583 205 584 208 crystal
+fill 582 205 583 208 crystal
+fill 595 220 596 225 crystal
+fill 594 220 595 225 crystal
+fill 593 220 594 225 crystal
+fill 592 220 593 225 crystal
+fill 591 220 592 225 crystal
+fill 590 221 591 224 crystal
+fill 589 221 590 224 crystal
+fill 588 221 589 224 crystal
+fill 587 221 588 224 crystal
+fill 586 221 587 224 crystal
+fill 598 242 599 247 crystal
+fill 597 242 598 247 crystal
+fill 596 242 597 247 crystal
+fill 595 242 596 247 crystal
+fill 594 242 595 247 crystal
+fill 593 243 594 246 crystal
+fill 592 243 593 246 crystal
+fill 591 243 592 246 crystal
+fill 590 243 591 246 crystal
+fill 616 207 617 214 crystal
+fill 617 207 618 214 crystal
+fill 618 207 619 214 crystal
+fill 619 207 620 214 crystal
+fill 620 207 621 214 crystal
+fill 621 207 622 214 crystal
+fill 622 208 623 213 crystal
+fill 623 208 624 213 crystal
+fill 624 208 625 213 crystal
+fill 625 208 626 213 crystal
+fill 626 208 627 213 crystal
+fill 627 209 628 212 crystal
+fill 628 209 629 212 crystal
+fill 629 209 630 212 crystal
+fill 630 209 631 212 crystal
+fill 631 209 632 212 crystal
+fill 613 234 614 239 crystal
+fill 614 234 615 239 crystal
+fill 615 234 616 239 crystal
+fill 616 234 617 239 crystal
+fill 617 234 618 239 crystal
+fill 618 235 619 238 crystal
+fill 619 235 620 238 crystal
+fill 620 235 621 238 crystal
+fill 621 235 622 238 crystal
+fill 622 235 623 238 crystal
+fill 623 236 624 237 crystal
+fill 624 236 625 237 crystal
+fill 611 263 612 266 crystal
+fill 612 263 613 266 crystal
+fill 613 263 614 266 crystal
+fill 614 263 615 266 crystal
+fill 615 263 616 266 crystal
+fill 616 263 617 266 crystal
+fill 617 264 618 265 crystal
+fill 618 264 619 265 crystal
+fill 603 281 604 284 crystal
+fill 602 281 603 284 crystal
+fill 601 281 602 284 crystal
+fill 600 281 601 284 crystal
+fill 599 282 600 283 crystal
+fill 598 282 599 283 crystal
+// Crystal clusters: on the island, under the roof, on the walls.
+fill 692 425 696 430 crystal
+fill 693 422 695 425 crystal
+fill 694 420 695 422 crystal
+fill 697 415 703 425 crystal
+fill 698 409 702 415 crystal
+fill 699 405 701 409 crystal
+fill 700 402 701 405 crystal
+fill 705 417 710 423 crystal
+fill 706 413 709 417 crystal
+fill 707 410 708 413 crystal
+fill 711 410 718 422 crystal
+fill 712 402 717 410 crystal
+fill 713 396 716 402 crystal
+fill 714 392 715 396 crystal
+fill 719 418 723 424 crystal
+fill 720 414 722 418 crystal
+fill 721 412 722 414 crystal
+fill 725 420 730 428 crystal
+fill 726 415 729 420 crystal
+fill 727 412 728 415 crystal
+fill 468 179 472 184 crystal
+fill 469 184 471 187 crystal
+fill 470 187 471 189 crystal
+fill 475 178 481 187 crystal
+fill 476 187 480 193 crystal
+fill 477 193 479 197 crystal
+fill 478 197 479 200 crystal
+fill 486 178 489 182 crystal
+fill 487 182 488 185 crystal
+fill 679 195 682 199 crystal
+fill 680 199 681 202 crystal
+fill 687 196 693 204 crystal
+fill 688 204 692 209 crystal
+fill 689 209 691 212 crystal
+fill 690 212 691 214 crystal
+fill 695 202 702 214 crystal
+fill 696 214 701 222 crystal
+fill 697 222 700 227 crystal
+fill 698 227 699 230 crystal
+fill 705 199 710 205 crystal
+fill 706 205 709 209 crystal
+fill 707 209 708 212 crystal
+fill 714 191 717 195 crystal
+fill 715 195 716 197 crystal
+fill 758 198 762 203 crystal
+fill 759 203 761 206 crystal
+fill 760 206 761 208 crystal
+fill 766 189 771 197 crystal
+fill 767 197 770 202 crystal
+fill 768 202 769 205 crystal
+fill 838 139 842 144 crystal
+fill 839 144 841 147 crystal
+fill 840 147 841 149 crystal
+fill 846 139 852 148 crystal
+fill 847 148 851 154 crystal
+fill 848 154 850 158 crystal
+fill 849 158 850 161 crystal
+fill 856 7 860 13 crystal
+fill 857 13 859 17 crystal
+fill 858 17 859 19 crystal
+fill 876 141 880 145 crystal
+fill 877 145 879 148 crystal
+fill 878 148 879 150 crystal
+fill 884 142 889 149 crystal
+fill 885 149 888 154 crystal
+fill 886 154 887 157 crystal
+fill 929 310 930 315 crystal
+fill 928 310 929 315 crystal
+fill 927 310 928 315 crystal
+fill 926 310 927 315 crystal
+fill 925 310 926 315 crystal
+fill 924 310 925 315 crystal
+fill 923 311 924 314 crystal
+fill 922 311 923 314 crystal
+fill 921 311 922 314 crystal
+fill 920 311 921 314 crystal
+fill 919 311 920 314 crystal
+fill 918 311 919 314 crystal
+fill 917 312 918 313 crystal
+fill 916 312 917 313 crystal
+fill 929 325 930 332 crystal
+fill 928 325 929 332 crystal
+fill 927 325 928 332 crystal
+fill 926 325 927 332 crystal
+fill 925 325 926 332 crystal
+fill 924 325 925 332 crystal
+fill 923 326 924 331 crystal
+fill 922 326 923 331 crystal
+fill 921 326 922 331 crystal
+fill 920 326 921 331 crystal
+fill 919 326 920 331 crystal
+fill 918 326 919 331 crystal
+fill 917 327 918 330 crystal
+fill 916 327 917 330 crystal
+fill 915 327 916 330 crystal
+fill 914 327 915 330 crystal
+fill 913 327 914 330 crystal
+fill 912 327 913 330 crystal
+fill 911 328 912 329 crystal
+fill 910 328 911 329 crystal
+fill 929 344 930 349 crystal
+fill 928 344 929 349 crystal
+fill 927 344 928 349 crystal
+fill 926 344 927 349 crystal
+fill 925 344 926 349 crystal
+fill 924 345 925 348 crystal
+fill 923 345 924 348 crystal
+fill 922 345 923 348 crystal
+fill 921 345 922 348 crystal
+fill 920 345 921 348 crystal
+fill 929 388 930 393 crystal
+fill 928 388 929 393 crystal
+fill 927 388 928 393 crystal
+fill 926 388 927 393 crystal
+fill 925 388 926 393 crystal
+fill 924 389 925 392 crystal
+fill 923 389 924 392 crystal
+fill 922 389 923 392 crystal
+fill 921 389 922 392 crystal
+fill 920 389 921 392 crystal
+fill 919 390 920 391 crystal
+fill 918 390 919 391 crystal
+fill 54 234 55 239 crystal
+fill 55 234 56 239 crystal
+fill 56 234 57 239 crystal
+fill 57 234 58 239 crystal
+fill 58 235 59 238 crystal
+fill 59 235 60 238 crystal
+fill 60 235 61 238 crystal
+fill 61 235 62 238 crystal
+fill 62 236 63 237 crystal
+fill 63 236 64 237 crystal
+fill 60 248 61 253 crystal
+fill 61 248 62 253 crystal
+fill 62 248 63 253 crystal
+fill 63 248 64 253 crystal
+fill 64 248 65 253 crystal
+fill 65 248 66 253 crystal
+fill 66 249 67 252 crystal
+fill 67 249 68 252 crystal
+fill 68 249 69 252 crystal
+fill 69 249 70 252 crystal
+fill 70 249 71 252 crystal
+fill 71 249 72 252 crystal
+fill 72 250 73 251 crystal
+fill 73 250 74 251 crystal
+// Glowshrooms on a ledge on the right wall and on the island.
+fill 840 400 930 412 stone
+circle 846 406 6 stone
+fill 852 395 853 400 glowshroom
+fill 851 393 854 395 glowshroom
+fill 861 392 862 400 glowshroom
+fill 859 390 864 392 glowshroom
+fill 870 396 871 400 glowshroom
+fill 869 394 872 396 glowshroom
+fill 880 391 881 400 glowshroom
+fill 878 389 883 391 glowshroom
+fill 892 395 893 400 glowshroom
+fill 891 393 894 395 glowshroom
+fill 903 393 904 400 glowshroom
+fill 901 391 906 393 glowshroom
+fill 698 405 699 409 glowshroom
+fill 697 403 700 405 glowshroom
+fill 718 418 719 424 glowshroom
+fill 716 416 721 418 glowshroom
+fill 729 415 730 420 glowshroom
+fill 728 413 731 415 glowshroom
+run 30
 
 [events]
-// The breach: the plug is blown out with a flash, and blasts in the lava
-// behind it throw glowing droplets out into the dark.
-at 290: explode 254 296 14 255
-at 290: explode 254 310 12 255
-at 290: dig 258 303 16
-at 290: fill 250 270 272 318 air
-at 290: explode 250 303 8 120
-at 290: explode 286 298 24 100
-at 290: paint 282 298 9 fire
-// The feeder in the chamber roof is cut off and the flow thins.
-at 480: fill 170 214 190 216 stone
-// A flooded fissure in the roof over the ramp cracks open: a waterfall pours
-// onto the lava, flashing into a column of steam, and the lava under it
-// crusts black. It dries up three seconds later.
-at 718: explode 364 136 8 140
-at 720: fill 354 134 374 136 water_source
-at 900: fill 354 134 374 136 stone
-// Steam condensing on the ceiling starts to drip on the cooling crust.
-at 1250: fill 388 214 391 215 rain_cloud
-// Blasts on either side of the slab's neck cut it, and it falls into the lake.
-at 1100: explode 642 160 10 220
-at 1100: explode 668 160 10 220
-at 1100: dig 655 160 8
-at 1100: paint 638 160 6 fire
-at 1100: paint 672 160 6 fire
+// The breach: a blast cracks the cliff face, the plug gives way and the
+// lava pours out after it.
+at 89: explode 416 424 18 220
+at 90: fill 384 410 400 444 air
+at 90: explode 388 428 6 60
+at 90: explode 420 426 14 120
+// The air over the lava entry is kept hot by the lava, so the steam stays
+// steam as it rises.
+every 2 from 100 to 1800: heat 470 395 45 1
+every 4 from 100 to 1800: heat 470 290 55 1
+every 4 from 100 to 1800: heat 430 225 28 1
+// A spring bursts from the back wall.
+at 480: explode 70 282 10 120
+at 481: fill 60 272 86 296 air
+at 481: fill 62 272 86 273 water_source
+// Steam that reaches the attic over the frame vents away.
+every 6 from 100 to 1800: fill 320 8 560 46 air
+every 6 from 100 to 1800: fill 680 8 910 46 air
+// Every few ticks the air just over the open lake is cleared, away from
+// the lava. This levels drops that land on the lake, which the engine
+// would otherwise stack into thin standing spikes, and acts as the lake's
+// overflow.
+every 3 from 200 to 1416: fill 520 438 680 454 air
+every 3 from 1560 to 1800: fill 520 438 585 454 air
+every 3 from 1560 to 1800: fill 632 438 680 454 air
+every 3 from 200 to 1800: fill 742 438 762 454 air
+every 3 from 200 to 1800: fill 798 438 930 454 air
+// The plug gives way further and a second surge of lava follows.
+at 1180: fill 384 384 400 444 air
+at 1180: explode 386 400 8 80
+at 1180: explode 418 406 16 160
+// The roof over the right of the lake cracks and a magma dyke pours
+// through it in a curtain of lava that falls into the lake.
+at 940: explode 779 191 12 220
+at 941: fill 770 173 788 193 air
+at 941: fill 770 173 788 176 lava_source
+at 941: fill 770 176 788 193 lava
+at 941: temp 770 173 788 193 1250
+every 2 from 960 to 1800: heat 790 395 44 1
+every 4 from 960 to 1800: heat 792 295 52 1
+// The great stalactite breaks from the roof and falls into the lake.
+at 1420: explode 606 193 14 255
+at 1420: fill 590 187 622 197 air
 
 [camera]
 view 960 540
 scale 2
 sky cave
-ambient 0.12 0.12 0.15
-exposure 1.6
-at 0: 480 300
-at 240: 480 300
-at 290: 300 320 zoom=1.6
-at 480: 330 340 zoom=1.6
-at 600: 440 360 zoom=1.3
-at 1000: 470 340 zoom=1.2
-at 1060: 480 300
-at 1320: 480 300
-at 1450: 440 330 zoom=1.15
-at 1800: 440 330 zoom=1.15
+ambient 0.07 0.07 0.1
+exposure 2.4
+at 0: 520 330 zoom=1.0
+at 60: 480 340 zoom=1.12
+at 150: 410 360 zoom=1.45
+at 330: 440 350 zoom=1.3
+at 470: 330 330 zoom=1.3
+at 620: 420 340 zoom=1.3
+at 820: 500 330 zoom=1.05
+at 930: 680 340 zoom=1.2
+at 1000: 760 350 zoom=1.35
+at 1120: 620 340 zoom=1.2
+at 1200: 480 350 zoom=1.3
+at 1330: 560 350 zoom=1.2
+at 1400: 600 360 zoom=1.25
+at 1560: 560 340 zoom=1.15
+at 1680: 480 330 zoom=1.0
+at 1800: 480 330 zoom=1.0
 
 [expect]
-after 302: particles >= 20
-after 600: count lava in 345 380 940 576 >= 300
-// The quench crust crumbles to gravel and sinks, so the front keeps boiling.
-after 1000: count gravel in 345 380 940 576 >= 150
-after 1150: bodies >= 1
+after 300: count lava in 384 360 520 480 >= 800
+after 700: count steam in 380 60 560 460 >= 600
+after 700: count water in 0 260 400 320 >= 200
+after 900: count gravel in 400 460 560 600 >= 400
+after 1100: count lava in 760 120 800 460 >= 200
+after 1100: count steam in 700 60 930 460 >= 40
+after 1500: count crystal in 540 360 690 600 >= 8
+after 1500: drawn water in 520 390 680 452 <= 40
+after 1500: drawn water in 798 390 900 452 <= 40
+after 1799: drawn water in 520 390 580 452 <= 40
+after 1799: drawn water in 798 390 900 452 <= 40
