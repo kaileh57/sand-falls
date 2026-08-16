@@ -1,124 +1,243 @@
 // Foundry: heat capacity and latent heat.
 //
-// A brick crucible over a heater taps white-hot metal through a small hole
-// down a cascade of four firebrick molds. Each mold fills, spills over its
-// lip into the next, and the last one overflows into the dry end of a quench
-// tank, where the metal pools on the floor. Molten metal holds a lot of heat
-// and gives off 300 C of latent heat as it freezes, so the pour stays liquid
-// all the way down and every mold fills before it sets. The castings cool to
-// their 1300 C freezing plateau and sit there, glowing yellow, while they
-// crystallise in from the mold walls.
+// A firebrick pouring box hangs over a quench tank. Its four wells hold
+// 2050 C metal over preheated linings and funnel floors. The nozzles are
+// tapped one after another (t15-t45), and four white-hot streams fill four
+// stepped firebrick molds. The wells drain dry by t280 and are stoppered
+// again. Molten metal holds a lot of heat and gives off 300 C of latent heat
+// before it freezes, so every mold is full and still liquid when the pour
+// ends, and the castings glow on their 1300 C freezing plateau.
 //
-// At tick 1000 the quench starts. A sprinkler bar rains on each casting, and
-// the tank's sluice gate opens so its water floods over the pool of metal.
-// Water takes 540 C of latent heat to boil, so it boils where it touches hot
-// metal, steadily rather than all at once, and steam rises off the castings.
-// The water freezes the castings from the top down: a crust cools through
-// orange and red to grey while the core below stays on its freezing plateau,
-// and by the end all four castings, and the slab on the tank floor, are grey.
+// At t300 the sluice gate of the cistern on the right lifts. The cistern
+// collapses into a wave that pours off the tower onto the highest casting,
+// sweeps down the steps over the others, and fills the tank around them.
+// Water takes 540 C of latent heat to boil, so every casting it touches
+// flashes it to steam. The rising pool swallows the castings one by one and
+// freezes them from the top down: they glow orange under the water, then go
+// grey (all solid by about t1000). They end grey under standing water.
+//
+// Steam rises to a vent in the roof, which carries it away (scripted: `fill`
+// events clear the vent every 6 ticks). The air under the roof and the
+// underside of the box are held at 105 C (scripted `temp` events) so that
+// the steam stays steam instead of condensing on them and raining back down
+// as streaks; the steam trapped under the box stays as a white bank.
 [scene]
 name = foundry
-description = A crucible pours molten metal down four cascading molds, which all fill while still liquid, and the overflow pools on the floor of a quench tank. Sprinklers and a flooding sluice then quench the metal: the water boils steadily into steam, and the castings cool from the top down through orange and red to grey.
-size = 768 432
+description = A pouring box taps four streams of white-hot metal into four stepped firebrick molds, which all fill while still liquid. A cistern's sluice gate then lifts: the water crashes down the steps and fills the tank, flashing to steam on the glowing castings, which freeze under it from orange to grey.
+size = 480 320
 seed = 0xf0d9
-ticks = 2700
+ticks = 1400
 
 [build]
-fill 0 0 768 432 stone
-// The hall. Bedrock under the floor anchors everything built on it.
-fill 20 40 748 380 air
-fill 0 400 768 432 bedrock
-// Crucible: a brick shell over a heater, full of molten metal, tapped through
-// a hole low in its right wall.
-fill 40 60 160 172 brick
-fill 50 70 150 160 air
-fill 50 160 150 166 heater
-fill 50 128 150 160 molten_metal
-temp 50 128 150 160 2050
-fill 150 156 160 160 air
-fill 40 172 154 380 stone
-fill 154 172 160 186 brick
-// Four firebrick molds, each 40 x 14 and 20 cells below the last. The wall
-// between two molds is topped at the higher mold's lip, so a full mold spills
-// over it into the next.
-fill 154 172 158 200 brick
-fill 154 200 202 206 brick
-fill 158 186 198 200 air
-fill 198 186 202 226 brick
-fill 198 220 246 226 brick
-fill 246 206 250 246 brick
-fill 246 240 290 246 brick
-fill 290 226 294 266 brick
-fill 290 260 334 266 brick
-fill 334 246 338 308 brick
-fill 154 206 198 380 stone
-fill 202 226 246 380 stone
-fill 250 246 290 380 stone
-fill 294 266 334 380 stone
-// The quench tank. The last mold overflows into its dry left end; a brick
-// sluice gate holds the water in the right end until the quench. The right
-// wall is lower than the last mold's lip, so runoff spills out to the right
-// instead of backing up over the castings.
-fill 338 300 470 308 brick
-fill 466 256 470 308 brick
-fill 338 308 470 380 stone
-fill 402 262 466 300 water
-fill 398 258 402 300 brick
-// A torch on the far wall for a little warm fill light.
-fill 20 120 22 124 torch
+fill 0 0 480 320 stone
+fill 16 16 464 300 air
+fill 0 300 480 320 bedrock
+// A vent in the roof over the whole hall carries the steam away.
+fill 20 4 456 16 air
+// Pouring box: a firebrick block with four wells, one over each mold, hung
+// from the roof on steel rods. The brick around each well is preheated to
+// 1350 C, above the metal's freezing point, so no metal freezes on the
+// walls, and the funnel floors drain every well dry.
+fill 38 4 40 56 metal
+fill 83 4 85 56 metal
+fill 137 4 139 56 metal
+fill 191 4 193 56 metal
+fill 236 4 238 56 metal
+fill 36 56 240 104 brick
+temp 43 56 71 104 1350
+temp 97 56 125 104 1350
+temp 151 56 179 104 1350
+temp 205 56 233 104 1350
+fill 46 56 68 100 air
+fill 46 68 68 100 molten_metal
+temp 46 68 68 100 2050
+fill 100 56 122 100 air
+fill 100 68 122 100 molten_metal
+temp 100 68 122 100 2050
+fill 154 56 176 100 air
+fill 154 68 176 100 molten_metal
+temp 154 68 176 100 2050
+fill 208 56 230 100 air
+fill 208 68 230 100 molten_metal
+temp 208 68 230 100 2050
+fill 46 93 47 94 brick
+fill 67 93 68 94 brick
+fill 46 94 48 95 brick
+fill 66 94 68 95 brick
+fill 46 95 49 96 brick
+fill 65 95 68 96 brick
+fill 46 96 50 97 brick
+fill 64 96 68 97 brick
+fill 46 97 51 98 brick
+fill 63 97 68 98 brick
+fill 46 98 52 99 brick
+fill 62 98 68 99 brick
+fill 46 99 53 100 brick
+fill 61 99 68 100 brick
+fill 100 93 101 94 brick
+fill 121 93 122 94 brick
+fill 100 94 102 95 brick
+fill 120 94 122 95 brick
+fill 100 95 103 96 brick
+fill 119 95 122 96 brick
+fill 100 96 104 97 brick
+fill 118 96 122 97 brick
+fill 100 97 105 98 brick
+fill 117 97 122 98 brick
+fill 100 98 106 99 brick
+fill 116 98 122 99 brick
+fill 100 99 107 100 brick
+fill 115 99 122 100 brick
+fill 154 93 155 94 brick
+fill 175 93 176 94 brick
+fill 154 94 156 95 brick
+fill 174 94 176 95 brick
+fill 154 95 157 96 brick
+fill 173 95 176 96 brick
+fill 154 96 158 97 brick
+fill 172 96 176 97 brick
+fill 154 97 159 98 brick
+fill 171 97 176 98 brick
+fill 154 98 160 99 brick
+fill 170 98 176 99 brick
+fill 154 99 161 100 brick
+fill 169 99 176 100 brick
+fill 208 93 209 94 brick
+fill 229 93 230 94 brick
+fill 208 94 210 95 brick
+fill 228 94 230 95 brick
+fill 208 95 211 96 brick
+fill 227 95 230 96 brick
+fill 208 96 212 97 brick
+fill 226 96 230 97 brick
+fill 208 97 213 98 brick
+fill 225 97 230 98 brick
+fill 208 98 214 99 brick
+fill 224 98 230 99 brick
+fill 208 99 215 100 brick
+fill 223 99 230 100 brick
+// Quench tank, between a brick wall on the left and the brick tower that
+// carries the cistern on the right. Four firebrick molds, each a 50 x 12
+// cavity under a 2-row lip, step up 6 rows at a time toward the tower.
+fill 16 100 28 300 brick
+fill 28 166 86 300 brick
+fill 32 166 82 180 air
+fill 82 160 140 300 brick
+fill 86 160 136 174 air
+fill 136 154 194 300 brick
+fill 140 154 190 168 air
+fill 190 148 248 300 brick
+fill 194 148 244 162 air
+fill 248 126 464 300 brick
+// Cistern on the tower, held back by a sluice gate on its left. Its floor
+// slopes down to the gate, so it drains dry.
+fill 248 40 252 126 brick
+fill 452 40 456 126 brick
+fill 252 56 452 126 water
+fill 252 125 258 126 brick
+fill 258 124 264 126 brick
+fill 264 123 270 126 brick
+fill 270 122 276 126 brick
+fill 276 121 282 126 brick
+fill 282 120 288 126 brick
+fill 288 119 294 126 brick
+fill 294 118 300 126 brick
+fill 300 117 306 126 brick
+fill 306 116 312 126 brick
+fill 312 115 318 126 brick
+fill 318 114 324 126 brick
+fill 324 113 330 126 brick
+fill 330 112 336 126 brick
+fill 336 111 342 126 brick
+fill 342 110 348 126 brick
+fill 348 109 354 126 brick
+fill 354 108 360 126 brick
+fill 360 107 366 126 brick
+fill 366 106 372 126 brick
+fill 372 105 378 126 brick
+fill 378 104 384 126 brick
+fill 384 103 390 126 brick
+fill 390 102 396 126 brick
+fill 396 101 402 126 brick
+fill 402 100 408 126 brick
+fill 408 99 414 126 brick
+fill 414 98 420 126 brick
+fill 420 97 426 126 brick
+fill 426 96 432 126 brick
+fill 432 95 438 126 brick
+fill 438 94 444 126 brick
+fill 444 93 450 126 brick
+fill 450 92 452 126 brick
 
 [events]
-// The crucible is empty: shut the heater off.
-at 800: fill 50 160 150 166 brick
-// The quench: open the sluice gate and turn on a sprinkler bar over each
-// casting, then shut the sprinklers off.
-at 1000: fill 398 258 402 300 air
-at 1000: fill 156 170 188 171 water_source
-at 1000: fill 200 186 232 187 water_source
-at 1000: fill 246 206 278 207 water_source
-at 1000: fill 290 226 322 227 water_source
-at 1150: fill 156 170 188 171 air
-at 1150: fill 200 186 232 187 air
-at 1150: fill 246 206 278 207 air
-at 1150: fill 290 226 322 227 air
+// Pull the nozzle plugs one after another: four streams, one per mold.
+at 15: fill 53 100 61 104 air
+at 25: fill 107 100 115 104 air
+at 35: fill 161 100 169 104 air
+at 45: fill 215 100 223 104 air
+// The wells are empty: stopper the nozzles again.
+at 290: fill 53 100 61 104 brick
+at 290: fill 107 100 115 104 brick
+at 290: fill 161 100 169 104 brick
+at 290: fill 215 100 223 104 brick
+// The quench: lift the sluice gate.
+at 300: fill 248 40 252 126 air
+// The roof vent draws off the steam that reaches it (between the rods).
+every 6 from 300 to 1400: fill 20 4 38 14 air
+every 6 from 300 to 1400: fill 40 4 83 14 air
+every 6 from 300 to 1400: fill 85 4 137 14 air
+every 6 from 300 to 1400: fill 139 4 191 14 air
+every 6 from 300 to 1400: fill 193 4 236 14 air
+every 6 from 300 to 1400: fill 238 4 456 14 air
+// Hot air under the roof and along the underside of the box keeps the steam
+// from condensing on them and raining back down. The part of the underside
+// next to the tower starts once the wave has passed under it.
+every 15 from 300 to 1400: temp 16 4 464 56 105
+every 15 from 300 to 1400: temp 16 56 36 112 105
+every 15 from 300 to 1400: temp 36 96 190 112 105
+every 15 from 560 to 1400: temp 190 96 248 112 105
+every 15 from 560 to 1400: temp 240 56 248 96 105
 
 [camera]
 view 960 540
 scale 2
 sky cave
-ambient 0.55 0.5 0.48
-exposure 0.32
-// Open on the tap and the stream, pan down the cascade as the molds fill,
-// hold on the molds and tank for the quench, and end on the dulling castings.
-at 0: 200 170 zoom=2
-at 300: 210 180 zoom=2
-at 900: 305 215 zoom=2.2
-at 1800: 305 215 zoom=2.2
-at 2700: 305 226 zoom=2.8
+ambient 0.7 0.62 0.58
+exposure 0.85
+// Open close on the pouring box and the four streams, pull back to the
+// whole hall for the wave, then move in on the castings in the tank.
+at 0: 170 105 zoom=2.9
+at 15: 170 105 zoom=2.9
+at 200: 190 122 zoom=2.5
+at 285: 242 135 zoom=2.2
+at 420: 242 135 zoom=2.2
+at 750: 200 122 zoom=2.4
+at 1400: 180 118 zoom=2.7
 
 [expect]
-// No stone melts into lava anywhere in the hall.
-after 300: count lava in 20 40 748 400 == 0
-after 900: count lava in 20 40 748 400 == 0
-after 1800: count lava in 20 40 748 400 == 0
-after 2700: count lava in 20 40 748 400 == 0
-// When the quench starts every mold is at least 95% full (cavities of 560,
-// 616, 560 and 560 cells; no water has reached them yet, so whatever is not
-// air is metal) and at least 90% of each is still liquid.
-after 1000: count air in 158 186 198 200 <= 28
-after 1000: count air in 202 206 246 220 <= 30
-after 1000: count air in 250 226 290 240 <= 28
-after 1000: count air in 294 246 334 260 <= 28
-after 1000: count molten_metal in 158 186 198 200 >= 504
-after 1000: count molten_metal in 202 206 246 220 >= 555
-after 1000: count molten_metal in 250 226 290 240 >= 504
-after 1000: count molten_metal in 294 246 334 260 >= 504
-// The overflow pools on the tank floor, still liquid, before the flood.
-after 1000: count molten_metal in 338 262 466 300 >= 300
-// Steam rises in the quench.
-after 1100: count steam in 20 40 748 380 > 400
-// The tank boils off only gradually: at least 85% of its starting 2432 cells.
-after 1500: count water in 338 262 466 300 >= 2068
-// The tank metal froze in place on the floor, and the castings are solid.
-after 1800: count metal in 338 262 466 300 >= 300
-after 2400: count molten_metal in 158 186 334 260 == 0
+// No stone melts anywhere.
+after 300: count lava in 0 0 480 320 == 0
+after 1400: count lava in 0 0 480 320 == 0
+// Just before the flood the pouring box is empty, with no metal frozen in
+// it, and every mold cavity (600 cells) is full and at least 90% liquid.
+after 290: count molten_metal in 36 56 240 104 == 0
+after 290: count metal in 36 56 240 104 == 0
+after 290: count air in 32 168 82 180 == 0
+after 290: count air in 86 162 136 174 == 0
+after 290: count air in 140 156 190 168 == 0
+after 290: count air in 194 150 244 162 == 0
+after 290: count molten_metal in 32 168 82 180 >= 540
+after 290: count molten_metal in 86 162 136 174 >= 540
+after 290: count molten_metal in 140 156 190 168 >= 540
+after 290: count molten_metal in 194 150 244 162 >= 540
+// The water boils to steam on the castings.
+after 600: count steam in 0 0 480 320 > 1000
+// Every casting is solid by t1100 and whole at the end, no metal is left
+// anywhere above the molds, and standing water covers all four castings.
+after 1100: count molten_metal in 0 0 480 320 == 0
+after 1400: count metal in 32 168 82 180 >= 590
+after 1400: count metal in 86 162 136 174 >= 590
+after 1400: count metal in 140 156 190 168 >= 590
+after 1400: count metal in 194 150 244 162 >= 590
+after 1400: count metal in 16 57 464 146 == 0
+after 1400: count water in 32 140 244 148 >= 1500
