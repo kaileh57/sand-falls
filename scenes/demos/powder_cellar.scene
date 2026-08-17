@@ -2,32 +2,33 @@
 // chemistry in the dark, each step started by the one before. Only the falling
 // brand is scripted; every later step comes from the material table.
 //
-// A burning brand drops from a lantern onto a gunpowder trail. Gunpowder
+// A burning brand drops out of a lantern onto a gunpowder trail. Gunpowder
 // explodes at 200 C with radius 9, so the trail burns as a crackling line of
-// tiny blasts along the floor, up the stone stair and along the shelf to two
-// powder kegs. The acid carboy stands on the first keg, which blows it apart.
-// Acid eats brick, stone, wood and metal into green acid_gas but not glass,
-// which is why it was kept in glass (a glass sill also keeps it off the straw).
-// It runs down the brick wall, eats the wooden shelf under it so its jars
-// tumble, and pools on the floor eating pits. Burning debris lights oil spilled
-// over straw in a floor sump; the fire creeps along it under the shelf,
-// setting the hanging oil barrels alight one by one, until it reaches the drain
-// mouth. Oil that catches fire burns as a liquid where it lies, so the sump
-// and the barrels burn on by themselves. A second trail runs under the bedrock
-// floor slab and up the far stair to the powder store. Its kegs set off the
-// TNT beside them (150 C, radius 18): a blast sets off every charge it reaches,
-// so the 144 cells of TNT go up together, merged into one large blast that
-// flashes white through the whole cellar, throws a fireball and burning
-// debris, and blows out the far corner.
+// small blasts along the floor, up the stone stair and along the shelf to two
+// powder kegs with TNT cores. Every cell of a charge grows the blast it joins,
+// so the kegs go up as one blast with a white flash. It blows apart the acid
+// carboy that stood on them and bursts the oil tank hung under the landing,
+// throwing burning oil down into the bay. Acid eats brick, stone, wood and
+// metal into green acid_gas but not glass, which is why it was kept in glass:
+// it runs down the brick wall eating into it, and eats the jar shelf so its
+// jars tumble. The burning oil lights bundles of dry brush on the floor (leaves
+// catch at 160 C and flare up), and the fire runs along the bay and up into the
+// hanging oil barrels. In the last bundle is the drain mouth: a second trail
+// runs under the bedrock floor as a white hot seam and comes up into the
+// powder store. A floor keg goes first, then the TNT crates (150 C, radius 18)
+// under, on and above the timber gallery, each a separate blast of radius 48
+// that sets off the next: a white flash that lights the whole cellar, a
+// fireball two hundred cells across that tears down the lanterns over the
+// store, and burning oil from the gallery barrels sprayed over the room.
 //
 // The light is the reactions' own: lamps and torches, sparks, burning oil and
-// timber, and the acid's green glow.
+// brush, the flashes, and the acid's green glow.
 [scene]
 name = powder cellar
-description = A brand drops on a powder trail in a dark vaulted cellar; the spark runs up the stair to the kegs, the blast frees a carboy of acid that eats the wall, a shelf and the floor, burning oil creeps along the straw to a second trail under the floor, and the powder store blows out the far corner.
+description = A brand drops on a powder trail in a dark vaulted cellar; the spark runs up the stair to the kegs, whose blast frees a carboy of acid that eats the wall and bursts an oil tank over bundles of brush, the brush fire lights a second trail that runs under the floor as a glowing seam, and a store of TNT crates goes up in a rolling blast that lights the whole cellar.
 size = 760 430
-seed = 0xc0d5
-ticks = 2160
+seed = 0x1234
+ticks = 1200
 
 [build]
 fill 0 0 760 430 stone
@@ -88,13 +89,11 @@ fill 360 377 366 382 bedrock
 fill 366 376 372 384 concrete
 fill 366 383 372 384 bedrock
 fill 78 384 262 390 air
-fill 78 387 262 390 leaves
-fill 78 384 262 387 oil
-fill 258 390 262 400 gunpowder
+fill 34 380 262 384 leaves
+fill 78 384 262 390 oil
 fill 262 384 558 398 bedrock
-fill 258 398 558 400 gunpowder
-fill 370 383 448 384 gunpowder
-fill 370 384 452 387 concrete
+fill 370 383 418 384 gunpowder
+fill 370 384 422 387 concrete
 fill 240 248 246 250 gunpowder
 fill 246 254 252 256 gunpowder
 fill 252 260 258 262 gunpowder
@@ -137,19 +136,6 @@ fill 59 298 69 311 acid
 fill 61 296 67 298 air
 fill 76 298 96 312 wood
 fill 78 300 94 310 splinters
-fill 74 376 77 384 glass
-fill 108 266 110 358 metal
-fill 100 358 118 381 wood
-fill 102 360 116 379 oil
-fill 144 266 146 358 metal
-fill 136 358 154 381 wood
-fill 138 360 152 379 oil
-fill 180 266 182 358 metal
-fill 172 358 190 381 wood
-fill 174 360 188 379 oil
-fill 216 266 218 358 metal
-fill 208 358 226 381 wood
-fill 210 360 224 379 oil
 fill 266 358 286 384 wood
 fill 268 360 284 383 oil
 fill 290 358 310 384 wood
@@ -163,95 +149,112 @@ fill 327 370 335 376 wood
 fill 336 370 344 376 wood
 fill 322 363 330 369 wood
 fill 331 363 339 369 wood
-fill 438 70 440 356 metal
-fill 432 356 446 358 metal
-fill 432 358 434 366 metal
-fill 444 358 446 366 metal
-fill 434 358 444 366 torch
-fill 432 366 436 368 metal
-fill 442 366 446 368 metal
+fill 408 70 410 326 metal
+fill 402 326 416 328 metal
+fill 402 328 404 336 metal
+fill 414 328 416 336 metal
+fill 404 328 414 336 torch
+fill 402 336 406 338 metal
+fill 412 336 416 338 metal
 fill 32 170 40 173 wood
 fill 33 161 38 170 torch
 fill 32 120 40 123 wood
 fill 33 111 38 120 torch
 fill 688 200 696 203 wood
 fill 690 191 695 200 torch
-fill 688 350 696 353 wood
-fill 690 341 695 350 torch
 fill 330 60 332 190 metal
 fill 324 190 338 192 metal
 fill 324 192 326 200 metal
 fill 336 192 338 200 metal
 fill 326 192 336 200 torch
 fill 324 200 338 202 metal
-fill 610 60 612 200 metal
-fill 604 200 618 202 metal
-fill 604 202 606 210 metal
-fill 616 202 618 210 metal
-fill 606 202 616 210 torch
-fill 604 210 618 212 metal
 fill 200 60 202 140 metal
 fill 194 140 208 142 metal
 fill 194 142 196 150 metal
 fill 206 142 208 150 metal
 fill 196 142 206 150 torch
 fill 194 150 208 152 metal
-fill 530 60 532 230 metal
-fill 524 230 538 232 metal
-fill 524 232 526 240 metal
-fill 536 232 538 240 metal
-fill 526 232 536 240 torch
-fill 524 240 538 242 metal
-fill 542 326 545 334 torch
-fill 490 334 495 384 brick
-fill 541 334 546 384 brick
-fill 495 354 541 384 coal
-fill 500 348 536 354 coal
-fill 508 344 528 348 coal
-fill 560 378 566 384 concrete
-fill 560 376 566 378 gunpowder
-fill 566 372 572 384 concrete
-fill 566 370 572 372 gunpowder
-fill 572 366 578 384 concrete
-fill 572 364 578 366 gunpowder
-fill 578 360 584 384 concrete
-fill 578 358 584 360 gunpowder
-fill 584 354 590 384 concrete
-fill 584 352 590 354 gunpowder
-fill 590 348 596 384 concrete
-fill 590 346 596 348 gunpowder
-fill 596 342 602 384 concrete
-fill 596 340 602 342 gunpowder
-fill 602 336 608 384 concrete
-fill 602 334 608 336 gunpowder
-fill 608 330 614 384 concrete
-fill 608 328 614 330 gunpowder
-fill 614 324 620 384 concrete
-fill 614 322 620 324 gunpowder
-fill 620 318 626 384 concrete
-fill 620 316 626 318 gunpowder
-fill 626 312 632 384 concrete
-fill 626 310 632 312 gunpowder
-fill 632 306 638 384 concrete
-fill 632 304 638 306 gunpowder
-fill 638 300 644 384 concrete
-fill 638 298 644 300 gunpowder
-fill 642 300 696 316 concrete
-fill 644 305 696 311 bedrock
-fill 554 382 560 400 gunpowder
-fill 642 298 646 300 gunpowder
-fill 646 286 662 300 wood
-fill 648 288 660 299 gunpowder
-fill 662 286 678 300 wood
-fill 664 288 676 299 gunpowder
-fill 654 274 670 286 wood
-fill 656 276 668 285 gunpowder
-fill 682 282 708 300 air
-fill 682 284 706 300 wood
-fill 688 286 700 298 tnt
+fill 112 390 262 398 bedrock
+fill 558 384 700 398 bedrock
+fill 688 270 696 273 wood
+fill 690 261 695 270 torch
+fill 66 240 76 249 gunpowder
+fill 52 242 60 248 tnt
+fill 80 242 86 248 tnt
+fill 230 380 234 398 gunpowder
+fill 230 398 516 400 gunpowder
+fill 513 384 515 398 gunpowder
+fill 144 266 146 326 metal
+fill 136 326 154 349 wood
+fill 138 328 152 347 oil
+fill 180 266 182 326 metal
+fill 172 326 190 349 wood
+fill 174 328 188 347 oil
+fill 216 266 218 326 metal
+fill 208 326 226 349 wood
+fill 210 328 224 347 oil
+fill 36 362 56 380 leaves
+fill 57 358 77 380 leaves
+fill 78 362 98 380 leaves
+fill 99 358 119 380 leaves
+fill 120 362 140 380 leaves
+fill 141 358 161 380 leaves
+fill 162 362 182 380 leaves
+fill 183 358 203 380 leaves
+fill 204 362 224 380 leaves
+fill 225 358 245 380 leaves
+fill 104 266 144 300 wood
+fill 106 266 142 298 oil
+fill 480 336 660 340 wood
+fill 482 340 487 384 brick
+fill 567 340 572 384 brick
+fill 653 340 658 384 brick
+fill 494 358 534 384 wood
+fill 496 360 532 384 gunpowder
+fill 576 356 606 384 wood
+fill 578 358 604 384 tnt
+fill 612 354 632 384 wood
+fill 614 356 630 383 oil
+fill 634 358 650 384 wood
+fill 636 360 648 383 oil
+fill 488 314 508 336 wood
+fill 490 316 506 334 tnt
+fill 512 314 526 336 wood
+fill 514 316 524 335 oil
+fill 530 314 550 336 wood
+fill 532 316 548 334 tnt
+fill 554 314 568 336 wood
+fill 556 316 566 335 oil
+fill 572 314 592 336 wood
+fill 574 316 590 334 tnt
+fill 596 314 614 336 wood
+fill 598 316 612 335 gunpowder
+fill 618 314 638 336 wood
+fill 620 316 636 334 tnt
+fill 488 312 638 314 wood
+fill 500 294 520 312 wood
+fill 502 296 518 310 tnt
+fill 530 292 546 312 wood
+fill 532 294 544 311 oil
+fill 560 294 580 312 wood
+fill 562 296 578 310 tnt
+fill 600 296 620 312 wood
+fill 602 298 618 311 gunpowder
+fill 530 60 532 260 wood
+fill 524 260 538 262 metal
+fill 524 262 526 270 metal
+fill 536 262 538 270 metal
+fill 526 262 536 270 torch
+fill 524 270 538 272 metal
+fill 610 60 612 250 wood
+fill 604 250 618 252 metal
+fill 604 252 606 260 metal
+fill 616 252 618 260 metal
+fill 606 252 616 260 torch
+fill 604 260 618 262 metal
 
 [events]
-at 150: body 436 369 442 373 burning_wood
+at 30: body 406 339 412 343 burning_wood
 
 [camera]
 view 640 360
@@ -259,29 +262,30 @@ scale 3
 sky cave
 ambient 0.035 0.035 0.039
 exposure 1.3
-at 0: 440 280 zoom=1.30
-at 140: 440 290 zoom=1.40
-at 190: 430 300 zoom=1.42
-at 240: 360 300 zoom=1.42
-at 330: 300 285 zoom=1.42
-at 400: 265 262 zoom=1.40
-at 470: 262 250 zoom=1.35
-at 560: 262 258 zoom=1.35
-at 800: 238 285 zoom=1.42
-at 960: 228 290 zoom=1.45
-at 1100: 245 293 zoom=1.50
-at 1210: 262 296 zoom=1.50
-at 1290: 300 300 zoom=1.42
-at 1400: 520 285 zoom=1.45
-at 1478: 545 275 zoom=1.50
-at 1600: 540 272 zoom=1.42
-at 1740: 470 255 zoom=1.15
-at 2160: 364 238 zoom=0.93
+at 0: 410 335 zoom=2.1
+at 35: 410 338 zoom=2.1
+at 100: 380 340 zoom=1.9
+at 200: 320 305 zoom=1.75
+at 290: 240 275 zoom=1.65
+at 340: 200 268 zoom=1.6
+at 370: 200 272 zoom=1.55
+at 450: 195 300 zoom=1.45
+at 560: 190 318 zoom=1.4
+at 620: 210 322 zoom=1.35
+at 690: 330 320 zoom=1.15
+at 770: 440 315 zoom=1.15
+at 808: 480 302 zoom=1.25
+at 830: 490 292 zoom=1.2
+at 900: 450 270 zoom=1.05
+at 1150: 420 252 zoom=1.0
 
 [expect]
-// The carboy is gone after the keg blast; the store is intact until the second
-// trail reaches it and gone at the end; the acid has eaten into the left wall.
+// The fuse reaches the kegs and the carboy is gone; the bundles of brush in the
+// bay have burned; the store stands until the seam reaches it and is gone right
+// after; the acid has eaten into the left wall.
+after 400: count tnt in 30 230 100 252 == 0
 after 700: count glass in 38 150 72 240 == 0
-after 1500: count tnt in 670 270 710 300 == 144
-after 1560: count tnt in 0 0 760 430 == 0
-after 2160: count brick in 16 150 32 384 < 3500
+after 800: count tnt in 470 280 670 390 == 2276
+after 800: count leaves in 30 340 260 390 < 50
+after 860: count tnt in 0 0 760 430 == 0
+after 1200: count brick in 16 150 32 384 < 3500
