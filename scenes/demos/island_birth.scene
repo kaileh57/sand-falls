@@ -1,1478 +1,688 @@
 // Island Birth: phase changes that build land.
 //
-// Night on a basalt sea coast. A glowing feeder dyke climbs the cliff and
-// feeds a lava river along the rim, which shoots out over the edge in a jet
-// and breaks into three falls that drop 22 m into a cold (15 C) sea. Lava
-// holds liquid on its 250 C latent-heat plateau, but a falling liquid that
-// freezes becomes its solid's debris: below a chill band halfway down, most of
-// each fall freezes in flight and lands as glowing cinders (rubble), while a
-// thin core lands as liquid lava. Water touching lava reacts into obsidian
-// and steam. The cinders pile up on the shallow shelf at the cliff foot,
-// break the surface by 10 s as three glowing cones, merge into one ridge and
-// keep climbing into a headland. Colour follows temperature: the falls are
-// yellow-white, the fresh cone tops orange, the flanks dull red, the
-// waterline black. Hot air shimmers over the falls and the new rock.
+// Dusk on a basalt sea coast. A lava lake brims on the cliff top behind a
+// cornice that overhangs the sea, and drains through three vents in the
+// cornice floor at the orifice (Torricelli) rate: three glowing curtains fall
+// ten metres straight into the sea. Where they hit, water touching lava
+// flashes to steam and obsidian; the obsidian skin crumbles to gravel, and
+// lava freezing in the water or on rubble becomes rubble, so a dark cone of
+// new rock grows up from the seabed. By 12 s it breaks the surface and the
+// falls land on their own island: a glowing lava dome, steaming where its
+// flanks meet the sea, with a strait of water between it and the cliff.
+// From 14 s the eruption wanes (the lake level drops and the curtains thin),
+// at 18 s the vents crust shut and the curtains' tails fall away, and the
+// lake and the island cool through orange and red until they freeze into
+// basalt: a new black island in the sea.
 //
-// Steam (density -10, cooling 5) boils off the waterline at the cones, rises
-// through the hot air, bends downwind with wind 2, and condenses at 90 C; a
-// light drizzle falls on the seaward flank. Mist sources on the open sea lay a
-// low haze downwind. At 31 s the falls thin out from the far end and stop,
-// the river crusts over, and the sea quenches the new land from the
-// waterline upward in an uneven front, leaving it black with a glowing summit
-// as the camera pulls back.
-//
-// The temperatures that set the look are scripted with `temp` events: the air
-// around the falls is held at 1290 C (which keeps the jet liquid and makes the
-// heat haze), the chill band at 450 C and then a cinder band whose
-// temperature drops over the run (840, 680, 560, 500, then 680 C for the last
-// summit cinders), and the final quench front at 400 C.
+// Scripted parts. The lake is refilled each tick (the supply), the cooling is
+// a temperature ramp over the lake and the island (radiative cooling, which
+// the engine does not model, would take minutes), steam aloft is held above
+// its condensing point so the plume rises instead of raining back as streaks,
+// and steam and hot air that collect under the overhang are vented.
 [scene]
 name = island birth
-description = A lava river on a night sea cliff shoots out over the rim and breaks into three falls; cinders that freeze in flight pile into three glowing cones that rise out of the cold sea and merge into a new headland, steam drifts downwind, and the land cools black from the waterline up while its summit still glows.
-size = 1280 720
+description = Three lava curtains pour from a cliff-top lava lake into the sea, steam boils off the entry, a cone of new rock grows up from the seabed until it breaks the surface as a glowing island, then the vents crust shut and the island cools into black basalt.
+bounds = 0 -200 640 360
 seed = 0x15b1
-wind = 2
-ticks = 2280
+wind = 4
+ticks = 1680
 
 [build]
-// Bedrock floor, sea, and the deep seabed.
-fill 0 700 1280 720 bedrock
-fill 380 470 1280 700 water
-terrain 610 1280 612 14 70 sand 700
-// The basalt cliff: a flat rim, rising inland toward the volcano.
-fill 0 246 380 700 basalt
-fill 0 170 4 246 basalt
-fill 4 172 8 246 basalt
-fill 8 173 12 246 basalt
-fill 12 175 16 246 basalt
-fill 16 176 20 246 basalt
-fill 20 178 24 246 basalt
-fill 24 179 28 246 basalt
-fill 28 181 32 246 basalt
-fill 32 182 36 246 basalt
-fill 36 184 40 246 basalt
-fill 40 185 44 246 basalt
-fill 44 186 48 246 basalt
-fill 48 188 52 246 basalt
-fill 52 189 56 246 basalt
-fill 56 191 60 246 basalt
-fill 60 192 64 246 basalt
-fill 64 194 68 246 basalt
-fill 68 195 72 246 basalt
-fill 72 197 76 246 basalt
-fill 76 198 80 246 basalt
-fill 80 199 84 246 basalt
-fill 84 201 88 246 basalt
-fill 88 202 92 246 basalt
-fill 92 204 96 246 basalt
-fill 96 205 100 246 basalt
-fill 100 207 104 246 basalt
-fill 104 208 108 246 basalt
-fill 108 210 112 246 basalt
-fill 112 211 116 246 basalt
-fill 116 212 120 246 basalt
-fill 120 214 124 246 basalt
-fill 124 215 128 246 basalt
-fill 128 217 132 246 basalt
-fill 132 218 136 246 basalt
-fill 136 220 140 246 basalt
-fill 140 221 144 246 basalt
-fill 144 223 148 246 basalt
-fill 148 224 152 246 basalt
-fill 152 226 156 246 basalt
-fill 156 227 160 246 basalt
-fill 160 228 164 246 basalt
-fill 164 230 168 246 basalt
-fill 168 231 172 246 basalt
-fill 172 233 176 246 basalt
-fill 176 234 180 246 basalt
-fill 180 236 184 246 basalt
-fill 184 237 188 246 basalt
-fill 188 239 192 246 basalt
-fill 192 240 196 246 basalt
-fill 196 241 200 246 basalt
-fill 200 243 204 246 basalt
-fill 204 244 208 246 basalt
-fill 208 246 212 246 basalt
-terrain 0 210 200 5 24 basalt 246
-// The cliff face: a weathered skin of paler rock, notched and ledged, that
-// catches the light of the falls.
-fill 376 250 379 256 stone
-fill 379 250 380 256 air
-fill 377 254 380 260 stone
-fill 375 258 378 264 stone
-fill 378 258 380 264 air
-fill 373 262 376 268 stone
-fill 376 262 380 268 air
-fill 377 266 380 272 stone
-fill 377 270 380 276 stone
-fill 372 274 375 280 stone
-fill 375 274 380 280 air
-fill 374 278 377 284 stone
-fill 377 278 380 284 air
-fill 377 282 380 288 stone
-fill 376 286 379 292 stone
-fill 379 286 380 292 air
-fill 374 290 377 296 stone
-fill 377 290 380 296 air
-fill 377 294 380 300 stone
-fill 374 298 377 304 stone
-fill 377 298 380 304 air
-fill 377 302 380 308 stone
-fill 377 306 380 312 stone
-fill 377 310 380 316 stone
-fill 375 314 378 320 stone
-fill 378 314 380 320 air
-fill 375 318 378 324 stone
-fill 378 318 380 324 air
-fill 377 322 380 328 stone
-fill 377 326 380 332 stone
-fill 377 330 380 336 stone
-fill 374 334 377 340 stone
-fill 377 334 380 340 air
-fill 375 338 378 344 stone
-fill 378 338 380 344 air
-fill 377 342 380 348 stone
-fill 372 346 375 352 stone
-fill 375 346 380 352 air
-fill 374 350 377 356 stone
-fill 377 350 380 356 air
-fill 377 354 380 360 stone
-fill 377 358 380 364 stone
-fill 373 362 376 368 stone
-fill 376 362 380 368 air
-fill 373 366 376 372 stone
-fill 376 366 380 372 air
-fill 374 370 377 376 stone
-fill 377 370 380 376 air
-fill 377 374 380 380 stone
-fill 374 378 377 384 stone
-fill 377 378 380 384 air
-fill 374 382 377 388 stone
-fill 377 382 380 388 air
-fill 375 386 378 392 stone
-fill 378 386 380 392 air
-fill 377 390 380 396 stone
-fill 377 394 380 400 stone
-fill 377 398 380 404 stone
-fill 374 402 377 408 stone
-fill 377 402 380 408 air
-fill 372 406 375 412 stone
-fill 375 406 380 412 air
-fill 377 410 380 416 stone
-fill 376 414 379 420 stone
-fill 379 414 380 420 air
-fill 375 418 378 424 stone
-fill 378 418 380 424 air
-fill 377 422 380 428 stone
-fill 374 426 377 432 stone
-fill 377 426 380 432 air
-fill 377 430 380 436 stone
-fill 374 434 377 440 stone
-fill 377 434 380 440 air
-fill 376 438 379 444 stone
-fill 379 438 380 444 air
-fill 374 442 377 448 stone
-fill 377 442 380 448 air
-fill 372 446 375 452 stone
-fill 375 446 380 452 air
-fill 373 450 376 456 stone
-fill 376 450 380 456 air
-fill 377 454 380 460 stone
-fill 377 458 380 464 stone
-fill 374 462 377 468 stone
-fill 377 462 380 468 air
-fill 374 466 377 472 stone
-fill 377 466 380 472 air
-// A shallow shelf at the cliff foot, then a drop to deep water.
-fill 380 483 383 700 stone
-fill 383 484 386 700 stone
-fill 386 482 389 700 stone
-fill 389 486 392 700 stone
-fill 392 482 395 700 stone
-fill 395 486 398 700 stone
-fill 398 482 401 700 stone
-fill 401 486 404 700 stone
-fill 404 483 407 700 stone
-fill 407 485 410 700 stone
-fill 410 486 413 700 stone
-fill 413 485 416 700 stone
-fill 416 484 419 700 stone
-fill 419 485 422 700 stone
-fill 422 486 425 700 stone
-fill 425 485 428 700 stone
-fill 428 484 431 700 stone
-fill 431 484 434 700 stone
-fill 434 483 437 700 stone
-fill 437 483 440 700 stone
-fill 440 483 443 700 stone
-fill 443 482 446 700 stone
-fill 446 486 449 700 stone
-fill 449 484 452 700 stone
-fill 452 486 455 700 stone
-fill 455 485 458 700 stone
-fill 458 484 461 700 stone
-fill 461 485 464 700 stone
-fill 464 484 467 700 stone
-fill 467 486 470 700 stone
-fill 470 482 473 700 stone
-fill 473 482 476 700 stone
-fill 476 486 479 700 stone
-fill 479 485 482 700 stone
-fill 482 483 485 700 stone
-fill 485 484 488 700 stone
-fill 488 483 491 700 stone
-fill 491 485 494 700 stone
-fill 494 485 497 700 stone
-fill 497 482 500 700 stone
-fill 500 482 503 700 stone
-fill 503 486 506 700 stone
-fill 506 486 509 700 stone
-fill 509 484 512 700 stone
-fill 512 484 515 700 stone
-fill 515 484 518 700 stone
-fill 518 486 521 700 stone
-fill 521 485 524 700 stone
-fill 524 486 527 700 stone
-fill 527 485 530 700 stone
-fill 530 482 533 700 stone
-fill 533 484 536 700 stone
-fill 536 488 539 700 stone
-fill 539 491 542 700 stone
-fill 542 490 545 700 stone
-fill 545 492 548 700 stone
-fill 548 496 551 700 stone
-fill 551 500 554 700 stone
-fill 554 501 557 700 stone
-fill 557 502 560 700 stone
-fill 560 506 563 700 stone
-fill 563 507 566 700 stone
-fill 566 507 569 700 stone
-fill 569 512 572 700 stone
-fill 572 513 575 700 stone
-fill 575 514 578 700 stone
-fill 578 519 581 700 stone
-fill 581 517 584 700 stone
-fill 584 522 587 700 stone
-fill 587 521 590 700 stone
-fill 590 525 593 700 stone
-fill 593 528 596 700 stone
-fill 596 529 599 700 stone
-fill 599 531 602 700 stone
-fill 602 535 605 700 stone
-fill 605 537 608 700 stone
-fill 608 539 611 700 stone
-fill 611 538 614 700 stone
-fill 614 541 617 700 stone
-fill 617 545 620 700 stone
-fill 620 548 623 700 stone
-fill 623 551 626 700 stone
-fill 626 551 629 700 stone
-fill 629 552 632 700 stone
-fill 632 556 635 700 stone
-fill 635 559 638 700 stone
-fill 638 559 641 700 stone
-fill 641 562 644 700 stone
-fill 644 563 647 700 stone
-fill 647 566 650 700 stone
-fill 650 567 653 700 stone
-fill 653 569 656 700 stone
-fill 656 570 659 700 stone
-fill 659 573 662 700 stone
-fill 662 575 665 700 stone
-fill 665 577 668 700 stone
-fill 668 579 671 700 stone
-fill 671 580 674 700 stone
-fill 674 585 677 700 stone
-fill 677 588 680 700 stone
-temp 0 0 1280 720 15
-// The feeder dyke: a glowing vein of lava rising through the cliff, walled in
-// obsidian (which melts only at 1300 C), feeds a lava river along the rim.
-fill 288 687 294 691 obsidian
-fill 289 684 295 688 obsidian
-fill 290 681 296 685 obsidian
-fill 291 678 297 682 obsidian
-fill 292 675 298 679 obsidian
-fill 292 672 298 676 obsidian
-fill 291 669 297 673 obsidian
-fill 290 666 296 670 obsidian
-fill 289 663 295 667 obsidian
-fill 288 660 294 664 obsidian
-fill 287 657 293 661 obsidian
-fill 286 654 292 658 obsidian
-fill 285 651 291 655 obsidian
-fill 284 648 290 652 obsidian
-fill 283 645 289 649 obsidian
-fill 283 642 288 646 obsidian
-fill 283 639 288 643 obsidian
-fill 282 636 288 640 obsidian
-fill 282 633 287 637 obsidian
-fill 282 630 287 634 obsidian
-fill 282 627 287 631 obsidian
-fill 282 624 287 628 obsidian
-fill 282 621 287 625 obsidian
-fill 282 618 287 622 obsidian
-fill 282 615 288 619 obsidian
-fill 283 612 289 616 obsidian
-fill 284 609 290 613 obsidian
-fill 285 606 291 610 obsidian
-fill 286 603 292 607 obsidian
-fill 287 600 293 604 obsidian
-fill 288 597 294 601 obsidian
-fill 289 594 295 598 obsidian
-fill 289 591 295 595 obsidian
-fill 288 588 294 592 obsidian
-fill 287 585 293 589 obsidian
-fill 286 582 292 586 obsidian
-fill 285 579 291 583 obsidian
-fill 284 576 290 580 obsidian
-fill 284 573 290 577 obsidian
-fill 284 570 290 574 obsidian
-fill 283 567 289 571 obsidian
-fill 282 564 288 568 obsidian
-fill 281 561 287 565 obsidian
-fill 281 558 287 562 obsidian
-fill 282 555 288 559 obsidian
-fill 283 552 289 556 obsidian
-fill 284 549 290 553 obsidian
-fill 285 546 291 550 obsidian
-fill 286 543 292 547 obsidian
-fill 287 540 293 544 obsidian
-fill 288 537 294 541 obsidian
-fill 289 534 295 538 obsidian
-fill 290 531 295 535 obsidian
-fill 290 528 295 532 obsidian
-fill 290 525 295 529 obsidian
-fill 290 522 296 526 obsidian
-fill 291 519 297 523 obsidian
-fill 291 516 297 520 obsidian
-fill 290 513 296 517 obsidian
-fill 289 510 295 514 obsidian
-fill 289 507 295 511 obsidian
-fill 290 504 296 508 obsidian
-fill 291 501 297 505 obsidian
-fill 292 498 298 502 obsidian
-fill 293 495 299 499 obsidian
-fill 294 492 300 496 obsidian
-fill 295 489 300 493 obsidian
-fill 295 486 300 490 obsidian
-fill 295 483 300 487 obsidian
-fill 295 480 300 484 obsidian
-fill 295 477 300 481 obsidian
-fill 295 474 300 478 obsidian
-fill 295 471 301 475 obsidian
-fill 296 468 302 472 obsidian
-fill 296 465 302 469 obsidian
-fill 295 462 301 466 obsidian
-fill 294 459 300 463 obsidian
-fill 293 456 299 460 obsidian
-fill 292 453 298 457 obsidian
-fill 292 450 298 454 obsidian
-fill 293 447 299 451 obsidian
-fill 294 444 300 448 obsidian
-fill 295 441 301 445 obsidian
-fill 296 438 301 442 obsidian
-fill 296 435 301 439 obsidian
-fill 296 432 302 436 obsidian
-fill 297 429 303 433 obsidian
-fill 298 426 304 430 obsidian
-fill 299 423 305 427 obsidian
-fill 300 420 306 424 obsidian
-fill 301 417 307 421 obsidian
-fill 301 414 307 418 obsidian
-fill 300 411 306 415 obsidian
-fill 299 408 305 412 obsidian
-fill 299 405 304 409 obsidian
-fill 299 402 304 406 obsidian
-fill 299 399 304 403 obsidian
-fill 299 396 304 400 obsidian
-fill 299 393 305 397 obsidian
-fill 300 390 305 394 obsidian
-fill 300 387 305 391 obsidian
-fill 300 384 305 388 obsidian
-fill 300 381 305 385 obsidian
-fill 300 378 305 382 obsidian
-fill 300 375 306 379 obsidian
-fill 301 372 307 376 obsidian
-fill 302 369 308 373 obsidian
-fill 303 366 309 370 obsidian
-fill 304 363 310 367 obsidian
-fill 305 360 311 364 obsidian
-fill 306 357 312 361 obsidian
-fill 307 354 312 358 obsidian
-fill 307 351 312 355 obsidian
-fill 307 348 313 352 obsidian
-fill 308 345 314 349 obsidian
-fill 309 342 315 346 obsidian
-fill 310 339 316 343 obsidian
-fill 311 336 316 340 obsidian
-fill 311 333 316 337 obsidian
-fill 311 330 316 334 obsidian
-fill 311 327 316 331 obsidian
-fill 311 324 316 328 obsidian
-fill 311 321 316 325 obsidian
-fill 311 318 316 322 obsidian
-fill 311 315 316 319 obsidian
-fill 310 312 316 316 obsidian
-fill 310 309 316 313 obsidian
-fill 310 306 316 310 obsidian
-fill 309 303 315 307 obsidian
-fill 308 300 314 304 obsidian
-fill 307 297 313 301 obsidian
-fill 306 294 312 298 obsidian
-fill 305 291 311 295 obsidian
-fill 304 288 310 292 obsidian
-fill 303 285 309 289 obsidian
-fill 302 282 308 286 obsidian
-fill 301 279 307 283 obsidian
-fill 300 276 306 280 obsidian
-fill 299 273 305 277 obsidian
-fill 298 270 304 274 obsidian
-fill 297 267 303 271 obsidian
-fill 296 264 302 268 obsidian
-fill 295 261 301 265 obsidian
-fill 294 258 300 262 obsidian
-fill 293 255 299 259 obsidian
-fill 292 252 298 256 obsidian
-fill 291 249 297 253 obsidian
-fill 290 248 296 250 obsidian
-fill 290 687 292 690 lava_source
-fill 291 684 293 687 lava_source
-fill 292 681 294 684 lava_source
-fill 293 678 295 681 lava_source
-fill 294 675 296 678 lava_source
-fill 294 672 296 675 lava_source
-fill 293 669 295 672 lava_source
-fill 292 666 294 669 lava_source
-fill 291 663 293 666 lava_source
-fill 290 660 292 663 lava_source
-fill 289 657 291 660 lava_source
-fill 288 654 290 657 lava_source
-fill 287 651 289 654 lava_source
-fill 286 648 288 651 lava_source
-fill 285 645 287 648 lava_source
-fill 285 642 286 645 lava_source
-fill 285 639 286 642 lava_source
-fill 284 636 286 639 lava_source
-fill 284 633 285 636 lava_source
-fill 284 630 285 633 lava_source
-fill 284 627 285 630 lava_source
-fill 284 624 285 627 lava_source
-fill 284 621 285 624 lava_source
-fill 284 618 285 621 lava_source
-fill 284 615 286 618 lava_source
-fill 285 612 287 615 lava_source
-fill 286 609 288 612 lava_source
-fill 287 606 289 609 lava_source
-fill 288 603 290 606 lava_source
-fill 289 600 291 603 lava_source
-fill 290 597 292 600 lava_source
-fill 291 594 293 597 lava_source
-fill 291 591 293 594 lava_source
-fill 290 588 292 591 lava_source
-fill 289 585 291 588 lava_source
-fill 288 582 290 585 lava_source
-fill 287 579 289 582 lava_source
-fill 286 576 288 579 lava_source
-fill 286 573 288 576 lava_source
-fill 286 570 288 573 lava_source
-fill 285 567 287 570 lava_source
-fill 284 564 286 567 lava_source
-fill 283 561 285 564 lava_source
-fill 283 558 285 561 lava_source
-fill 284 555 286 558 lava_source
-fill 285 552 287 555 lava_source
-fill 286 549 288 552 lava_source
-fill 287 546 289 549 lava_source
-fill 288 543 290 546 lava_source
-fill 289 540 291 543 lava_source
-fill 290 537 292 540 lava_source
-fill 291 534 293 537 lava_source
-fill 292 531 293 534 lava_source
-fill 292 528 293 531 lava_source
-fill 292 525 293 528 lava_source
-fill 292 522 294 525 lava_source
-fill 293 519 295 522 lava_source
-fill 293 516 295 519 lava_source
-fill 292 513 294 516 lava_source
-fill 291 510 293 513 lava_source
-fill 291 507 293 510 lava_source
-fill 292 504 294 507 lava_source
-fill 293 501 295 504 lava_source
-fill 294 498 296 501 lava_source
-fill 295 495 297 498 lava_source
-fill 296 492 298 495 lava_source
-fill 297 489 298 492 lava_source
-fill 297 486 298 489 lava_source
-fill 297 483 298 486 lava_source
-fill 297 480 298 483 lava_source
-fill 297 477 298 480 lava_source
-fill 297 474 298 477 lava_source
-fill 297 471 299 474 lava_source
-fill 298 468 300 471 lava_source
-fill 298 465 300 468 lava_source
-fill 297 462 299 465 lava_source
-fill 296 459 298 462 lava_source
-fill 295 456 297 459 lava_source
-fill 294 453 296 456 lava_source
-fill 294 450 296 453 lava_source
-fill 295 447 297 450 lava_source
-fill 296 444 298 447 lava_source
-fill 297 441 299 444 lava_source
-fill 298 438 299 441 lava_source
-fill 298 435 299 438 lava_source
-fill 298 432 300 435 lava_source
-fill 299 429 301 432 lava_source
-fill 300 426 302 429 lava_source
-fill 301 423 303 426 lava_source
-fill 302 420 304 423 lava_source
-fill 303 417 305 420 lava_source
-fill 303 414 305 417 lava_source
-fill 302 411 304 414 lava_source
-fill 301 408 303 411 lava_source
-fill 301 405 302 408 lava_source
-fill 301 402 302 405 lava_source
-fill 301 399 302 402 lava_source
-fill 301 396 302 399 lava_source
-fill 301 393 303 396 lava_source
-fill 302 390 303 393 lava_source
-fill 302 387 303 390 lava_source
-fill 302 384 303 387 lava_source
-fill 302 381 303 384 lava_source
-fill 302 378 303 381 lava_source
-fill 302 375 304 378 lava_source
-fill 303 372 305 375 lava_source
-fill 304 369 306 372 lava_source
-fill 305 366 307 369 lava_source
-fill 306 363 308 366 lava_source
-fill 307 360 309 363 lava_source
-fill 308 357 310 360 lava_source
-fill 309 354 310 357 lava_source
-fill 309 351 310 354 lava_source
-fill 309 348 311 351 lava_source
-fill 310 345 312 348 lava_source
-fill 311 342 313 345 lava_source
-fill 312 339 314 342 lava_source
-fill 313 336 314 339 lava_source
-fill 313 333 314 336 lava_source
-fill 313 330 314 333 lava_source
-fill 313 327 314 330 lava_source
-fill 313 324 314 327 lava_source
-fill 313 321 314 324 lava_source
-fill 313 318 314 321 lava_source
-fill 313 315 314 318 lava_source
-fill 312 312 314 315 lava_source
-fill 312 309 314 312 lava_source
-fill 312 306 314 309 lava_source
-fill 311 303 313 306 lava_source
-fill 310 300 312 303 lava_source
-fill 309 297 311 300 lava_source
-fill 308 294 310 297 lava_source
-fill 307 291 309 294 lava_source
-fill 306 288 308 291 lava_source
-fill 305 285 307 288 lava_source
-fill 304 282 306 285 lava_source
-fill 303 279 305 282 lava_source
-fill 302 276 304 279 lava_source
-fill 301 273 303 276 lava_source
-fill 300 270 302 273 lava_source
-fill 299 267 301 270 lava_source
-fill 298 264 300 267 lava_source
-fill 297 261 299 264 lava_source
-fill 296 258 298 261 lava_source
-fill 295 255 297 258 lava_source
-fill 294 252 296 255 lava_source
-fill 293 249 295 252 lava_source
-fill 292 248 294 249 lava_source
-fill 290 246 380 248 obsidian
-fill 292 245 380 246 lava_source
-temp 289 243 380 250 1000
-// The jet over the rim. Only cells with air below spawn lava, so the river
-// pours only where the jet breaks into the three curtains.
-// Sea mist: sources on the water surface breathe a low haze downwind.
-scatter 540 460 700 461 mist_source 100
-scatter 700 460 900 461 mist_source 50
-scatter 900 460 1280 461 mist_source 25
+fill 0 -90 640 -80 bedrock
+fill 0 354 640 360 bedrock
+fill 190 245 640 354 water
+terrain 190 640 318 8 40 sand 354
+terrain 200 400 302 4 20 sand 354
+fill 0 142 200 354 bedrock
+terrain 0 200 96 8 40 bedrock 142
+fill 186 108 200 142 bedrock
+fill 200 130 214 142 bedrock
+fill 214 136 228 142 bedrock
+fill 200 140 346 143 bedrock
+fill 200 143 202 205 bedrock
+fill 202 143 204 204 bedrock
+fill 204 143 206 202 bedrock
+fill 206 143 208 200 bedrock
+fill 208 143 210 198 bedrock
+fill 210 143 212 197 bedrock
+fill 212 143 214 195 bedrock
+fill 214 143 216 193 bedrock
+fill 216 143 218 191 bedrock
+fill 218 143 220 190 bedrock
+fill 220 143 222 188 bedrock
+fill 222 143 224 186 bedrock
+fill 224 143 226 184 bedrock
+fill 226 143 228 182 bedrock
+fill 228 143 230 181 bedrock
+fill 230 143 232 179 bedrock
+fill 232 143 234 177 bedrock
+fill 234 143 236 175 bedrock
+fill 236 143 238 174 bedrock
+fill 238 143 240 172 bedrock
+fill 240 143 242 170 bedrock
+fill 242 143 244 168 bedrock
+fill 244 143 246 167 bedrock
+fill 246 143 248 165 bedrock
+fill 248 143 250 163 bedrock
+fill 250 143 252 161 bedrock
+fill 252 143 254 159 bedrock
+fill 254 143 256 158 bedrock
+fill 256 143 258 156 bedrock
+fill 258 143 260 154 bedrock
+fill 260 143 262 152 bedrock
+fill 262 143 264 151 bedrock
+fill 264 143 266 149 bedrock
+fill 266 143 268 147 bedrock
+fill 268 143 270 145 bedrock
+fill 338 106 346 143 bedrock
+fill 200 112 338 130 lava
+fill 214 130 338 136 lava
+fill 228 136 338 140 lava
+fill 270 140 284 143 air
+fill 294 140 308 143 air
+fill 318 140 332 143 air
 
 [events]
-// The river spills over the rim: its jet reaches out and breaks into three falls.
-at 60: fill 380 247 381 248 lava_source
-at 60: fill 381 247 382 248 lava_source
-at 61: fill 382 247 383 248 lava_source
-at 62: fill 384 247 385 248 lava_source
-at 62: fill 384 248 385 249 mist_source
-at 63: fill 386 247 387 248 lava_source
-at 63: fill 386 248 387 249 mist_source
-at 64: fill 388 247 389 248 lava_source
-at 64: fill 388 248 389 249 mist_source
-at 65: fill 390 247 391 248 lava_source
-at 65: fill 390 248 391 249 mist_source
-at 66: fill 392 247 393 248 lava_source
-at 66: fill 392 248 393 249 mist_source
-at 67: fill 394 247 395 248 lava_source
-at 67: fill 394 248 395 249 mist_source
-at 68: fill 396 247 397 248 lava_source
-at 68: fill 396 248 397 249 mist_source
-at 69: fill 398 247 399 248 lava_source
-at 69: fill 398 248 399 249 mist_source
-at 70: fill 400 248 401 249 lava_source
-at 70: fill 400 249 401 250 mist_source
-at 71: fill 402 248 403 249 lava_source
-at 71: fill 402 249 403 250 mist_source
-at 72: fill 404 248 405 249 lava_source
-at 72: fill 404 249 405 250 mist_source
-at 73: fill 406 248 407 249 lava_source
-at 73: fill 406 249 407 250 mist_source
-at 74: fill 408 249 409 250 lava_source
-at 74: fill 408 250 409 251 mist_source
-at 75: fill 410 249 411 250 lava_source
-at 75: fill 410 250 411 251 mist_source
-at 76: fill 412 249 413 250 lava_source
-at 76: fill 412 250 413 251 mist_source
-at 77: fill 414 249 415 251 lava_source
-at 77: fill 415 249 416 251 lava_source
-at 78: fill 416 249 417 251 lava_source
-at 78: fill 417 249 418 251 lava_source
-at 79: fill 418 250 419 252 lava_source
-at 79: fill 419 250 420 252 lava_source
-at 80: fill 420 250 421 252 lava_source
-at 80: fill 421 250 422 252 lava_source
-at 81: fill 422 250 423 252 lava_source
-at 81: fill 423 251 424 253 lava_source
-at 82: fill 424 251 425 253 lava_source
-at 82: fill 425 251 426 253 lava_source
-at 83: fill 426 251 427 253 lava_source
-at 83: fill 427 252 428 254 lava_source
-at 84: fill 428 252 429 254 lava_source
-at 84: fill 429 252 430 254 lava_source
-at 85: fill 430 253 431 254 lava_source
-at 85: fill 430 254 431 255 mist_source
-at 86: fill 432 254 433 255 lava_source
-at 86: fill 432 255 433 256 mist_source
-at 87: fill 434 255 435 256 lava_source
-at 87: fill 434 256 435 257 mist_source
-at 88: fill 436 255 437 256 lava_source
-at 88: fill 436 256 437 257 mist_source
-at 89: fill 438 256 439 257 lava_source
-at 89: fill 438 257 439 258 mist_source
-at 90: fill 440 257 441 258 lava_source
-at 90: fill 440 258 441 259 mist_source
-at 91: fill 442 257 443 258 lava_source
-at 91: fill 442 258 443 259 mist_source
-at 92: fill 444 258 445 259 lava_source
-at 92: fill 444 259 445 260 mist_source
-at 93: fill 446 259 447 260 lava_source
-at 93: fill 446 260 447 261 mist_source
-at 94: fill 448 259 449 260 lava_source
-at 94: fill 448 260 449 261 mist_source
-at 95: fill 450 260 451 261 lava_source
-at 95: fill 450 261 451 262 mist_source
-at 96: fill 452 260 453 262 lava_source
-at 96: fill 453 260 454 262 lava_source
-at 97: fill 454 261 455 263 lava_source
-at 97: fill 455 261 456 263 lava_source
-at 98: fill 456 262 457 264 lava_source
-at 98: fill 457 262 458 264 lava_source
-at 99: fill 458 262 459 264 lava_source
-at 99: fill 459 263 460 265 lava_source
-at 100: fill 460 263 461 265 lava_source
-at 100: fill 461 264 462 266 lava_source
-at 101: fill 462 264 463 266 lava_source
-at 101: fill 463 265 464 267 lava_source
-at 102: fill 464 265 465 267 lava_source
-at 102: fill 465 266 466 268 lava_source
-at 103: fill 466 266 467 268 lava_source
-at 103: fill 467 267 468 269 lava_source
-at 104: fill 468 268 469 269 lava_source
-at 104: fill 468 269 469 270 mist_source
-at 105: fill 470 269 471 270 lava_source
-at 105: fill 470 270 471 271 mist_source
-at 106: fill 472 270 473 271 lava_source
-at 106: fill 472 271 473 272 mist_source
-at 107: fill 474 271 475 272 lava_source
-at 107: fill 474 272 475 273 mist_source
-at 108: fill 476 272 477 273 lava_source
-at 108: fill 476 273 477 274 mist_source
-at 109: fill 478 273 479 274 lava_source
-at 109: fill 478 274 479 275 mist_source
-at 110: fill 480 274 481 275 lava_source
-at 110: fill 480 275 481 276 mist_source
-at 111: fill 482 275 483 276 lava_source
-at 111: fill 482 276 483 277 mist_source
-at 112: fill 484 277 485 278 lava_source
-at 112: fill 484 278 485 279 mist_source
-at 113: fill 486 278 487 279 lava_source
-at 113: fill 486 279 487 280 mist_source
-at 114: fill 488 279 489 280 lava_source
-at 114: fill 488 280 489 281 mist_source
-at 115: fill 490 279 491 281 lava_source
-at 115: fill 491 280 492 282 lava_source
-at 116: fill 492 280 493 282 lava_source
-at 116: fill 493 281 494 283 lava_source
-at 117: fill 494 282 495 284 lava_source
-at 117: fill 495 282 496 284 lava_source
-at 118: fill 496 283 497 285 lava_source
-at 118: fill 497 284 498 286 lava_source
-at 119: fill 498 284 499 286 lava_source
-at 119: fill 499 285 500 287 lava_source
-at 120: fill 500 286 501 288 lava_source
-at 120: fill 501 286 502 288 lava_source
-at 121: fill 502 287 503 289 lava_source
-at 121: fill 503 288 504 290 lava_source
-at 122: fill 504 288 505 290 lava_source
-at 122: fill 505 289 506 291 lava_source
-// Hot air over the falls: keeps the curtains white-hot, flashes drizzle to
-// steam before it can touch falling lava, and shows as heat haze.
-every 2 from 0 to 900: temp 388 236 518 345 1290
-every 2 from 900 to 1300: temp 388 236 518 345 1290
-every 2 from 1300 to 1700: temp 388 236 518 345 1290
-every 2 from 1700 to 1900: temp 388 236 518 345 1290
-every 2 from 1900 to 2110: temp 388 236 518 345 1290
-// Lower down, all but the core of each curtain chills below 700 C and freezes
-// in flight into cinders, which land still glowing; the core lands as lava.
-every 1 from 0 to 900: temp 380 345 384 351 450
-every 1 from 0 to 900: temp 380 351 384 355 840
-every 1 from 0 to 900: temp 412 345 422 351 450
-every 1 from 0 to 900: temp 412 351 422 355 840
-every 1 from 0 to 900: temp 423 345 432 351 450
-every 1 from 0 to 900: temp 423 351 432 355 840
-every 120 from 0 to 900: fill 412 345 432 347 air
-every 1 from 0 to 900: temp 450 345 460 351 450
-every 1 from 0 to 900: temp 450 351 460 355 840
-every 1 from 0 to 900: temp 461 345 470 351 450
-every 1 from 0 to 900: temp 461 351 470 355 840
-every 120 from 0 to 900: fill 450 345 470 347 air
-every 1 from 0 to 900: temp 488 345 498 351 450
-every 1 from 0 to 900: temp 488 351 498 355 840
-every 1 from 0 to 900: temp 499 345 508 351 450
-every 1 from 0 to 900: temp 499 351 508 355 840
-every 120 from 0 to 900: fill 488 345 508 347 air
-every 1 from 900 to 1300: temp 380 345 384 351 450
-every 1 from 900 to 1300: temp 380 351 384 355 680
-every 1 from 900 to 1300: temp 412 345 422 351 450
-every 1 from 900 to 1300: temp 412 351 422 355 680
-every 1 from 900 to 1300: temp 423 345 432 351 450
-every 1 from 900 to 1300: temp 423 351 432 355 680
-every 120 from 900 to 1300: fill 412 345 432 347 air
-every 1 from 900 to 1300: temp 450 345 460 351 450
-every 1 from 900 to 1300: temp 450 351 460 355 680
-every 1 from 900 to 1300: temp 461 345 470 351 450
-every 1 from 900 to 1300: temp 461 351 470 355 680
-every 120 from 900 to 1300: fill 450 345 470 347 air
-every 1 from 900 to 1300: temp 488 345 498 351 450
-every 1 from 900 to 1300: temp 488 351 498 355 680
-every 1 from 900 to 1300: temp 499 345 508 351 450
-every 1 from 900 to 1300: temp 499 351 508 355 680
-every 120 from 900 to 1300: fill 488 345 508 347 air
-every 1 from 1300 to 1700: temp 380 345 384 351 450
-every 1 from 1300 to 1700: temp 380 351 384 355 560
-every 1 from 1300 to 1700: temp 412 345 422 351 450
-every 1 from 1300 to 1700: temp 412 351 422 355 560
-every 1 from 1300 to 1700: temp 423 345 432 351 450
-every 1 from 1300 to 1700: temp 423 351 432 355 560
-every 120 from 1300 to 1700: fill 412 345 432 347 air
-every 1 from 1300 to 1700: temp 450 345 460 351 450
-every 1 from 1300 to 1700: temp 450 351 460 355 560
-every 1 from 1300 to 1700: temp 461 345 470 351 450
-every 1 from 1300 to 1700: temp 461 351 470 355 560
-every 120 from 1300 to 1700: fill 450 345 470 347 air
-every 1 from 1300 to 1700: temp 488 345 498 351 450
-every 1 from 1300 to 1700: temp 488 351 498 355 560
-every 1 from 1300 to 1700: temp 499 345 508 351 450
-every 1 from 1300 to 1700: temp 499 351 508 355 560
-every 120 from 1300 to 1700: fill 488 345 508 347 air
-every 1 from 1700 to 1900: temp 380 345 384 351 450
-every 1 from 1700 to 1900: temp 380 351 384 355 500
-every 1 from 1700 to 1900: temp 412 345 422 351 450
-every 1 from 1700 to 1900: temp 412 351 422 355 500
-every 1 from 1700 to 1900: temp 423 345 432 351 450
-every 1 from 1700 to 1900: temp 423 351 432 355 500
-every 120 from 1700 to 1900: fill 412 345 432 347 air
-every 1 from 1700 to 1900: temp 450 345 460 351 450
-every 1 from 1700 to 1900: temp 450 351 460 355 500
-every 1 from 1700 to 1900: temp 461 345 470 351 450
-every 1 from 1700 to 1900: temp 461 351 470 355 500
-every 120 from 1700 to 1900: fill 450 345 470 347 air
-every 1 from 1700 to 1900: temp 488 345 498 351 450
-every 1 from 1700 to 1900: temp 488 351 498 355 500
-every 1 from 1700 to 1900: temp 499 345 508 351 450
-every 1 from 1700 to 1900: temp 499 351 508 355 500
-every 120 from 1700 to 1900: fill 488 345 508 347 air
-every 1 from 1900 to 2110: temp 380 345 384 351 450
-every 1 from 1900 to 2110: temp 380 351 384 355 680
-every 1 from 1900 to 2110: temp 412 345 422 351 450
-every 1 from 1900 to 2110: temp 412 351 422 355 680
-every 1 from 1900 to 2110: temp 423 345 432 351 450
-every 1 from 1900 to 2110: temp 423 351 432 355 680
-every 1 from 1900 to 2110: temp 422 345 423 351 450
-every 1 from 1900 to 2110: temp 422 351 423 355 680
-every 120 from 1900 to 2110: fill 412 345 432 347 air
-every 1 from 1900 to 2110: temp 450 345 460 351 450
-every 1 from 1900 to 2110: temp 450 351 460 355 680
-every 1 from 1900 to 2110: temp 461 345 470 351 450
-every 1 from 1900 to 2110: temp 461 351 470 355 680
-every 1 from 1900 to 2110: temp 460 345 461 351 450
-every 1 from 1900 to 2110: temp 460 351 461 355 680
-every 120 from 1900 to 2110: fill 450 345 470 347 air
-every 1 from 1900 to 2110: temp 488 345 498 351 450
-every 1 from 1900 to 2110: temp 488 351 498 355 680
-every 1 from 1900 to 2110: temp 499 345 508 351 450
-every 1 from 1900 to 2110: temp 499 351 508 355 680
-every 1 from 1900 to 2110: temp 498 345 499 351 450
-every 1 from 1900 to 2110: temp 498 351 499 355 680
-every 120 from 1900 to 2110: fill 488 345 508 347 air
-// The sea quenches the new land from the waterline up: each band of the
-// island is held at the temperature of the surf in turn.
-every 3 from 2041 to 2280: temp 380 430 385 472 400
-every 3 from 2049 to 2280: temp 380 427 385 430 400
-every 3 from 2057 to 2280: temp 380 424 385 427 400
-every 3 from 2065 to 2280: temp 380 421 385 424 400
-every 3 from 2073 to 2280: temp 380 418 385 421 400
-every 3 from 2081 to 2280: temp 380 415 385 418 400
-every 3 from 2089 to 2280: temp 380 412 385 415 400
-every 3 from 2097 to 2280: temp 380 409 385 412 400
-every 3 from 2105 to 2280: temp 380 406 385 409 400
-every 3 from 2113 to 2280: temp 380 403 385 406 400
-every 3 from 2121 to 2280: temp 380 400 385 403 400
-every 3 from 2129 to 2280: temp 380 397 385 400 400
-every 3 from 2137 to 2280: temp 380 394 385 397 400
-every 3 from 2145 to 2280: temp 380 391 385 394 400
-every 3 from 2153 to 2280: temp 380 388 385 391 400
-every 3 from 2161 to 2280: temp 380 385 385 388 400
-every 3 from 2169 to 2280: temp 380 382 385 385 400
-every 3 from 2043 to 2280: temp 385 430 390 472 400
-every 3 from 2051 to 2280: temp 385 427 390 430 400
-every 3 from 2059 to 2280: temp 385 424 390 427 400
-every 3 from 2067 to 2280: temp 385 421 390 424 400
-every 3 from 2075 to 2280: temp 385 418 390 421 400
-every 3 from 2083 to 2280: temp 385 415 390 418 400
-every 3 from 2091 to 2280: temp 385 412 390 415 400
-every 3 from 2099 to 2280: temp 385 409 390 412 400
-every 3 from 2107 to 2280: temp 385 406 390 409 400
-every 3 from 2115 to 2280: temp 385 403 390 406 400
-every 3 from 2123 to 2280: temp 385 400 390 403 400
-every 3 from 2131 to 2280: temp 385 397 390 400 400
-every 3 from 2139 to 2280: temp 385 394 390 397 400
-every 3 from 2147 to 2280: temp 385 391 390 394 400
-every 3 from 2155 to 2280: temp 385 388 390 391 400
-every 3 from 2163 to 2280: temp 385 385 390 388 400
-every 3 from 2171 to 2280: temp 385 382 390 385 400
-every 3 from 2049 to 2280: temp 390 430 395 472 400
-every 3 from 2057 to 2280: temp 390 427 395 430 400
-every 3 from 2065 to 2280: temp 390 424 395 427 400
-every 3 from 2073 to 2280: temp 390 421 395 424 400
-every 3 from 2081 to 2280: temp 390 418 395 421 400
-every 3 from 2089 to 2280: temp 390 415 395 418 400
-every 3 from 2097 to 2280: temp 390 412 395 415 400
-every 3 from 2105 to 2280: temp 390 409 395 412 400
-every 3 from 2113 to 2280: temp 390 406 395 409 400
-every 3 from 2121 to 2280: temp 390 403 395 406 400
-every 3 from 2129 to 2280: temp 390 400 395 403 400
-every 3 from 2137 to 2280: temp 390 397 395 400 400
-every 3 from 2145 to 2280: temp 390 394 395 397 400
-every 3 from 2153 to 2280: temp 390 391 395 394 400
-every 3 from 2161 to 2280: temp 390 388 395 391 400
-every 3 from 2169 to 2280: temp 390 385 395 388 400
-every 3 from 2177 to 2280: temp 390 382 395 385 400
-every 3 from 2050 to 2280: temp 395 430 400 472 400
-every 3 from 2058 to 2280: temp 395 427 400 430 400
-every 3 from 2066 to 2280: temp 395 424 400 427 400
-every 3 from 2074 to 2280: temp 395 421 400 424 400
-every 3 from 2082 to 2280: temp 395 418 400 421 400
-every 3 from 2090 to 2280: temp 395 415 400 418 400
-every 3 from 2098 to 2280: temp 395 412 400 415 400
-every 3 from 2106 to 2280: temp 395 409 400 412 400
-every 3 from 2114 to 2280: temp 395 406 400 409 400
-every 3 from 2122 to 2280: temp 395 403 400 406 400
-every 3 from 2130 to 2280: temp 395 400 400 403 400
-every 3 from 2138 to 2280: temp 395 397 400 400 400
-every 3 from 2146 to 2280: temp 395 394 400 397 400
-every 3 from 2154 to 2280: temp 395 391 400 394 400
-every 3 from 2162 to 2280: temp 395 388 400 391 400
-every 3 from 2170 to 2280: temp 395 385 400 388 400
-every 3 from 2178 to 2280: temp 395 382 400 385 400
-every 3 from 2051 to 2280: temp 400 430 405 472 400
-every 3 from 2059 to 2280: temp 400 427 405 430 400
-every 3 from 2067 to 2280: temp 400 424 405 427 400
-every 3 from 2075 to 2280: temp 400 421 405 424 400
-every 3 from 2083 to 2280: temp 400 418 405 421 400
-every 3 from 2091 to 2280: temp 400 415 405 418 400
-every 3 from 2099 to 2280: temp 400 412 405 415 400
-every 3 from 2107 to 2280: temp 400 409 405 412 400
-every 3 from 2115 to 2280: temp 400 406 405 409 400
-every 3 from 2123 to 2280: temp 400 403 405 406 400
-every 3 from 2131 to 2280: temp 400 400 405 403 400
-every 3 from 2139 to 2280: temp 400 397 405 400 400
-every 3 from 2147 to 2280: temp 400 394 405 397 400
-every 3 from 2155 to 2280: temp 400 391 405 394 400
-every 3 from 2163 to 2280: temp 400 388 405 391 400
-every 3 from 2171 to 2280: temp 400 385 405 388 400
-every 3 from 2179 to 2280: temp 400 382 405 385 400
-every 3 from 2053 to 2280: temp 405 430 410 472 400
-every 3 from 2061 to 2280: temp 405 427 410 430 400
-every 3 from 2069 to 2280: temp 405 424 410 427 400
-every 3 from 2077 to 2280: temp 405 421 410 424 400
-every 3 from 2085 to 2280: temp 405 418 410 421 400
-every 3 from 2093 to 2280: temp 405 415 410 418 400
-every 3 from 2101 to 2280: temp 405 412 410 415 400
-every 3 from 2109 to 2280: temp 405 409 410 412 400
-every 3 from 2117 to 2280: temp 405 406 410 409 400
-every 3 from 2125 to 2280: temp 405 403 410 406 400
-every 3 from 2133 to 2280: temp 405 400 410 403 400
-every 3 from 2141 to 2280: temp 405 397 410 400 400
-every 3 from 2149 to 2280: temp 405 394 410 397 400
-every 3 from 2157 to 2280: temp 405 391 410 394 400
-every 3 from 2165 to 2280: temp 405 388 410 391 400
-every 3 from 2173 to 2280: temp 405 385 410 388 400
-every 3 from 2181 to 2280: temp 405 382 410 385 400
-every 3 from 2056 to 2280: temp 410 430 415 472 400
-every 3 from 2064 to 2280: temp 410 427 415 430 400
-every 3 from 2072 to 2280: temp 410 424 415 427 400
-every 3 from 2080 to 2280: temp 410 421 415 424 400
-every 3 from 2088 to 2280: temp 410 418 415 421 400
-every 3 from 2096 to 2280: temp 410 415 415 418 400
-every 3 from 2104 to 2280: temp 410 412 415 415 400
-every 3 from 2112 to 2280: temp 410 409 415 412 400
-every 3 from 2120 to 2280: temp 410 406 415 409 400
-every 3 from 2128 to 2280: temp 410 403 415 406 400
-every 3 from 2136 to 2280: temp 410 400 415 403 400
-every 3 from 2144 to 2280: temp 410 397 415 400 400
-every 3 from 2152 to 2280: temp 410 394 415 397 400
-every 3 from 2160 to 2280: temp 410 391 415 394 400
-every 3 from 2168 to 2280: temp 410 388 415 391 400
-every 3 from 2176 to 2280: temp 410 385 415 388 400
-every 3 from 2184 to 2280: temp 410 382 415 385 400
-every 3 from 2053 to 2280: temp 415 430 420 472 400
-every 3 from 2061 to 2280: temp 415 427 420 430 400
-every 3 from 2069 to 2280: temp 415 424 420 427 400
-every 3 from 2077 to 2280: temp 415 421 420 424 400
-every 3 from 2085 to 2280: temp 415 418 420 421 400
-every 3 from 2093 to 2280: temp 415 415 420 418 400
-every 3 from 2101 to 2280: temp 415 412 420 415 400
-every 3 from 2109 to 2280: temp 415 409 420 412 400
-every 3 from 2117 to 2280: temp 415 406 420 409 400
-every 3 from 2125 to 2280: temp 415 403 420 406 400
-every 3 from 2133 to 2280: temp 415 400 420 403 400
-every 3 from 2141 to 2280: temp 415 397 420 400 400
-every 3 from 2149 to 2280: temp 415 394 420 397 400
-every 3 from 2157 to 2280: temp 415 391 420 394 400
-every 3 from 2165 to 2280: temp 415 388 420 391 400
-every 3 from 2173 to 2280: temp 415 385 420 388 400
-every 3 from 2181 to 2280: temp 415 382 420 385 400
-every 3 from 2049 to 2280: temp 420 430 425 472 400
-every 3 from 2057 to 2280: temp 420 427 425 430 400
-every 3 from 2065 to 2280: temp 420 424 425 427 400
-every 3 from 2073 to 2280: temp 420 421 425 424 400
-every 3 from 2081 to 2280: temp 420 418 425 421 400
-every 3 from 2089 to 2280: temp 420 415 425 418 400
-every 3 from 2097 to 2280: temp 420 412 425 415 400
-every 3 from 2105 to 2280: temp 420 409 425 412 400
-every 3 from 2113 to 2280: temp 420 406 425 409 400
-every 3 from 2121 to 2280: temp 420 403 425 406 400
-every 3 from 2129 to 2280: temp 420 400 425 403 400
-every 3 from 2137 to 2280: temp 420 397 425 400 400
-every 3 from 2145 to 2280: temp 420 394 425 397 400
-every 3 from 2153 to 2280: temp 420 391 425 394 400
-every 3 from 2161 to 2280: temp 420 388 425 391 400
-every 3 from 2169 to 2280: temp 420 385 425 388 400
-every 3 from 2177 to 2280: temp 420 382 425 385 400
-every 3 from 2055 to 2280: temp 425 430 430 472 400
-every 3 from 2063 to 2280: temp 425 427 430 430 400
-every 3 from 2071 to 2280: temp 425 424 430 427 400
-every 3 from 2079 to 2280: temp 425 421 430 424 400
-every 3 from 2087 to 2280: temp 425 418 430 421 400
-every 3 from 2095 to 2280: temp 425 415 430 418 400
-every 3 from 2103 to 2280: temp 425 412 430 415 400
-every 3 from 2111 to 2280: temp 425 409 430 412 400
-every 3 from 2119 to 2280: temp 425 406 430 409 400
-every 3 from 2127 to 2280: temp 425 403 430 406 400
-every 3 from 2135 to 2280: temp 425 400 430 403 400
-every 3 from 2143 to 2280: temp 425 397 430 400 400
-every 3 from 2151 to 2280: temp 425 394 430 397 400
-every 3 from 2159 to 2280: temp 425 391 430 394 400
-every 3 from 2167 to 2280: temp 425 388 430 391 400
-every 3 from 2175 to 2280: temp 425 385 430 388 400
-every 3 from 2183 to 2280: temp 425 382 430 385 400
-every 3 from 2057 to 2280: temp 430 430 435 472 400
-every 3 from 2065 to 2280: temp 430 427 435 430 400
-every 3 from 2073 to 2280: temp 430 424 435 427 400
-every 3 from 2081 to 2280: temp 430 421 435 424 400
-every 3 from 2089 to 2280: temp 430 418 435 421 400
-every 3 from 2097 to 2280: temp 430 415 435 418 400
-every 3 from 2105 to 2280: temp 430 412 435 415 400
-every 3 from 2113 to 2280: temp 430 409 435 412 400
-every 3 from 2121 to 2280: temp 430 406 435 409 400
-every 3 from 2129 to 2280: temp 430 403 435 406 400
-every 3 from 2137 to 2280: temp 430 400 435 403 400
-every 3 from 2145 to 2280: temp 430 397 435 400 400
-every 3 from 2153 to 2280: temp 430 394 435 397 400
-every 3 from 2161 to 2280: temp 430 391 435 394 400
-every 3 from 2169 to 2280: temp 430 388 435 391 400
-every 3 from 2177 to 2280: temp 430 385 435 388 400
-every 3 from 2185 to 2280: temp 430 382 435 385 400
-every 3 from 2058 to 2280: temp 435 430 440 472 400
-every 3 from 2066 to 2280: temp 435 427 440 430 400
-every 3 from 2074 to 2280: temp 435 424 440 427 400
-every 3 from 2082 to 2280: temp 435 421 440 424 400
-every 3 from 2090 to 2280: temp 435 418 440 421 400
-every 3 from 2098 to 2280: temp 435 415 440 418 400
-every 3 from 2106 to 2280: temp 435 412 440 415 400
-every 3 from 2114 to 2280: temp 435 409 440 412 400
-every 3 from 2122 to 2280: temp 435 406 440 409 400
-every 3 from 2130 to 2280: temp 435 403 440 406 400
-every 3 from 2138 to 2280: temp 435 400 440 403 400
-every 3 from 2146 to 2280: temp 435 397 440 400 400
-every 3 from 2154 to 2280: temp 435 394 440 397 400
-every 3 from 2162 to 2280: temp 435 391 440 394 400
-every 3 from 2170 to 2280: temp 435 388 440 391 400
-every 3 from 2178 to 2280: temp 435 385 440 388 400
-every 3 from 2186 to 2280: temp 435 382 440 385 400
-every 3 from 2062 to 2280: temp 440 430 445 472 400
-every 3 from 2070 to 2280: temp 440 427 445 430 400
-every 3 from 2078 to 2280: temp 440 424 445 427 400
-every 3 from 2086 to 2280: temp 440 421 445 424 400
-every 3 from 2094 to 2280: temp 440 418 445 421 400
-every 3 from 2102 to 2280: temp 440 415 445 418 400
-every 3 from 2110 to 2280: temp 440 412 445 415 400
-every 3 from 2118 to 2280: temp 440 409 445 412 400
-every 3 from 2126 to 2280: temp 440 406 445 409 400
-every 3 from 2134 to 2280: temp 440 403 445 406 400
-every 3 from 2142 to 2280: temp 440 400 445 403 400
-every 3 from 2150 to 2280: temp 440 397 445 400 400
-every 3 from 2158 to 2280: temp 440 394 445 397 400
-every 3 from 2166 to 2280: temp 440 391 445 394 400
-every 3 from 2174 to 2280: temp 440 388 445 391 400
-every 3 from 2182 to 2280: temp 440 385 445 388 400
-every 3 from 2190 to 2280: temp 440 382 445 385 400
-every 3 from 2064 to 2280: temp 445 430 450 472 400
-every 3 from 2072 to 2280: temp 445 427 450 430 400
-every 3 from 2080 to 2280: temp 445 424 450 427 400
-every 3 from 2088 to 2280: temp 445 421 450 424 400
-every 3 from 2096 to 2280: temp 445 418 450 421 400
-every 3 from 2104 to 2280: temp 445 415 450 418 400
-every 3 from 2112 to 2280: temp 445 412 450 415 400
-every 3 from 2120 to 2280: temp 445 409 450 412 400
-every 3 from 2128 to 2280: temp 445 406 450 409 400
-every 3 from 2136 to 2280: temp 445 403 450 406 400
-every 3 from 2144 to 2280: temp 445 400 450 403 400
-every 3 from 2152 to 2280: temp 445 397 450 400 400
-every 3 from 2160 to 2280: temp 445 394 450 397 400
-every 3 from 2168 to 2280: temp 445 391 450 394 400
-every 3 from 2176 to 2280: temp 445 388 450 391 400
-every 3 from 2184 to 2280: temp 445 385 450 388 400
-every 3 from 2192 to 2280: temp 445 382 450 385 400
-every 3 from 2064 to 2280: temp 450 430 455 472 400
-every 3 from 2072 to 2280: temp 450 427 455 430 400
-every 3 from 2080 to 2280: temp 450 424 455 427 400
-every 3 from 2088 to 2280: temp 450 421 455 424 400
-every 3 from 2096 to 2280: temp 450 418 455 421 400
-every 3 from 2104 to 2280: temp 450 415 455 418 400
-every 3 from 2112 to 2280: temp 450 412 455 415 400
-every 3 from 2120 to 2280: temp 450 409 455 412 400
-every 3 from 2128 to 2280: temp 450 406 455 409 400
-every 3 from 2136 to 2280: temp 450 403 455 406 400
-every 3 from 2144 to 2280: temp 450 400 455 403 400
-every 3 from 2152 to 2280: temp 450 397 455 400 400
-every 3 from 2160 to 2280: temp 450 394 455 397 400
-every 3 from 2168 to 2280: temp 450 391 455 394 400
-every 3 from 2176 to 2280: temp 450 388 455 391 400
-every 3 from 2184 to 2280: temp 450 385 455 388 400
-every 3 from 2192 to 2280: temp 450 382 455 385 400
-every 3 from 2060 to 2280: temp 455 430 460 472 400
-every 3 from 2068 to 2280: temp 455 427 460 430 400
-every 3 from 2076 to 2280: temp 455 424 460 427 400
-every 3 from 2084 to 2280: temp 455 421 460 424 400
-every 3 from 2092 to 2280: temp 455 418 460 421 400
-every 3 from 2100 to 2280: temp 455 415 460 418 400
-every 3 from 2108 to 2280: temp 455 412 460 415 400
-every 3 from 2116 to 2280: temp 455 409 460 412 400
-every 3 from 2124 to 2280: temp 455 406 460 409 400
-every 3 from 2132 to 2280: temp 455 403 460 406 400
-every 3 from 2140 to 2280: temp 455 400 460 403 400
-every 3 from 2148 to 2280: temp 455 397 460 400 400
-every 3 from 2156 to 2280: temp 455 394 460 397 400
-every 3 from 2164 to 2280: temp 455 391 460 394 400
-every 3 from 2172 to 2280: temp 455 388 460 391 400
-every 3 from 2180 to 2280: temp 455 385 460 388 400
-every 3 from 2188 to 2280: temp 455 382 460 385 400
-every 3 from 2055 to 2280: temp 460 430 465 472 400
-every 3 from 2063 to 2280: temp 460 427 465 430 400
-every 3 from 2071 to 2280: temp 460 424 465 427 400
-every 3 from 2079 to 2280: temp 460 421 465 424 400
-every 3 from 2087 to 2280: temp 460 418 465 421 400
-every 3 from 2095 to 2280: temp 460 415 465 418 400
-every 3 from 2103 to 2280: temp 460 412 465 415 400
-every 3 from 2111 to 2280: temp 460 409 465 412 400
-every 3 from 2119 to 2280: temp 460 406 465 409 400
-every 3 from 2127 to 2280: temp 460 403 465 406 400
-every 3 from 2135 to 2280: temp 460 400 465 403 400
-every 3 from 2143 to 2280: temp 460 397 465 400 400
-every 3 from 2151 to 2280: temp 460 394 465 397 400
-every 3 from 2159 to 2280: temp 460 391 465 394 400
-every 3 from 2167 to 2280: temp 460 388 465 391 400
-every 3 from 2175 to 2280: temp 460 385 465 388 400
-every 3 from 2183 to 2280: temp 460 382 465 385 400
-every 3 from 2056 to 2280: temp 465 430 470 472 400
-every 3 from 2064 to 2280: temp 465 427 470 430 400
-every 3 from 2072 to 2280: temp 465 424 470 427 400
-every 3 from 2080 to 2280: temp 465 421 470 424 400
-every 3 from 2088 to 2280: temp 465 418 470 421 400
-every 3 from 2096 to 2280: temp 465 415 470 418 400
-every 3 from 2104 to 2280: temp 465 412 470 415 400
-every 3 from 2112 to 2280: temp 465 409 470 412 400
-every 3 from 2120 to 2280: temp 465 406 470 409 400
-every 3 from 2128 to 2280: temp 465 403 470 406 400
-every 3 from 2136 to 2280: temp 465 400 470 403 400
-every 3 from 2144 to 2280: temp 465 397 470 400 400
-every 3 from 2152 to 2280: temp 465 394 470 397 400
-every 3 from 2160 to 2280: temp 465 391 470 394 400
-every 3 from 2168 to 2280: temp 465 388 470 391 400
-every 3 from 2176 to 2280: temp 465 385 470 388 400
-every 3 from 2184 to 2280: temp 465 382 470 385 400
-every 3 from 2054 to 2280: temp 470 430 475 472 400
-every 3 from 2062 to 2280: temp 470 427 475 430 400
-every 3 from 2070 to 2280: temp 470 424 475 427 400
-every 3 from 2078 to 2280: temp 470 421 475 424 400
-every 3 from 2086 to 2280: temp 470 418 475 421 400
-every 3 from 2094 to 2280: temp 470 415 475 418 400
-every 3 from 2102 to 2280: temp 470 412 475 415 400
-every 3 from 2110 to 2280: temp 470 409 475 412 400
-every 3 from 2118 to 2280: temp 470 406 475 409 400
-every 3 from 2126 to 2280: temp 470 403 475 406 400
-every 3 from 2134 to 2280: temp 470 400 475 403 400
-every 3 from 2142 to 2280: temp 470 397 475 400 400
-every 3 from 2150 to 2280: temp 470 394 475 397 400
-every 3 from 2158 to 2280: temp 470 391 475 394 400
-every 3 from 2166 to 2280: temp 470 388 475 391 400
-every 3 from 2174 to 2280: temp 470 385 475 388 400
-every 3 from 2182 to 2280: temp 470 382 475 385 400
-every 3 from 2050 to 2280: temp 475 430 480 472 400
-every 3 from 2058 to 2280: temp 475 427 480 430 400
-every 3 from 2066 to 2280: temp 475 424 480 427 400
-every 3 from 2074 to 2280: temp 475 421 480 424 400
-every 3 from 2082 to 2280: temp 475 418 480 421 400
-every 3 from 2090 to 2280: temp 475 415 480 418 400
-every 3 from 2098 to 2280: temp 475 412 480 415 400
-every 3 from 2106 to 2280: temp 475 409 480 412 400
-every 3 from 2114 to 2280: temp 475 406 480 409 400
-every 3 from 2122 to 2280: temp 475 403 480 406 400
-every 3 from 2130 to 2280: temp 475 400 480 403 400
-every 3 from 2138 to 2280: temp 475 397 480 400 400
-every 3 from 2146 to 2280: temp 475 394 480 397 400
-every 3 from 2154 to 2280: temp 475 391 480 394 400
-every 3 from 2162 to 2280: temp 475 388 480 391 400
-every 3 from 2170 to 2280: temp 475 385 480 388 400
-every 3 from 2178 to 2280: temp 475 382 480 385 400
-every 3 from 2045 to 2280: temp 480 430 485 472 400
-every 3 from 2053 to 2280: temp 480 427 485 430 400
-every 3 from 2061 to 2280: temp 480 424 485 427 400
-every 3 from 2069 to 2280: temp 480 421 485 424 400
-every 3 from 2077 to 2280: temp 480 418 485 421 400
-every 3 from 2085 to 2280: temp 480 415 485 418 400
-every 3 from 2093 to 2280: temp 480 412 485 415 400
-every 3 from 2101 to 2280: temp 480 409 485 412 400
-every 3 from 2109 to 2280: temp 480 406 485 409 400
-every 3 from 2117 to 2280: temp 480 403 485 406 400
-every 3 from 2125 to 2280: temp 480 400 485 403 400
-every 3 from 2133 to 2280: temp 480 397 485 400 400
-every 3 from 2141 to 2280: temp 480 394 485 397 400
-every 3 from 2149 to 2280: temp 480 391 485 394 400
-every 3 from 2157 to 2280: temp 480 388 485 391 400
-every 3 from 2165 to 2280: temp 480 385 485 388 400
-every 3 from 2173 to 2280: temp 480 382 485 385 400
-every 3 from 2047 to 2280: temp 485 430 490 472 400
-every 3 from 2055 to 2280: temp 485 427 490 430 400
-every 3 from 2063 to 2280: temp 485 424 490 427 400
-every 3 from 2071 to 2280: temp 485 421 490 424 400
-every 3 from 2079 to 2280: temp 485 418 490 421 400
-every 3 from 2087 to 2280: temp 485 415 490 418 400
-every 3 from 2095 to 2280: temp 485 412 490 415 400
-every 3 from 2103 to 2280: temp 485 409 490 412 400
-every 3 from 2111 to 2280: temp 485 406 490 409 400
-every 3 from 2119 to 2280: temp 485 403 490 406 400
-every 3 from 2127 to 2280: temp 485 400 490 403 400
-every 3 from 2135 to 2280: temp 485 397 490 400 400
-every 3 from 2143 to 2280: temp 485 394 490 397 400
-every 3 from 2151 to 2280: temp 485 391 490 394 400
-every 3 from 2159 to 2280: temp 485 388 490 391 400
-every 3 from 2167 to 2280: temp 485 385 490 388 400
-every 3 from 2175 to 2280: temp 485 382 490 385 400
-every 3 from 2053 to 2280: temp 490 430 495 472 400
-every 3 from 2061 to 2280: temp 490 427 495 430 400
-every 3 from 2069 to 2280: temp 490 424 495 427 400
-every 3 from 2077 to 2280: temp 490 421 495 424 400
-every 3 from 2085 to 2280: temp 490 418 495 421 400
-every 3 from 2093 to 2280: temp 490 415 495 418 400
-every 3 from 2101 to 2280: temp 490 412 495 415 400
-every 3 from 2109 to 2280: temp 490 409 495 412 400
-every 3 from 2117 to 2280: temp 490 406 495 409 400
-every 3 from 2125 to 2280: temp 490 403 495 406 400
-every 3 from 2133 to 2280: temp 490 400 495 403 400
-every 3 from 2141 to 2280: temp 490 397 495 400 400
-every 3 from 2149 to 2280: temp 490 394 495 397 400
-every 3 from 2157 to 2280: temp 490 391 495 394 400
-every 3 from 2165 to 2280: temp 490 388 495 391 400
-every 3 from 2173 to 2280: temp 490 385 495 388 400
-every 3 from 2181 to 2280: temp 490 382 495 385 400
-every 3 from 2058 to 2280: temp 495 430 500 472 400
-every 3 from 2066 to 2280: temp 495 427 500 430 400
-every 3 from 2074 to 2280: temp 495 424 500 427 400
-every 3 from 2082 to 2280: temp 495 421 500 424 400
-every 3 from 2090 to 2280: temp 495 418 500 421 400
-every 3 from 2098 to 2280: temp 495 415 500 418 400
-every 3 from 2106 to 2280: temp 495 412 500 415 400
-every 3 from 2114 to 2280: temp 495 409 500 412 400
-every 3 from 2122 to 2280: temp 495 406 500 409 400
-every 3 from 2130 to 2280: temp 495 403 500 406 400
-every 3 from 2138 to 2280: temp 495 400 500 403 400
-every 3 from 2146 to 2280: temp 495 397 500 400 400
-every 3 from 2154 to 2280: temp 495 394 500 397 400
-every 3 from 2162 to 2280: temp 495 391 500 394 400
-every 3 from 2170 to 2280: temp 495 388 500 391 400
-every 3 from 2178 to 2280: temp 495 385 500 388 400
-every 3 from 2186 to 2280: temp 495 382 500 385 400
-every 3 from 2062 to 2280: temp 500 430 505 472 400
-every 3 from 2070 to 2280: temp 500 427 505 430 400
-every 3 from 2078 to 2280: temp 500 424 505 427 400
-every 3 from 2086 to 2280: temp 500 421 505 424 400
-every 3 from 2094 to 2280: temp 500 418 505 421 400
-every 3 from 2102 to 2280: temp 500 415 505 418 400
-every 3 from 2110 to 2280: temp 500 412 505 415 400
-every 3 from 2118 to 2280: temp 500 409 505 412 400
-every 3 from 2126 to 2280: temp 500 406 505 409 400
-every 3 from 2134 to 2280: temp 500 403 505 406 400
-every 3 from 2142 to 2280: temp 500 400 505 403 400
-every 3 from 2150 to 2280: temp 500 397 505 400 400
-every 3 from 2158 to 2280: temp 500 394 505 397 400
-every 3 from 2166 to 2280: temp 500 391 505 394 400
-every 3 from 2174 to 2280: temp 500 388 505 391 400
-every 3 from 2182 to 2280: temp 500 385 505 388 400
-every 3 from 2190 to 2280: temp 500 382 505 385 400
-every 3 from 2056 to 2280: temp 505 430 510 472 400
-every 3 from 2064 to 2280: temp 505 427 510 430 400
-every 3 from 2072 to 2280: temp 505 424 510 427 400
-every 3 from 2080 to 2280: temp 505 421 510 424 400
-every 3 from 2088 to 2280: temp 505 418 510 421 400
-every 3 from 2096 to 2280: temp 505 415 510 418 400
-every 3 from 2104 to 2280: temp 505 412 510 415 400
-every 3 from 2112 to 2280: temp 505 409 510 412 400
-every 3 from 2120 to 2280: temp 505 406 510 409 400
-every 3 from 2128 to 2280: temp 505 403 510 406 400
-every 3 from 2136 to 2280: temp 505 400 510 403 400
-every 3 from 2144 to 2280: temp 505 397 510 400 400
-every 3 from 2152 to 2280: temp 505 394 510 397 400
-every 3 from 2160 to 2280: temp 505 391 510 394 400
-every 3 from 2168 to 2280: temp 505 388 510 391 400
-every 3 from 2176 to 2280: temp 505 385 510 388 400
-every 3 from 2184 to 2280: temp 505 382 510 385 400
-every 3 from 2059 to 2280: temp 510 430 515 472 400
-every 3 from 2067 to 2280: temp 510 427 515 430 400
-every 3 from 2075 to 2280: temp 510 424 515 427 400
-every 3 from 2083 to 2280: temp 510 421 515 424 400
-every 3 from 2091 to 2280: temp 510 418 515 421 400
-every 3 from 2099 to 2280: temp 510 415 515 418 400
-every 3 from 2107 to 2280: temp 510 412 515 415 400
-every 3 from 2115 to 2280: temp 510 409 515 412 400
-every 3 from 2123 to 2280: temp 510 406 515 409 400
-every 3 from 2131 to 2280: temp 510 403 515 406 400
-every 3 from 2139 to 2280: temp 510 400 515 403 400
-every 3 from 2147 to 2280: temp 510 397 515 400 400
-every 3 from 2155 to 2280: temp 510 394 515 397 400
-every 3 from 2163 to 2280: temp 510 391 515 394 400
-every 3 from 2171 to 2280: temp 510 388 515 391 400
-every 3 from 2179 to 2280: temp 510 385 515 388 400
-every 3 from 2187 to 2280: temp 510 382 515 385 400
-every 3 from 2059 to 2280: temp 515 430 520 472 400
-every 3 from 2067 to 2280: temp 515 427 520 430 400
-every 3 from 2075 to 2280: temp 515 424 520 427 400
-every 3 from 2083 to 2280: temp 515 421 520 424 400
-every 3 from 2091 to 2280: temp 515 418 520 421 400
-every 3 from 2099 to 2280: temp 515 415 520 418 400
-every 3 from 2107 to 2280: temp 515 412 520 415 400
-every 3 from 2115 to 2280: temp 515 409 520 412 400
-every 3 from 2123 to 2280: temp 515 406 520 409 400
-every 3 from 2131 to 2280: temp 515 403 520 406 400
-every 3 from 2139 to 2280: temp 515 400 520 403 400
-every 3 from 2147 to 2280: temp 515 397 520 400 400
-every 3 from 2155 to 2280: temp 515 394 520 397 400
-every 3 from 2163 to 2280: temp 515 391 520 394 400
-every 3 from 2171 to 2280: temp 515 388 520 391 400
-every 3 from 2179 to 2280: temp 515 385 520 388 400
-every 3 from 2187 to 2280: temp 515 382 520 385 400
-every 3 from 2060 to 2280: temp 520 430 525 472 400
-every 3 from 2068 to 2280: temp 520 427 525 430 400
-every 3 from 2076 to 2280: temp 520 424 525 427 400
-every 3 from 2084 to 2280: temp 520 421 525 424 400
-every 3 from 2092 to 2280: temp 520 418 525 421 400
-every 3 from 2100 to 2280: temp 520 415 525 418 400
-every 3 from 2108 to 2280: temp 520 412 525 415 400
-every 3 from 2116 to 2280: temp 520 409 525 412 400
-every 3 from 2124 to 2280: temp 520 406 525 409 400
-every 3 from 2132 to 2280: temp 520 403 525 406 400
-every 3 from 2140 to 2280: temp 520 400 525 403 400
-every 3 from 2148 to 2280: temp 520 397 525 400 400
-every 3 from 2156 to 2280: temp 520 394 525 397 400
-every 3 from 2164 to 2280: temp 520 391 525 394 400
-every 3 from 2172 to 2280: temp 520 388 525 391 400
-every 3 from 2180 to 2280: temp 520 385 525 388 400
-every 3 from 2188 to 2280: temp 520 382 525 385 400
-every 3 from 2064 to 2280: temp 525 430 530 472 400
-every 3 from 2072 to 2280: temp 525 427 530 430 400
-every 3 from 2080 to 2280: temp 525 424 530 427 400
-every 3 from 2088 to 2280: temp 525 421 530 424 400
-every 3 from 2096 to 2280: temp 525 418 530 421 400
-every 3 from 2104 to 2280: temp 525 415 530 418 400
-every 3 from 2112 to 2280: temp 525 412 530 415 400
-every 3 from 2120 to 2280: temp 525 409 530 412 400
-every 3 from 2128 to 2280: temp 525 406 530 409 400
-every 3 from 2136 to 2280: temp 525 403 530 406 400
-every 3 from 2144 to 2280: temp 525 400 530 403 400
-every 3 from 2152 to 2280: temp 525 397 530 400 400
-every 3 from 2160 to 2280: temp 525 394 530 397 400
-every 3 from 2168 to 2280: temp 525 391 530 394 400
-every 3 from 2176 to 2280: temp 525 388 530 391 400
-every 3 from 2184 to 2280: temp 525 385 530 388 400
-every 3 from 2192 to 2280: temp 525 382 530 385 400
-every 3 from 2064 to 2280: temp 530 430 535 472 400
-every 3 from 2072 to 2280: temp 530 427 535 430 400
-every 3 from 2080 to 2280: temp 530 424 535 427 400
-every 3 from 2088 to 2280: temp 530 421 535 424 400
-every 3 from 2096 to 2280: temp 530 418 535 421 400
-every 3 from 2104 to 2280: temp 530 415 535 418 400
-every 3 from 2112 to 2280: temp 530 412 535 415 400
-every 3 from 2120 to 2280: temp 530 409 535 412 400
-every 3 from 2128 to 2280: temp 530 406 535 409 400
-every 3 from 2136 to 2280: temp 530 403 535 406 400
-every 3 from 2144 to 2280: temp 530 400 535 403 400
-every 3 from 2152 to 2280: temp 530 397 535 400 400
-every 3 from 2160 to 2280: temp 530 394 535 397 400
-every 3 from 2168 to 2280: temp 530 391 535 394 400
-every 3 from 2176 to 2280: temp 530 388 535 391 400
-every 3 from 2184 to 2280: temp 530 385 535 388 400
-every 3 from 2192 to 2280: temp 530 382 535 385 400
-every 3 from 2064 to 2280: temp 535 430 540 472 400
-every 3 from 2072 to 2280: temp 535 427 540 430 400
-every 3 from 2080 to 2280: temp 535 424 540 427 400
-every 3 from 2088 to 2280: temp 535 421 540 424 400
-every 3 from 2096 to 2280: temp 535 418 540 421 400
-every 3 from 2104 to 2280: temp 535 415 540 418 400
-every 3 from 2112 to 2280: temp 535 412 540 415 400
-every 3 from 2120 to 2280: temp 535 409 540 412 400
-every 3 from 2128 to 2280: temp 535 406 540 409 400
-every 3 from 2136 to 2280: temp 535 403 540 406 400
-every 3 from 2144 to 2280: temp 535 400 540 403 400
-every 3 from 2152 to 2280: temp 535 397 540 400 400
-every 3 from 2160 to 2280: temp 535 394 540 397 400
-every 3 from 2168 to 2280: temp 535 391 540 394 400
-every 3 from 2176 to 2280: temp 535 388 540 391 400
-every 3 from 2184 to 2280: temp 535 385 540 388 400
-every 3 from 2192 to 2280: temp 535 382 540 385 400
-every 3 from 2064 to 2280: temp 540 430 545 472 400
-every 3 from 2072 to 2280: temp 540 427 545 430 400
-every 3 from 2080 to 2280: temp 540 424 545 427 400
-every 3 from 2088 to 2280: temp 540 421 545 424 400
-every 3 from 2096 to 2280: temp 540 418 545 421 400
-every 3 from 2104 to 2280: temp 540 415 545 418 400
-every 3 from 2112 to 2280: temp 540 412 545 415 400
-every 3 from 2120 to 2280: temp 540 409 545 412 400
-every 3 from 2128 to 2280: temp 540 406 545 409 400
-every 3 from 2136 to 2280: temp 540 403 545 406 400
-every 3 from 2144 to 2280: temp 540 400 545 403 400
-every 3 from 2152 to 2280: temp 540 397 545 400 400
-every 3 from 2160 to 2280: temp 540 394 545 397 400
-every 3 from 2168 to 2280: temp 540 391 545 394 400
-every 3 from 2176 to 2280: temp 540 388 545 391 400
-every 3 from 2184 to 2280: temp 540 385 545 388 400
-every 3 from 2192 to 2280: temp 540 382 545 385 400
-every 3 from 2060 to 2280: temp 545 430 550 472 400
-every 3 from 2068 to 2280: temp 545 427 550 430 400
-every 3 from 2076 to 2280: temp 545 424 550 427 400
-every 3 from 2084 to 2280: temp 545 421 550 424 400
-every 3 from 2092 to 2280: temp 545 418 550 421 400
-every 3 from 2100 to 2280: temp 545 415 550 418 400
-every 3 from 2108 to 2280: temp 545 412 550 415 400
-every 3 from 2116 to 2280: temp 545 409 550 412 400
-every 3 from 2124 to 2280: temp 545 406 550 409 400
-every 3 from 2132 to 2280: temp 545 403 550 406 400
-every 3 from 2140 to 2280: temp 545 400 550 403 400
-every 3 from 2148 to 2280: temp 545 397 550 400 400
-every 3 from 2156 to 2280: temp 545 394 550 397 400
-every 3 from 2164 to 2280: temp 545 391 550 394 400
-every 3 from 2172 to 2280: temp 545 388 550 391 400
-every 3 from 2180 to 2280: temp 545 385 550 388 400
-every 3 from 2188 to 2280: temp 545 382 550 385 400
-every 3 from 2063 to 2280: temp 550 430 555 472 400
-every 3 from 2071 to 2280: temp 550 427 555 430 400
-every 3 from 2079 to 2280: temp 550 424 555 427 400
-every 3 from 2087 to 2280: temp 550 421 555 424 400
-every 3 from 2095 to 2280: temp 550 418 555 421 400
-every 3 from 2103 to 2280: temp 550 415 555 418 400
-every 3 from 2111 to 2280: temp 550 412 555 415 400
-every 3 from 2119 to 2280: temp 550 409 555 412 400
-every 3 from 2127 to 2280: temp 550 406 555 409 400
-every 3 from 2135 to 2280: temp 550 403 555 406 400
-every 3 from 2143 to 2280: temp 550 400 555 403 400
-every 3 from 2151 to 2280: temp 550 397 555 400 400
-every 3 from 2159 to 2280: temp 550 394 555 397 400
-every 3 from 2167 to 2280: temp 550 391 555 394 400
-every 3 from 2175 to 2280: temp 550 388 555 391 400
-every 3 from 2183 to 2280: temp 550 385 555 388 400
-every 3 from 2191 to 2280: temp 550 382 555 385 400
-every 3 from 2057 to 2280: temp 555 430 560 472 400
-every 3 from 2065 to 2280: temp 555 427 560 430 400
-every 3 from 2073 to 2280: temp 555 424 560 427 400
-every 3 from 2081 to 2280: temp 555 421 560 424 400
-every 3 from 2089 to 2280: temp 555 418 560 421 400
-every 3 from 2097 to 2280: temp 555 415 560 418 400
-every 3 from 2105 to 2280: temp 555 412 560 415 400
-every 3 from 2113 to 2280: temp 555 409 560 412 400
-every 3 from 2121 to 2280: temp 555 406 560 409 400
-every 3 from 2129 to 2280: temp 555 403 560 406 400
-every 3 from 2137 to 2280: temp 555 400 560 403 400
-every 3 from 2145 to 2280: temp 555 397 560 400 400
-every 3 from 2153 to 2280: temp 555 394 560 397 400
-every 3 from 2161 to 2280: temp 555 391 560 394 400
-every 3 from 2169 to 2280: temp 555 388 560 391 400
-every 3 from 2177 to 2280: temp 555 385 560 388 400
-every 3 from 2185 to 2280: temp 555 382 560 385 400
-// The river crusts over and stops feeding the falls.
-at 2110: fill 292 245 380 246 basalt
-// The surf boils where the falls and the hot new rock meet the sea: steam
-// pours off the waterline around the cones, rises through the hot air over
-// the falls, and drifts downwind as it cools.
-every 2 from 240 to 2110: scatter 522 452 534 468 steam 20
-every 2 from 240 to 2110: temp 522 452 534 468 450
-// The source thins: the jet retreats toward the rim.
-at 1860: fill 498 230 520 300 air
-at 1960: fill 486 230 498 300 air
-at 2040: fill 442 230 486 300 air
-at 2100: fill 380 230 442 300 air
-// Drizzle from the steam cloud.
-every 3 from 700 to 2280: scatter 522 60 660 62 water 1
-every 2 from 2110 to 2280: scatter 380 330 540 332 water 3
+// the feed: the summit lake is kept brimming, then wanes
+every 1 from 0 to 860: fill 200 112 338 130 lava
+every 1 from 861 to 960: fill 200 118 338 130 lava
+every 1 from 961 to 1060: fill 214 126 338 130 lava
+every 1 from 0 to 1060: fill 214 130 338 136 lava
+every 1 from 0 to 1060: fill 228 136 338 140 lava
+// the vents crust shut and the lake skins over
+at 1070: fill 270 140 284 143 basalt
+at 1070: fill 294 140 308 143 basalt
+at 1070: fill 318 140 332 143 basalt
+at 1070: temp 186 116 346 150 1000
+at 1070: temp 336 104 346 116 1000
+at 1090: temp 186 116 346 150 970
+at 1090: temp 336 104 346 116 970
+at 1110: temp 186 116 346 150 940
+at 1110: temp 336 104 346 116 940
+at 1130: temp 186 116 346 150 910
+at 1130: temp 336 104 346 116 910
+at 1150: temp 186 116 346 150 880
+at 1150: temp 336 104 346 116 880
+at 1170: temp 186 116 346 150 850
+at 1170: temp 336 104 346 116 850
+at 1190: temp 186 116 346 150 820
+at 1190: temp 336 104 346 116 820
+at 1210: temp 186 116 346 150 790
+at 1210: temp 336 104 346 116 790
+at 1230: temp 186 116 346 150 760
+at 1230: temp 336 104 346 116 760
+at 1250: temp 186 116 346 150 730
+at 1250: temp 336 104 346 116 730
+at 1270: temp 186 116 346 150 700
+at 1270: temp 336 104 346 116 700
+at 1290: temp 186 116 346 150 670
+at 1290: temp 336 104 346 116 670
+at 1310: temp 186 116 346 150 640
+at 1310: temp 336 104 346 116 640
+at 1330: temp 186 116 346 150 610
+at 1330: temp 336 104 346 116 610
+at 1350: temp 186 116 346 150 580
+at 1350: temp 336 104 346 116 580
+at 1370: temp 186 116 346 150 550
+at 1370: temp 336 104 346 116 550
+at 1390: temp 186 116 346 150 520
+at 1390: temp 336 104 346 116 520
+at 1410: temp 186 116 346 150 490
+at 1410: temp 336 104 346 116 490
+at 1430: temp 186 116 346 150 460
+at 1430: temp 336 104 346 116 460
+at 1450: temp 186 116 346 150 430
+at 1450: temp 336 104 346 116 430
+// steam that collects under the overhang is vented
+every 6: fill 202 204 204 230 air
+every 6: fill 204 202 206 230 air
+every 6: fill 206 200 208 230 air
+every 6: fill 208 198 210 230 air
+every 6: fill 210 197 212 230 air
+every 6: fill 212 195 214 230 air
+every 6: fill 214 193 216 230 air
+every 6: fill 216 191 218 230 air
+every 6: fill 218 190 220 230 air
+every 6: fill 220 188 222 230 air
+every 6: fill 222 186 224 230 air
+every 6: fill 224 184 226 230 air
+every 6: fill 226 182 228 230 air
+every 6: fill 228 181 230 230 air
+every 6: fill 230 179 232 230 air
+every 6: fill 232 177 234 230 air
+every 6: fill 234 175 236 230 air
+every 6: fill 236 174 238 230 air
+every 6: fill 238 172 240 230 air
+every 6: fill 240 170 242 230 air
+every 6: fill 242 168 244 230 air
+every 6: fill 244 167 246 230 air
+every 6: fill 246 165 248 230 air
+every 6: fill 248 163 250 215 air
+every 6: fill 250 161 252 215 air
+every 6: fill 252 159 254 215 air
+every 6: fill 254 158 256 215 air
+every 6: fill 256 156 258 215 air
+every 6: fill 258 154 260 215 air
+every 6: fill 260 152 262 215 air
+every 6: fill 262 151 264 215 air
+every 6: fill 264 149 266 215 air
+every 6: fill 266 147 268 215 air
+every 6 from 1100 to 1129: fill 268 143 346 175 air
+every 4 from 1130 to 1680: fill 268 143 346 214 air
+// steam aloft stays steam
+every 3: temp 180 -80 640 100 110
+every 3: temp 380 100 640 240 110
+every 3: temp 350 100 380 190 110
+// the new island cools and crusts
+// the new island cools and crusts: a ramp over the lava dome, column by
+// column so the air above it is left alone
+at 1160: temp 249 228 255 245 1050
+at 1160: temp 255 229 261 262 1050
+at 1160: temp 261 227 267 262 1050
+at 1160: temp 267 222 273 262 1050
+at 1160: temp 273 221 279 262 1050
+at 1160: temp 279 221 285 262 1050
+at 1160: temp 285 220 291 262 1050
+at 1160: temp 291 220 297 262 1050
+at 1160: temp 297 219 303 262 1050
+at 1160: temp 303 219 309 262 1050
+at 1160: temp 309 219 315 262 1050
+at 1160: temp 315 221 321 262 1050
+at 1160: temp 321 222 327 262 1050
+at 1160: temp 327 224 333 262 1050
+at 1160: temp 333 226 339 262 1050
+at 1160: temp 339 232 345 262 1050
+at 1160: temp 345 232 351 262 1050
+at 1160: temp 351 233 357 245 1050
+at 1160: temp 357 237 363 245 1050
+at 1160: temp 363 241 369 245 1050
+at 1160: temp 369 241 375 245 1050
+at 1180: temp 249 228 255 245 1024
+at 1180: temp 255 229 261 262 1024
+at 1180: temp 261 227 267 262 1024
+at 1180: temp 267 222 273 262 1024
+at 1180: temp 273 221 279 262 1024
+at 1180: temp 279 221 285 262 1024
+at 1180: temp 285 220 291 262 1024
+at 1180: temp 291 220 297 262 1024
+at 1180: temp 297 219 303 262 1024
+at 1180: temp 303 219 309 262 1024
+at 1180: temp 309 219 315 262 1024
+at 1180: temp 315 221 321 262 1024
+at 1180: temp 321 222 327 262 1024
+at 1180: temp 327 224 333 262 1024
+at 1180: temp 333 226 339 262 1024
+at 1180: temp 339 232 345 262 1024
+at 1180: temp 345 232 351 262 1024
+at 1180: temp 351 233 357 245 1024
+at 1180: temp 357 237 363 245 1024
+at 1180: temp 363 241 369 245 1024
+at 1180: temp 369 241 375 245 1024
+at 1200: temp 249 228 255 245 998
+at 1200: temp 255 229 261 262 998
+at 1200: temp 261 227 267 262 998
+at 1200: temp 267 222 273 262 998
+at 1200: temp 273 221 279 262 998
+at 1200: temp 279 221 285 262 998
+at 1200: temp 285 220 291 262 998
+at 1200: temp 291 220 297 262 998
+at 1200: temp 297 219 303 262 998
+at 1200: temp 303 219 309 262 998
+at 1200: temp 309 219 315 262 998
+at 1200: temp 315 221 321 262 998
+at 1200: temp 321 222 327 262 998
+at 1200: temp 327 224 333 262 998
+at 1200: temp 333 226 339 262 998
+at 1200: temp 339 232 345 262 998
+at 1200: temp 345 232 351 262 998
+at 1200: temp 351 233 357 245 998
+at 1200: temp 357 237 363 245 998
+at 1200: temp 363 241 369 245 998
+at 1200: temp 369 241 375 245 998
+at 1220: temp 249 228 255 245 972
+at 1220: temp 255 229 261 262 972
+at 1220: temp 261 227 267 262 972
+at 1220: temp 267 222 273 262 972
+at 1220: temp 273 221 279 262 972
+at 1220: temp 279 221 285 262 972
+at 1220: temp 285 220 291 262 972
+at 1220: temp 291 220 297 262 972
+at 1220: temp 297 219 303 262 972
+at 1220: temp 303 219 309 262 972
+at 1220: temp 309 219 315 262 972
+at 1220: temp 315 221 321 262 972
+at 1220: temp 321 222 327 262 972
+at 1220: temp 327 224 333 262 972
+at 1220: temp 333 226 339 262 972
+at 1220: temp 339 232 345 262 972
+at 1220: temp 345 232 351 262 972
+at 1220: temp 351 233 357 245 972
+at 1220: temp 357 237 363 245 972
+at 1220: temp 363 241 369 245 972
+at 1220: temp 369 241 375 245 972
+at 1240: temp 249 228 255 245 946
+at 1240: temp 255 229 261 262 946
+at 1240: temp 261 227 267 262 946
+at 1240: temp 267 222 273 262 946
+at 1240: temp 273 221 279 262 946
+at 1240: temp 279 221 285 262 946
+at 1240: temp 285 220 291 262 946
+at 1240: temp 291 220 297 262 946
+at 1240: temp 297 219 303 262 946
+at 1240: temp 303 219 309 262 946
+at 1240: temp 309 219 315 262 946
+at 1240: temp 315 221 321 262 946
+at 1240: temp 321 222 327 262 946
+at 1240: temp 327 224 333 262 946
+at 1240: temp 333 226 339 262 946
+at 1240: temp 339 232 345 262 946
+at 1240: temp 345 232 351 262 946
+at 1240: temp 351 233 357 245 946
+at 1240: temp 357 237 363 245 946
+at 1240: temp 363 241 369 245 946
+at 1240: temp 369 241 375 245 946
+at 1260: temp 249 228 255 245 920
+at 1260: temp 255 229 261 262 920
+at 1260: temp 261 227 267 262 920
+at 1260: temp 267 222 273 262 920
+at 1260: temp 273 221 279 262 920
+at 1260: temp 279 221 285 262 920
+at 1260: temp 285 220 291 262 920
+at 1260: temp 291 220 297 262 920
+at 1260: temp 297 219 303 262 920
+at 1260: temp 303 219 309 262 920
+at 1260: temp 309 219 315 262 920
+at 1260: temp 315 221 321 262 920
+at 1260: temp 321 222 327 262 920
+at 1260: temp 327 224 333 262 920
+at 1260: temp 333 226 339 262 920
+at 1260: temp 339 232 345 262 920
+at 1260: temp 345 232 351 262 920
+at 1260: temp 351 233 357 245 920
+at 1260: temp 357 237 363 245 920
+at 1260: temp 363 241 369 245 920
+at 1260: temp 369 241 375 245 920
+at 1280: temp 249 228 255 245 895
+at 1280: temp 255 229 261 262 895
+at 1280: temp 261 227 267 262 895
+at 1280: temp 267 222 273 262 895
+at 1280: temp 273 221 279 262 895
+at 1280: temp 279 221 285 262 895
+at 1280: temp 285 220 291 262 895
+at 1280: temp 291 220 297 262 895
+at 1280: temp 297 219 303 262 895
+at 1280: temp 303 219 309 262 895
+at 1280: temp 309 219 315 262 895
+at 1280: temp 315 221 321 262 895
+at 1280: temp 321 222 327 262 895
+at 1280: temp 327 224 333 262 895
+at 1280: temp 333 226 339 262 895
+at 1280: temp 339 232 345 262 895
+at 1280: temp 345 232 351 262 895
+at 1280: temp 351 233 357 245 895
+at 1280: temp 357 237 363 245 895
+at 1280: temp 363 241 369 245 895
+at 1280: temp 369 241 375 245 895
+at 1300: temp 249 228 255 245 869
+at 1300: temp 255 229 261 262 869
+at 1300: temp 261 227 267 262 869
+at 1300: temp 267 222 273 262 869
+at 1300: temp 273 221 279 262 869
+at 1300: temp 279 221 285 262 869
+at 1300: temp 285 220 291 262 869
+at 1300: temp 291 220 297 262 869
+at 1300: temp 297 219 303 262 869
+at 1300: temp 303 219 309 262 869
+at 1300: temp 309 219 315 262 869
+at 1300: temp 315 221 321 262 869
+at 1300: temp 321 222 327 262 869
+at 1300: temp 327 224 333 262 869
+at 1300: temp 333 226 339 262 869
+at 1300: temp 339 232 345 262 869
+at 1300: temp 345 232 351 262 869
+at 1300: temp 351 233 357 245 869
+at 1300: temp 357 237 363 245 869
+at 1300: temp 363 241 369 245 869
+at 1300: temp 369 241 375 245 869
+at 1320: temp 249 228 255 245 843
+at 1320: temp 255 229 261 262 843
+at 1320: temp 261 227 267 262 843
+at 1320: temp 267 222 273 262 843
+at 1320: temp 273 221 279 262 843
+at 1320: temp 279 221 285 262 843
+at 1320: temp 285 220 291 262 843
+at 1320: temp 291 220 297 262 843
+at 1320: temp 297 219 303 262 843
+at 1320: temp 303 219 309 262 843
+at 1320: temp 309 219 315 262 843
+at 1320: temp 315 221 321 262 843
+at 1320: temp 321 222 327 262 843
+at 1320: temp 327 224 333 262 843
+at 1320: temp 333 226 339 262 843
+at 1320: temp 339 232 345 262 843
+at 1320: temp 345 232 351 262 843
+at 1320: temp 351 233 357 245 843
+at 1320: temp 357 237 363 245 843
+at 1320: temp 363 241 369 245 843
+at 1320: temp 369 241 375 245 843
+at 1340: temp 249 228 255 245 817
+at 1340: temp 255 229 261 262 817
+at 1340: temp 261 227 267 262 817
+at 1340: temp 267 222 273 262 817
+at 1340: temp 273 221 279 262 817
+at 1340: temp 279 221 285 262 817
+at 1340: temp 285 220 291 262 817
+at 1340: temp 291 220 297 262 817
+at 1340: temp 297 219 303 262 817
+at 1340: temp 303 219 309 262 817
+at 1340: temp 309 219 315 262 817
+at 1340: temp 315 221 321 262 817
+at 1340: temp 321 222 327 262 817
+at 1340: temp 327 224 333 262 817
+at 1340: temp 333 226 339 262 817
+at 1340: temp 339 232 345 262 817
+at 1340: temp 345 232 351 262 817
+at 1340: temp 351 233 357 245 817
+at 1340: temp 357 237 363 245 817
+at 1340: temp 363 241 369 245 817
+at 1340: temp 369 241 375 245 817
+at 1360: temp 249 228 255 245 791
+at 1360: temp 255 229 261 262 791
+at 1360: temp 261 227 267 262 791
+at 1360: temp 267 222 273 262 791
+at 1360: temp 273 221 279 262 791
+at 1360: temp 279 221 285 262 791
+at 1360: temp 285 220 291 262 791
+at 1360: temp 291 220 297 262 791
+at 1360: temp 297 219 303 262 791
+at 1360: temp 303 219 309 262 791
+at 1360: temp 309 219 315 262 791
+at 1360: temp 315 221 321 262 791
+at 1360: temp 321 222 327 262 791
+at 1360: temp 327 224 333 262 791
+at 1360: temp 333 226 339 262 791
+at 1360: temp 339 232 345 262 791
+at 1360: temp 345 232 351 262 791
+at 1360: temp 351 233 357 245 791
+at 1360: temp 357 237 363 245 791
+at 1360: temp 363 241 369 245 791
+at 1360: temp 369 241 375 245 791
+at 1380: temp 249 228 255 245 765
+at 1380: temp 255 229 261 262 765
+at 1380: temp 261 227 267 262 765
+at 1380: temp 267 222 273 262 765
+at 1380: temp 273 221 279 262 765
+at 1380: temp 279 221 285 262 765
+at 1380: temp 285 220 291 262 765
+at 1380: temp 291 220 297 262 765
+at 1380: temp 297 219 303 262 765
+at 1380: temp 303 219 309 262 765
+at 1380: temp 309 219 315 262 765
+at 1380: temp 315 221 321 262 765
+at 1380: temp 321 222 327 262 765
+at 1380: temp 327 224 333 262 765
+at 1380: temp 333 226 339 262 765
+at 1380: temp 339 232 345 262 765
+at 1380: temp 345 232 351 262 765
+at 1380: temp 351 233 357 245 765
+at 1380: temp 357 237 363 245 765
+at 1380: temp 363 241 369 245 765
+at 1380: temp 369 241 375 245 765
+at 1400: temp 249 228 255 245 740
+at 1400: temp 255 229 261 262 740
+at 1400: temp 261 227 267 262 740
+at 1400: temp 267 222 273 262 740
+at 1400: temp 273 221 279 262 740
+at 1400: temp 279 221 285 262 740
+at 1400: temp 285 220 291 262 740
+at 1400: temp 291 220 297 262 740
+at 1400: temp 297 219 303 262 740
+at 1400: temp 303 219 309 262 740
+at 1400: temp 309 219 315 262 740
+at 1400: temp 315 221 321 262 740
+at 1400: temp 321 222 327 262 740
+at 1400: temp 327 224 333 262 740
+at 1400: temp 333 226 339 262 740
+at 1400: temp 339 232 345 262 740
+at 1400: temp 345 232 351 262 740
+at 1400: temp 351 233 357 245 740
+at 1400: temp 357 237 363 245 740
+at 1400: temp 363 241 369 245 740
+at 1400: temp 369 241 375 245 740
+at 1420: temp 255 244 261 262 714
+at 1420: temp 261 243 267 262 714
+at 1420: temp 267 229 273 262 714
+at 1420: temp 273 234 279 262 714
+at 1420: temp 279 233 285 262 714
+at 1420: temp 285 233 291 262 714
+at 1420: temp 291 228 297 262 714
+at 1420: temp 297 231 303 262 714
+at 1420: temp 303 231 309 262 714
+at 1420: temp 309 232 315 262 714
+at 1420: temp 315 232 321 262 714
+at 1420: temp 321 232 327 262 714
+at 1420: temp 327 232 333 262 714
+at 1420: temp 333 235 339 262 714
+at 1420: temp 339 235 345 262 714
+at 1420: temp 345 237 351 262 714
+at 1420: temp 351 241 357 245 714
+at 1440: temp 255 244 261 262 688
+at 1440: temp 261 243 267 262 688
+at 1440: temp 267 229 273 262 688
+at 1440: temp 273 234 279 262 688
+at 1440: temp 279 233 285 262 688
+at 1440: temp 285 233 291 262 688
+at 1440: temp 291 228 297 262 688
+at 1440: temp 297 231 303 262 688
+at 1440: temp 303 231 309 262 688
+at 1440: temp 309 232 315 262 688
+at 1440: temp 315 232 321 262 688
+at 1440: temp 321 232 327 262 688
+at 1440: temp 327 232 333 262 688
+at 1440: temp 333 235 339 262 688
+at 1440: temp 339 235 345 262 688
+at 1440: temp 345 237 351 262 688
+at 1440: temp 351 241 357 245 688
+at 1460: temp 255 244 261 262 662
+at 1460: temp 261 243 267 262 662
+at 1460: temp 267 229 273 262 662
+at 1460: temp 273 234 279 262 662
+at 1460: temp 279 233 285 262 662
+at 1460: temp 285 233 291 262 662
+at 1460: temp 291 228 297 262 662
+at 1460: temp 297 231 303 262 662
+at 1460: temp 303 231 309 262 662
+at 1460: temp 309 232 315 262 662
+at 1460: temp 315 232 321 262 662
+at 1460: temp 321 232 327 262 662
+at 1460: temp 327 232 333 262 662
+at 1460: temp 333 235 339 262 662
+at 1460: temp 339 235 345 262 662
+at 1460: temp 345 237 351 262 662
+at 1460: temp 351 241 357 245 662
+at 1480: temp 255 244 261 262 636
+at 1480: temp 261 243 267 262 636
+at 1480: temp 267 229 273 262 636
+at 1480: temp 273 234 279 262 636
+at 1480: temp 279 233 285 262 636
+at 1480: temp 285 233 291 262 636
+at 1480: temp 291 228 297 262 636
+at 1480: temp 297 231 303 262 636
+at 1480: temp 303 231 309 262 636
+at 1480: temp 309 232 315 262 636
+at 1480: temp 315 232 321 262 636
+at 1480: temp 321 232 327 262 636
+at 1480: temp 327 232 333 262 636
+at 1480: temp 333 235 339 262 636
+at 1480: temp 339 235 345 262 636
+at 1480: temp 345 237 351 262 636
+at 1480: temp 351 241 357 245 636
+at 1500: temp 255 244 261 262 610
+at 1500: temp 261 243 267 262 610
+at 1500: temp 267 229 273 262 610
+at 1500: temp 273 234 279 262 610
+at 1500: temp 279 233 285 262 610
+at 1500: temp 285 233 291 262 610
+at 1500: temp 291 228 297 262 610
+at 1500: temp 297 231 303 262 610
+at 1500: temp 303 231 309 262 610
+at 1500: temp 309 232 315 262 610
+at 1500: temp 315 232 321 262 610
+at 1500: temp 321 232 327 262 610
+at 1500: temp 327 232 333 262 610
+at 1500: temp 333 235 339 262 610
+at 1500: temp 339 235 345 262 610
+at 1500: temp 345 237 351 262 610
+at 1500: temp 351 241 357 245 610
+at 1520: temp 255 244 261 262 585
+at 1520: temp 261 243 267 262 585
+at 1520: temp 267 229 273 262 585
+at 1520: temp 273 234 279 262 585
+at 1520: temp 279 233 285 262 585
+at 1520: temp 285 233 291 262 585
+at 1520: temp 291 228 297 262 585
+at 1520: temp 297 231 303 262 585
+at 1520: temp 303 231 309 262 585
+at 1520: temp 309 232 315 262 585
+at 1520: temp 315 232 321 262 585
+at 1520: temp 321 232 327 262 585
+at 1520: temp 327 232 333 262 585
+at 1520: temp 333 235 339 262 585
+at 1520: temp 339 235 345 262 585
+at 1520: temp 345 237 351 262 585
+at 1520: temp 351 241 357 245 585
+at 1540: temp 255 244 261 262 559
+at 1540: temp 261 243 267 262 559
+at 1540: temp 267 229 273 262 559
+at 1540: temp 273 234 279 262 559
+at 1540: temp 279 233 285 262 559
+at 1540: temp 285 233 291 262 559
+at 1540: temp 291 228 297 262 559
+at 1540: temp 297 231 303 262 559
+at 1540: temp 303 231 309 262 559
+at 1540: temp 309 232 315 262 559
+at 1540: temp 315 232 321 262 559
+at 1540: temp 321 232 327 262 559
+at 1540: temp 327 232 333 262 559
+at 1540: temp 333 235 339 262 559
+at 1540: temp 339 235 345 262 559
+at 1540: temp 345 237 351 262 559
+at 1540: temp 351 241 357 245 559
+at 1560: temp 255 244 261 262 533
+at 1560: temp 261 243 267 262 533
+at 1560: temp 267 229 273 262 533
+at 1560: temp 273 234 279 262 533
+at 1560: temp 279 233 285 262 533
+at 1560: temp 285 233 291 262 533
+at 1560: temp 291 228 297 262 533
+at 1560: temp 297 231 303 262 533
+at 1560: temp 303 231 309 262 533
+at 1560: temp 309 232 315 262 533
+at 1560: temp 315 232 321 262 533
+at 1560: temp 321 232 327 262 533
+at 1560: temp 327 232 333 262 533
+at 1560: temp 333 235 339 262 533
+at 1560: temp 339 235 345 262 533
+at 1560: temp 345 237 351 262 533
+at 1560: temp 351 241 357 245 533
+at 1580: temp 255 244 261 262 507
+at 1580: temp 261 243 267 262 507
+at 1580: temp 267 229 273 262 507
+at 1580: temp 273 234 279 262 507
+at 1580: temp 279 233 285 262 507
+at 1580: temp 285 233 291 262 507
+at 1580: temp 291 228 297 262 507
+at 1580: temp 297 231 303 262 507
+at 1580: temp 303 231 309 262 507
+at 1580: temp 309 232 315 262 507
+at 1580: temp 315 232 321 262 507
+at 1580: temp 321 232 327 262 507
+at 1580: temp 327 232 333 262 507
+at 1580: temp 333 235 339 262 507
+at 1580: temp 339 235 345 262 507
+at 1580: temp 345 237 351 262 507
+at 1580: temp 351 241 357 245 507
+at 1600: temp 255 244 261 262 481
+at 1600: temp 261 243 267 262 481
+at 1600: temp 267 229 273 262 481
+at 1600: temp 273 234 279 262 481
+at 1600: temp 279 233 285 262 481
+at 1600: temp 285 233 291 262 481
+at 1600: temp 291 228 297 262 481
+at 1600: temp 297 231 303 262 481
+at 1600: temp 303 231 309 262 481
+at 1600: temp 309 232 315 262 481
+at 1600: temp 315 232 321 262 481
+at 1600: temp 321 232 327 262 481
+at 1600: temp 327 232 333 262 481
+at 1600: temp 333 235 339 262 481
+at 1600: temp 339 235 345 262 481
+at 1600: temp 345 237 351 262 481
+at 1600: temp 351 241 357 245 481
+at 1620: temp 255 244 261 262 455
+at 1620: temp 261 243 267 262 455
+at 1620: temp 267 229 273 262 455
+at 1620: temp 273 234 279 262 455
+at 1620: temp 279 233 285 262 455
+at 1620: temp 285 233 291 262 455
+at 1620: temp 291 228 297 262 455
+at 1620: temp 297 231 303 262 455
+at 1620: temp 303 231 309 262 455
+at 1620: temp 309 232 315 262 455
+at 1620: temp 315 232 321 262 455
+at 1620: temp 321 232 327 262 455
+at 1620: temp 327 232 333 262 455
+at 1620: temp 333 235 339 262 455
+at 1620: temp 339 235 345 262 455
+at 1620: temp 345 237 351 262 455
+at 1620: temp 351 241 357 245 455
+at 1640: temp 255 244 261 262 430
+at 1640: temp 261 243 267 262 430
+at 1640: temp 267 229 273 262 430
+at 1640: temp 273 234 279 262 430
+at 1640: temp 279 233 285 262 430
+at 1640: temp 285 233 291 262 430
+at 1640: temp 291 228 297 262 430
+at 1640: temp 297 231 303 262 430
+at 1640: temp 303 231 309 262 430
+at 1640: temp 309 232 315 262 430
+at 1640: temp 315 232 321 262 430
+at 1640: temp 321 232 327 262 430
+at 1640: temp 327 232 333 262 430
+at 1640: temp 333 235 339 262 430
+at 1640: temp 339 235 345 262 430
+at 1640: temp 345 237 351 262 430
+at 1640: temp 351 241 357 245 430
 
 [camera]
-view 960 540
-scale 2
-sky night
-ambient 0.03 0.03 0.04
-exposure 1.5
-at 0: 540 395 zoom=1.3
-at 240: 540 395 zoom=1.3
-at 1200: 560 390 zoom=1.0
-at 2040: 580 388 zoom=0.95
-at 2280: 600 385 zoom=0.85
+// Close on the lake and the curtains hitting the sea for 3 s, then ease out
+// to the cliff, the strait and the new island with the steam plume.
+view 640 360
+scale 3
+sky dusk
+exposure 1.3
+at 0: 275 190 zoom=1.8
+at 180: 275 190 zoom=1.8
+at 700: 290 188 zoom=1.35
+at 1680: 290 188 zoom=1.35
 
 [expect]
-// The falls are pouring by 5 s: lava in the air over the shelf.
-after 300: count lava in 400 252 520 440 > 400
-// Cinders break the surface by 15 s and the cones keep growing.
-after 900: count rubble in 380 380 560 470 > 800
-after 1800: count rubble in 380 300 560 470 > 4000
-after 1800: count rubble in 380 300 560 400 > 600
-// Steam is rising off the impact zone, and sea mist lies over the water.
-after 900: count steam in 380 0 1280 470 > 500
-after 900: count mist in 380 0 1280 470 > 500
-// The falls have stopped by the end and the new land has cooled.
-after 2270: count lava in 400 252 560 440 < 200
-after 2270: temp rubble in 380 380 560 470 < 450
+// The three curtains fall from the cornice to the sea from the first seconds.
+after 150: count lava in 268 143 346 240 > 300
+after 150: drawn lava in 268 143 346 240 > 1200
+after 600: drawn lava in 268 143 346 220 > 1500
+after 1000: drawn lava in 268 143 346 210 > 1200
+// Steam boils off the sea entry.
+after 300: count steam in 186 -200 640 250 > 400
+after 1000: count steam in 186 -200 640 250 > 1200
+// New rock: a cone of rubble and gravel grows up from the seabed...
+after 600: count rubble in 200 245 420 320 > 600
+after 1000: count gravel in 200 245 420 320 > 1500
+// ...and breaks the surface as an island.
+after 900: count lava in 236 200 380 244 > 1000
+// The vents have crusted shut and the lake and island have frozen to basalt.
+after 1670: count lava in 186 100 400 300 < 30
+after 1670: count basalt in 200 104 346 143 > 1500
+after 1670: count rubble in 236 200 380 244 > 200
+after 1670: count basalt in 236 200 380 244 > 150
+after 1670: count rubble in 236 244 380 262 > 1000
