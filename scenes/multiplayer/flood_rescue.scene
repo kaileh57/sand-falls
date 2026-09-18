@@ -1,203 +1,619 @@
-// Flood rescue, co-op: an underground lake breaks through the roof of a cave
-// system. A slab of the lake floor drops out as a rigid body and the flood
-// pours down two fissures into the top tunnel, runs both ways along it and
-// spills down the open left and right shafts into the middle caves, which
-// fill to pools. The players start in the top tunnel over a sealed, lit
-// gallery: their digging breaks its thin rock floor, and new waterfalls pour
-// in where there was rock. Below the gallery a soil plug holds the centre
-// shaft; once they dig it out, the water they steered fills the centre
-// chamber instead of running on down the right-hand way. That way spills
-// over a sill onto a lava pocket and crusts it over, until a charge drops
-// the lower tunnel into a deep well. A second charge drains the left chamber
-// into the sump. The villagers sit dry in a lit bedrock vault at the
-// bottom, which no digging can break.
+// Flood rescue, co-op. A reservoir held back by a stone dam sits above a
+// cave system. Four players stand on a bedrock lip in the tunnel under the
+// dam, behind an iron-hard railing, and dig out the soil plug in the tunnel
+// floor in front of them. Their cut frees the rest of the plug, which drops
+// into the empty cavern below as one block. The dam springs a leak, a jet
+// arcing across the hall onto the plug, then bursts: the flood surges along
+// the tunnel and pours down the players' slot into the cavern as a curtain,
+// while the crew runs for the dry landing past the berm. A spring keeps the
+// reservoir running. Once the cavern is deep the crew drops down the shaft to
+// a ledge in the lava well and cuts the beam that holds the drain gate in the
+// cavern floor: the gate falls into the lava and the cavern pours down onto
+// it, which boils and crusts over. The villagers sit dry in a lit bedrock
+// vault under the reservoir.
 [scene]
 name = flood rescue
-description = Co-op: an underground lake bursts into a cave system; four players dig through the rock under their feet to open new waterfalls and steer the flood through tunnels, shafts and chambers, while charges blast drains past a lava pocket and around the villagers' lit vault.
+description = Co-op: four players dig a slot through the tunnel floor to steer a real-time flood from a burst dam into a cavern, then cut the beam that holds its drain gate so the cavern pours onto a lava well, while the villagers stay dry.
 size = 640 480
 seed = 0xf100d
-spawn = 300 120
+spawn = 480 172
+spawn = 486 172
+spawn = 474 172
+spawn = 604 172
 ticks = 2400
 
 [build]
 fill 0 0 640 480 stone
+fill 0 0 640 4 bedrock
 fill 0 470 640 480 bedrock
 fill 0 0 6 480 bedrock
 fill 634 0 640 480 bedrock
 
-// The underground lake, topped up by springs, and the fissures in its floor.
-fill 130 8 470 58 air
-circle 250 12 34 air
-circle 400 14 30 air
-fill 130 16 470 58 water
-fill 226 6 266 8 water_source
-fill 400 8 430 10 water_source
-fill 226 58 262 72 air
-circle 244 62 12 air
-fill 410 58 434 72 air
-circle 422 62 10 air
-// A rock column holds up the lake floor between the fissures.
-fill 326 8 342 58 stone
-circle 334 58 10 stone
+// The reservoir, a hundred rows deep, under a domed roof. A spring pipe in
+// its left wall keeps it running once the dam goes.
+fill 30 44 236 172 air
+circle 125 52 34 air
+circle 52 52 16 air
+circle 208 52 16 air
+fill 30 64 236 172 water
+fill 8 58 26 172 air
+fill 8 64 26 172 water
+fill 26 58 30 150 stone
+fill 12 58 20 59 water_source
 
-// Top tunnel, floor at 130, with a ragged roof.
-fill 14 72 620 130 air
-circle 60 72 14 air
-circle 160 78 12 air
-circle 400 72 16 air
-circle 480 70 10 air
-circle 570 72 14 air
-circle 200 132 6 stone
-circle 430 132 5 stone
+// A tall hall below the dam, and the tunnel from it, with a ragged roof.
+fill 252 112 624 172 air
+fill 252 56 316 172 air
+circle 284 64 30 air
+circle 318 112 20 air
+circle 360 110 10 air
+circle 450 112 14 air
+circle 540 110 12 air
+circle 600 114 10 air
+// The dam: the stone between the reservoir and the hall, x 236..252.
 
-// A gallery right under the players' feet, sealed off by a thin floor of
-// rock. Their digging breaks through it, and the flood pours in.
-fill 180 142 440 172 air
-circle 236 150 10 air
-circle 384 150 10 air
-circle 300 168 14 air
-// Shafts from the top tunnel to the middle caves.
-// Left shaft, open: the flood's first way down.
-fill 100 130 128 236 air
-// Centre shaft from the gallery floor, plugged with soil.
-fill 288 172 312 250 air
-fill 288 172 312 190 soil
-// Right shaft, open.
-fill 520 130 548 236 air
+// Everything the crew can reach from where they stand is bedrock, so their
+// tools only bite where the story needs them to: the slot, and the beam.
+fill 300 172 634 204 bedrock
+fill 560 132 634 356 bedrock
+fill 486 288 634 356 bedrock
+fill 560 112 624 172 air
+circle 600 114 10 air
 
-// Middle caves: three chambers, each fed by its own shaft.
-fill 60 230 210 320 air
-circle 120 232 26 air
-fill 250 250 400 320 air
-circle 330 254 30 air
-fill 440 230 590 320 air
-circle 520 232 26 air
+// The cavern under the tunnel.
+fill 230 186 448 300 air
+circle 380 214 30 air
+circle 300 200 14 air
+fill 300 172 448 186 bedrock
+fill 230 300 448 314 stone
 
-// Left shaft down to the sump, behind a thin stone wall at its top.
-fill 90 324 116 350 air
-// The sump: a big empty cave on the lower left, and an old tunnel from it
-// that ends at the vault wall.
-fill 14 350 220 462 air
-circle 110 366 24 air
-fill 220 372 252 392 air
+// The slot: a soil plug through the tunnel floor over the cavern. A seam of
+// moss on its left holds nothing up, so the plug hangs from the bedrock lip
+// on its right: once the crew cuts through by the lip, the rest drops out.
+fill 372 172 430 186 soil
+fill 370 172 372 186 moss
+// The railing on the lip keeps the crew out of the slot and turns back the
+// part of the surge that jumps it.
+fill 430 132 434 172 bedrock
 
-// The right chamber drains over a sill in its far wall, so it fills to a
-// pool first, then spills down a shaft to the lower tunnel.
-fill 590 300 606 310 air
-fill 594 302 612 352 air
-// Lower tunnel, floor at 392, running left over the vault.
-fill 420 352 620 392 air
-// A lava pocket right under the spill: water that takes this way boils.
-fill 556 392 618 436 air
-fill 556 404 618 436 lava
-// A deep well under the tunnel, behind a thin stone floor.
-fill 440 396 520 464 air
+// A bedrock berm past the crew holds the tunnel's water back from the dry
+// landing at its end.
+fill 520 172 521 172 bedrock
+fill 521 171 522 172 bedrock
+fill 522 170 523 172 bedrock
+fill 523 170 524 172 bedrock
+fill 524 169 525 172 bedrock
+fill 525 168 526 172 bedrock
+fill 526 167 527 172 bedrock
+fill 527 166 528 172 bedrock
+fill 528 166 529 172 bedrock
+fill 529 165 530 172 bedrock
+fill 530 164 531 172 bedrock
+fill 531 163 532 172 bedrock
+fill 532 163 533 172 bedrock
+fill 533 162 534 172 bedrock
+fill 534 161 535 172 bedrock
+fill 535 160 536 172 bedrock
+fill 536 159 537 172 bedrock
+fill 537 159 538 172 bedrock
+fill 538 158 539 172 bedrock
+fill 539 157 540 172 bedrock
+fill 540 156 541 172 bedrock
+fill 541 156 542 172 bedrock
+fill 542 155 543 172 bedrock
+fill 543 154 544 172 bedrock
+fill 544 153 545 172 bedrock
+fill 545 152 546 172 bedrock
+fill 546 152 547 172 bedrock
+fill 547 151 548 172 bedrock
+fill 548 150 549 172 bedrock
+fill 549 150 550 172 bedrock
+fill 550 150 551 172 bedrock
+fill 551 150 552 172 bedrock
+fill 552 150 553 172 bedrock
+fill 553 150 554 172 bedrock
+fill 554 150 555 172 bedrock
+fill 555 150 556 172 bedrock
+fill 556 150 557 172 bedrock
+fill 557 150 558 172 bedrock
+fill 558 150 559 172 bedrock
+fill 559 150 560 172 bedrock
+fill 560 150 561 172 bedrock
+fill 561 150 562 172 bedrock
+fill 562 150 563 172 bedrock
+fill 563 151 564 172 bedrock
+fill 564 152 565 172 bedrock
+fill 565 153 566 172 bedrock
+fill 566 154 567 172 bedrock
+fill 567 155 568 172 bedrock
+fill 568 156 569 172 bedrock
+fill 569 157 570 172 bedrock
+fill 570 158 571 172 bedrock
+fill 571 159 572 172 bedrock
+fill 572 160 573 172 bedrock
+fill 573 161 574 172 bedrock
+fill 574 162 575 172 bedrock
+fill 575 163 576 172 bedrock
+fill 576 164 577 172 bedrock
+fill 577 165 578 172 bedrock
+fill 578 166 579 172 bedrock
+fill 579 167 580 172 bedrock
+fill 580 168 581 172 bedrock
+fill 581 169 582 172 bedrock
+fill 582 170 583 172 bedrock
+fill 583 171 584 172 bedrock
 
-// The villagers' vault: a sealed bedrock shell no digging can break.
-fill 254 394 410 456 bedrock
-fill 260 400 404 450 air
+// The lava well under the cavern's right end. A hot bed under the lava keeps
+// it boiling whatever lands on it.
+fill 294 314 520 466 air
+fill 294 430 420 462 lava
+fill 420 430 520 466 stone
+fill 294 462 420 466 heater
+// The landing past the berm, the shaft under its hatch, and the ledge in the
+// well's right wall.
+fill 596 190 624 320 air
+fill 520 294 624 320 air
 
-// Wooden huts on the vault floor.
-fill 272 434 274 450 wood
-fill 292 434 294 450 wood
-fill 270 432 296 434 wood
-fill 273 430 293 432 wood
-fill 276 428 290 430 wood
-fill 279 426 287 428 wood
-fill 316 432 318 450 wood
-fill 340 432 342 450 wood
-fill 314 430 344 432 wood
-fill 317 428 341 430 wood
-fill 320 426 338 428 wood
-fill 323 424 335 426 wood
-fill 326 422 332 424 wood
-fill 362 436 364 450 wood
-fill 380 436 382 450 wood
-fill 360 434 384 436 wood
-fill 363 432 381 434 wood
-fill 366 430 378 432 wood
-// Torches inside and between the huts.
-fill 282 440 284 443 torch
-fill 328 438 330 441 torch
-fill 371 442 373 445 torch
-fill 262 412 264 415 torch
-fill 304 410 306 413 torch
-fill 352 410 354 413 torch
-fill 396 412 398 415 torch
-// Glowshroom garden.
-fill 300 446 301 450 glowshroom
-fill 298 444 303 446 glowshroom
-fill 305 447 306 450 glowshroom
-fill 304 445 307 447 glowshroom
-fill 349 446 350 450 glowshroom
-fill 347 444 352 446 glowshroom
-fill 354 447 355 450 glowshroom
-fill 353 445 356 447 glowshroom
-fill 388 446 389 450 glowshroom
-fill 386 444 391 446 glowshroom
+// The drain gate: a soil plug through the cavern floor over the well, in
+// moss seams, hung from a soil beam under the floor that runs out to the
+// ledge and rests on it.
+fill 298 300 326 320 moss
+fill 300 300 324 320 soil
+fill 324 316 524 320 soil
 
-// Torches along the tunnels.
-fill 130 112 132 115 torch
-fill 220 112 222 115 torch
-fill 400 112 402 115 torch
-fill 590 112 592 115 torch
-fill 70 290 72 293 torch
-fill 200 296 202 299 torch
-fill 460 290 462 293 torch
-fill 256 284 258 287 torch
-fill 330 270 332 273 torch
-fill 392 284 394 287 torch
-fill 580 296 582 299 torch
-fill 470 372 472 375 torch
-fill 30 420 32 423 torch
-fill 200 420 202 423 torch
-fill 186 156 188 159 torch
-fill 300 150 302 153 torch
-fill 432 156 434 159 torch
-// Glowshroom clusters on the floors and moss on the roofs.
-decorate 14 72 620 130 glowshroom 2 floor
-decorate 180 142 440 172 glowshroom 4 floor
-decorate 60 230 590 320 glowshroom 2 floor
-decorate 14 350 220 462 glowshroom 2 floor
-// No moss under the lake floor: it would pin the slab that breaks away.
-decorate 14 60 150 462 moss 2 ceiling
-decorate 280 60 620 462 moss 2 ceiling
-decorate 150 140 280 462 moss 2 ceiling
+// The villagers' vault, a sealed bedrock shell under the reservoir.
+fill 22 322 238 470 bedrock
+fill 30 330 230 462 air
+fill 44 444 46 462 wood
+fill 68 444 70 462 wood
+fill 42 442 72 444 wood
+fill 45 440 69 442 wood
+fill 48 438 66 440 wood
+fill 51 436 63 438 wood
+fill 92 440 94 462 wood
+fill 120 440 122 462 wood
+fill 90 438 124 440 wood
+fill 93 436 121 438 wood
+fill 96 434 118 436 wood
+fill 99 432 115 434 wood
+fill 102 430 112 432 wood
+fill 144 446 146 462 wood
+fill 168 446 170 462 wood
+fill 142 444 172 446 wood
+fill 145 442 169 444 wood
+fill 148 440 166 442 wood
+fill 151 438 163 440 wood
+fill 190 442 192 462 wood
+fill 214 442 216 462 wood
+fill 188 440 218 442 wood
+fill 191 438 215 440 wood
+fill 194 436 212 438 wood
+fill 197 434 209 436 wood
+fill 54 448 56 451 torch
+fill 105 444 107 447 torch
+fill 155 450 157 453 torch
+fill 201 446 203 449 torch
+fill 36 380 38 383 torch
+fill 84 372 86 375 torch
+fill 132 370 134 373 torch
+fill 180 372 182 375 torch
+fill 224 380 226 383 torch
+fill 76 455 77 462 glowshroom
+fill 74 453 79 455 glowshroom
+fill 128 455 129 462 glowshroom
+fill 126 453 131 455 glowshroom
+fill 178 456 179 462 glowshroom
+fill 176 454 181 456 glowshroom
+decorate 30 330 230 462 crystal 2 ceiling
+player 12 40 462
+player 13 82 462
+player 14 118 462
+player 15 134 462
+player 20 172 462
+player 21 222 462
+
+// Lights. Torches sit high on the walls, above every water line; glowshrooms
+// and crystals light the water from under it.
+fill 40 46 42 49 torch
+fill 208 40 210 43 torch
+fill 125 22 127 25 torch
+fill 280 40 282 43 torch
+fill 450 100 452 103 torch
+fill 540 100 542 103 torch
+fill 600 106 602 109 torch
+fill 240 196 242 199 torch
+fill 236 260 238 263 torch
+fill 300 188 302 191 torch
+decorate 30 44 236 172 glowshroom 5 floor
+decorate 30 44 236 172 crystal 2 walls
+decorate 252 112 340 172 glowshroom 3 floor
+decorate 230 186 440 300 glowshroom 5 floor
+decorate 230 186 440 300 crystal 2 walls
+decorate 252 40 400 172 moss 2 ceiling
+decorate 230 186 440 300 moss 2 ceiling
+decorate 294 314 520 430 crystal 1 walls
 
 [events]
-// The lake floor cracks: the slab beside the left fissure is cut loose,
-// falls into the top tunnel as a rigid body, and the lake pours through.
-at 90: explode 168 65 7 160
-at 90: dig 168 65 8
-// A charge blows a hole in the thin floor of the lower tunnel, and the water
-// there drains into the well instead of running on toward the vault.
-at 960: explode 476 394 7 200
-// Another blasts the thin wall at the bottom of the left chamber, and the
-// left chamber drains into the sump.
-at 1470: explode 103 322 7 200
+// The dam springs a leak: the reservoir's head drives a jet out across the
+// hall, onto the plug the crew is digging.
+at 110: dig 238 140 4
+at 110: dig 243 140 4
+at 110: dig 248 140 4
+at 110: dig 252 140 4
+// Then it bursts: the whole face collapses into the hall and the flood
+// surges along the tunnel toward the crew's slot.
+at 300: dig 244 50 12
+at 300: dig 244 62 12
+at 300: dig 244 74 12
+at 300: dig 244 86 12
+at 300: dig 244 98 12
+at 300: dig 244 110 12
+at 300: dig 244 122 12
+at 300: dig 244 134 12
+at 300: dig 244 146 12
+at 300: dig 244 158 12
+at 300: dig 244 164 9
+
+// The crew: put back on their marks every few ticks. In between, each player
+// walks, jumps, digs and blasts as they please (or as the inputs below say,
+// for one not yet connected), so only what lies in reach of those marks can
+// be cut. They wait by the berm, then work the lip by the railing, cutting
+// the slot open, then run for the landing ahead of the flood.
+every 3 from 0 to 40: player 0 478 172
+at 40: player 0 478 172
+at 43: player 0 474 172
+at 46: player 0 469 172
+at 49: player 0 465 172
+at 52: player 0 460 172
+at 55: player 0 456 172
+at 58: player 0 451 172
+at 61: player 0 447 172
+at 64: player 0 442 172
+at 67: player 0 438 172
+every 3 from 70 to 160: player 0 438 172
+at 160: player 0 438 172
+at 163: player 0 444 172
+at 166: player 0 451 172
+at 169: player 0 457 172
+at 172: player 0 464 172
+at 175: player 0 470 172
+at 178: player 0 477 172
+at 181: player 0 483 172
+at 184: player 0 490 172
+at 187: player 0 496 172
+at 190: player 0 503 172
+at 193: player 0 509 172
+at 196: player 0 516 172
+at 199: player 0 522 169
+at 202: player 0 529 163
+at 205: player 0 535 159
+at 208: player 0 542 153
+at 211: player 0 548 150
+at 214: player 0 555 150
+at 217: player 0 561 150
+at 220: player 0 568 153
+at 223: player 0 574 159
+at 226: player 0 581 166
+at 229: player 0 587 172
+at 232: player 0 594 172
+at 235: player 0 600 172
+every 3 from 240 to 1140: player 0 600 172
+every 3 from 0 to 40: player 1 486 172
+at 40: player 1 486 172
+at 43: player 1 481 172
+at 46: player 1 477 172
+at 49: player 1 472 172
+at 52: player 1 467 172
+at 55: player 1 463 172
+at 58: player 1 458 172
+at 61: player 1 453 172
+at 64: player 1 449 172
+at 67: player 1 444 172
+every 3 from 70 to 166: player 1 444 172
+at 166: player 1 444 172
+at 169: player 1 450 172
+at 172: player 1 457 172
+at 175: player 1 463 172
+at 178: player 1 470 172
+at 181: player 1 476 172
+at 184: player 1 483 172
+at 187: player 1 489 172
+at 190: player 1 496 172
+at 193: player 1 502 172
+at 196: player 1 509 172
+at 199: player 1 515 172
+at 202: player 1 522 169
+at 205: player 1 528 164
+at 208: player 1 535 159
+at 211: player 1 541 154
+at 214: player 1 548 150
+at 217: player 1 554 150
+at 220: player 1 561 150
+at 223: player 1 567 152
+at 226: player 1 574 159
+at 229: player 1 580 165
+at 232: player 1 587 172
+at 235: player 1 593 172
+at 238: player 1 600 172
+at 241: player 1 606 172
+every 3 from 246 to 1149: player 1 606 172
+every 3 from 0 to 40: player 2 470 172
+at 40: player 2 470 172
+at 43: player 2 468 172
+at 46: player 2 466 172
+at 49: player 2 463 172
+at 52: player 2 461 172
+at 55: player 2 459 172
+at 58: player 2 457 172
+at 61: player 2 454 172
+at 64: player 2 452 172
+at 67: player 2 450 172
+every 3 from 70 to 172: player 2 450 172
+at 172: player 2 450 172
+at 175: player 2 456 172
+at 178: player 2 463 172
+at 181: player 2 469 172
+at 184: player 2 476 172
+at 187: player 2 482 172
+at 190: player 2 489 172
+at 193: player 2 495 172
+at 196: player 2 502 172
+at 199: player 2 508 172
+at 202: player 2 515 172
+at 205: player 2 521 170
+at 208: player 2 528 164
+at 211: player 2 534 159
+at 214: player 2 541 154
+at 217: player 2 547 150
+at 220: player 2 554 150
+at 223: player 2 560 150
+at 226: player 2 567 152
+at 229: player 2 573 158
+at 232: player 2 580 165
+at 235: player 2 586 171
+at 238: player 2 593 172
+at 241: player 2 599 172
+at 244: player 2 606 172
+at 247: player 2 612 172
+every 3 from 252 to 1158: player 2 612 172
+every 3 from 0 to 40: player 3 494 172
+at 40: player 3 494 172
+at 43: player 3 490 172
+at 46: player 3 486 172
+at 49: player 3 481 172
+at 52: player 3 477 172
+at 55: player 3 473 172
+at 58: player 3 469 172
+at 61: player 3 464 172
+at 64: player 3 460 172
+at 67: player 3 456 172
+every 3 from 70 to 178: player 3 456 172
+at 178: player 3 456 172
+at 181: player 3 462 172
+at 184: player 3 469 172
+at 187: player 3 475 172
+at 190: player 3 482 172
+at 193: player 3 488 172
+at 196: player 3 495 172
+at 199: player 3 501 172
+at 202: player 3 508 172
+at 205: player 3 514 172
+at 208: player 3 521 170
+at 211: player 3 527 165
+at 214: player 3 534 159
+at 217: player 3 540 155
+at 220: player 3 547 150
+at 223: player 3 553 150
+at 226: player 3 560 150
+at 229: player 3 566 151
+at 232: player 3 573 158
+at 235: player 3 579 164
+at 238: player 3 586 171
+at 241: player 3 592 172
+at 244: player 3 599 172
+at 247: player 3 605 172
+at 250: player 3 612 172
+at 253: player 3 618 172
+every 3 from 258 to 1167: player 3 618 172
+// The landing's hatch opens and the crew drops down the shaft to the ledge
+// in the well, walks along it and cuts the beam that holds the drain gate.
+at 1140: fill 596 172 624 190 air
+at 1280: player 0 600 320
+at 1283: player 0 595 320
+at 1286: player 0 591 320
+at 1289: player 0 586 320
+at 1292: player 0 581 320
+at 1295: player 0 577 320
+at 1298: player 0 572 320
+at 1301: player 0 567 320
+at 1304: player 0 563 320
+at 1307: player 0 558 320
+at 1310: player 0 553 320
+at 1313: player 0 549 320
+at 1316: player 0 544 320
+at 1319: player 0 539 320
+at 1322: player 0 535 320
+at 1325: player 0 530 320
+every 3 from 1330 to 2400: player 0 530 320
+at 1286: player 1 606 320
+at 1289: player 1 601 320
+at 1292: player 1 595 320
+at 1295: player 1 590 320
+at 1298: player 1 584 320
+at 1301: player 1 579 320
+at 1304: player 1 574 320
+at 1307: player 1 568 320
+at 1310: player 1 563 320
+at 1313: player 1 558 320
+at 1316: player 1 552 320
+at 1319: player 1 547 320
+at 1322: player 1 541 320
+at 1325: player 1 536 320
+every 3 from 1330 to 2400: player 1 536 320
+at 1292: player 2 612 320
+at 1295: player 2 606 320
+at 1298: player 2 599 320
+at 1301: player 2 593 320
+at 1304: player 2 587 320
+at 1307: player 2 580 320
+at 1310: player 2 574 320
+at 1313: player 2 567 320
+at 1316: player 2 561 320
+at 1319: player 2 555 320
+at 1322: player 2 548 320
+at 1325: player 2 542 320
+every 3 from 1330 to 2400: player 2 542 320
+at 1298: player 3 618 320
+at 1301: player 3 610 320
+at 1304: player 3 602 320
+at 1307: player 3 595 320
+at 1310: player 3 587 320
+at 1313: player 3 579 320
+at 1316: player 3 571 320
+at 1319: player 3 564 320
+at 1322: player 3 556 320
+at 1325: player 3 548 320
+every 3 from 1330 to 2400: player 3 548 320
+
+// Tool use for players nobody is driving: in a plain run of the scene, and
+// the fourth player until they connect over the network.
+at 76..81: input 0 tool=dig param=6 aim=-30,10 use
+at 81..86: input 0 tool=dig param=6 aim=-18,10 use
+at 86..91: input 0 tool=dig param=6 aim=-24,10 use
+at 91..96: input 0 tool=dig param=6 aim=-12,10 use
+at 96..101: input 0 tool=dig param=6 aim=-30,16 use
+at 101..106: input 0 tool=dig param=6 aim=-18,16 use
+at 106..111: input 0 tool=dig param=6 aim=-24,16 use
+at 111..116: input 0 tool=dig param=6 aim=-12,16 use
+at 116..121: input 0 tool=dig param=6 aim=-30,22 use
+at 121..126: input 0 tool=dig param=6 aim=-18,22 use
+at 126..131: input 0 tool=dig param=6 aim=-24,22 use
+at 131..136: input 0 tool=dig param=6 aim=-12,22 use
+at 136..141: input 0 tool=dig param=6 aim=-30,6 use
+at 141..146: input 0 tool=dig param=6 aim=-18,6 use
+at 146..151: input 0 tool=dig param=6 aim=-24,6 use
+at 151..156: input 0 tool=dig param=6 aim=-12,6 use
+at 78..83: input 1 tool=dig param=6 aim=-24,16 use
+at 83..88: input 1 tool=dig param=6 aim=-30,16 use
+at 88..93: input 1 tool=dig param=6 aim=-18,16 use
+at 93..98: input 1 tool=dig param=6 aim=-36,22 use
+at 98..103: input 1 tool=dig param=6 aim=-24,22 use
+at 103..108: input 1 tool=dig param=6 aim=-30,22 use
+at 108..113: input 1 tool=dig param=6 aim=-18,22 use
+at 113..118: input 1 tool=dig param=6 aim=-36,6 use
+at 118..123: input 1 tool=dig param=6 aim=-24,6 use
+at 123..128: input 1 tool=dig param=6 aim=-30,6 use
+at 128..133: input 1 tool=dig param=6 aim=-18,6 use
+at 133..138: input 1 tool=dig param=6 aim=-36,10 use
+at 138..143: input 1 tool=dig param=6 aim=-24,10 use
+at 143..148: input 1 tool=dig param=6 aim=-30,10 use
+at 148..153: input 1 tool=dig param=6 aim=-18,10 use
+at 153..158: input 1 tool=dig param=6 aim=-36,16 use
+at 80..85: input 2 tool=dig param=6 aim=-36,22 use
+at 85..90: input 2 tool=dig param=6 aim=-24,22 use
+at 90..95: input 2 tool=dig param=6 aim=-42,6 use
+at 95..100: input 2 tool=dig param=6 aim=-30,6 use
+at 100..105: input 2 tool=dig param=6 aim=-36,6 use
+at 105..110: input 2 tool=dig param=6 aim=-24,6 use
+at 110..115: input 2 tool=dig param=6 aim=-42,10 use
+at 115..120: input 2 tool=dig param=6 aim=-30,10 use
+at 120..125: input 2 tool=dig param=6 aim=-36,10 use
+at 125..130: input 2 tool=dig param=6 aim=-24,10 use
+at 130..135: input 2 tool=dig param=6 aim=-42,16 use
+at 135..140: input 2 tool=dig param=6 aim=-30,16 use
+at 140..145: input 2 tool=dig param=6 aim=-36,16 use
+at 145..150: input 2 tool=dig param=6 aim=-24,16 use
+at 150..155: input 2 tool=dig param=6 aim=-42,22 use
+at 155..160: input 2 tool=dig param=6 aim=-30,22 use
+at 82..87: input 3 tool=dig param=6 aim=-30,6 use
+at 87..92: input 3 tool=dig param=6 aim=-48,10 use
+at 92..97: input 3 tool=dig param=6 aim=-36,10 use
+at 97..102: input 3 tool=dig param=6 aim=-42,10 use
+at 102..107: input 3 tool=dig param=6 aim=-30,10 use
+at 107..112: input 3 tool=dig param=6 aim=-48,16 use
+at 112..117: input 3 tool=dig param=6 aim=-36,16 use
+at 117..122: input 3 tool=dig param=6 aim=-42,16 use
+at 122..127: input 3 tool=dig param=6 aim=-30,16 use
+at 127..132: input 3 tool=dig param=6 aim=-48,22 use
+at 132..137: input 3 tool=dig param=6 aim=-36,22 use
+at 137..142: input 3 tool=dig param=6 aim=-42,22 use
+at 142..147: input 3 tool=dig param=6 aim=-30,22 use
+at 147..152: input 3 tool=dig param=6 aim=-48,6 use
+at 152..157: input 3 tool=dig param=6 aim=-36,6 use
+at 1340..1345: input 0 tool=dig param=6 aim=-20,4 use
+at 1346..1351: input 0 tool=dig param=6 aim=-30,4 use
+at 1352..1357: input 0 tool=dig param=6 aim=-14,4 use
+at 1358..1363: input 0 tool=dig param=6 aim=-25,2 use
+at 1364..1369: input 0 tool=dig param=6 aim=-20,4 use
+at 1370..1375: input 0 tool=dig param=6 aim=-30,4 use
+at 1376..1381: input 0 tool=dig param=6 aim=-14,4 use
+at 1382..1387: input 0 tool=dig param=6 aim=-25,2 use
+at 1343..1348: input 1 tool=dig param=6 aim=-36,4 use
+at 1349..1354: input 1 tool=dig param=6 aim=-20,4 use
+at 1355..1360: input 1 tool=dig param=6 aim=-31,2 use
+at 1361..1366: input 1 tool=dig param=6 aim=-26,4 use
+at 1367..1372: input 1 tool=dig param=6 aim=-36,4 use
+at 1373..1378: input 1 tool=dig param=6 aim=-20,4 use
+at 1379..1384: input 1 tool=dig param=6 aim=-31,2 use
+at 1385..1390: input 1 tool=dig param=6 aim=-26,4 use
+at 1346..1351: input 2 tool=dig param=6 aim=-26,4 use
+at 1352..1357: input 2 tool=dig param=6 aim=-37,2 use
+at 1358..1363: input 2 tool=dig param=6 aim=-32,4 use
+at 1364..1369: input 2 tool=dig param=6 aim=-42,4 use
+at 1370..1375: input 2 tool=dig param=6 aim=-26,4 use
+at 1376..1381: input 2 tool=dig param=6 aim=-37,2 use
+at 1382..1387: input 2 tool=dig param=6 aim=-32,4 use
+at 1388..1393: input 2 tool=dig param=6 aim=-42,4 use
+at 1349..1354: input 3 tool=dig param=6 aim=-43,2 use
+at 1355..1360: input 3 tool=dig param=6 aim=-38,4 use
+at 1361..1366: input 3 tool=dig param=6 aim=-48,4 use
+at 1367..1372: input 3 tool=dig param=6 aim=-32,4 use
+at 1373..1378: input 3 tool=dig param=6 aim=-43,2 use
+at 1379..1384: input 3 tool=dig param=6 aim=-38,4 use
+at 1385..1390: input 3 tool=dig param=6 aim=-48,4 use
+at 1391..1396: input 3 tool=dig param=6 aim=-32,4 use
 
 [camera]
 view 640 360
 scale 3
 sky cave
-ambient 0.09 0.095 0.115
+ambient 0.2 0.2 0.24
 exposure 1.6
-// The lake breaks into the top tunnel while the players dig through the
-// gallery floor under their feet.
-at 0: 300 112 1.4
-at 520: 300 112 1.4
-// Down to the lower tunnel as the right-hand spill reaches the lava, and
-// the charge drops the water into the well.
-at 620: 462 368 1.8
-at 1020: 462 368 1.8
-// Back up to the diggers, and the waterfalls their breaches feed.
-at 1120: 310 178 1.35
-at 1340: 310 178 1.35
-// The charge at the bottom of the left chamber drains it into the sump.
-at 1420: 250 316 1.35
-at 1680: 250 316 1.35
+// The reservoir, the dam and the crew waiting by the berm.
+at 0: 330 132 1.25
+at 80: 340 140 1.3
+// The crew cuts the slot and the leak arcs onto it.
+at 140: 375 160 1.6
+at 280: 375 160 1.6
+// The burst and the surge reaching the slot.
+at 330: 340 160 1.25
+at 560: 350 176 1.25
+// The flood pours down the slot into the cavern.
+at 660: 345 232 1.35
+at 1120: 345 232 1.35
+// The crew drops down the shaft to the ledge and cuts the beam.
+at 1200: 470 310 1.45
+at 1300: 470 310 1.45
+// The drain pours the cavern onto the lava.
+at 1360: 400 350 1.3
+at 1820: 400 350 1.3
 // The whole cave system, then the villagers, safe and dry in their vault.
-at 1780: 320 248 0.8
-at 2180: 320 248 0.8
-at 2320: 332 378 1.8
-at 2400: 332 378 1.8
+at 1900: 320 240 0.75
+at 2150: 320 240 0.75
+at 2260: 130 396 1.7
+at 2400: 130 396 1.7
+
+[expect]
+// The reservoir holds until the dam bursts; then the surge fills the tunnel.
+after 200: count water in 30 44 236 172 > 18000
+after 360: count water in 252 112 430 172 > 1000
+// The flood pours down the crew's slot and fills the cavern.
+after 600: count water in 230 186 448 300 > 2000
+after 1200: count water in 230 186 448 300 > 12000
+// The drain pours into the well, where the lava boils it and crusts over.
+after 1700: count water in 294 314 520 470 > 1500
+after 1700: count steam in 0 0 640 480 > 40
+after 1700: count obsidian in 294 400 520 470 > 30
+// The villagers' vault stays dry.
+after 2400: count water in 22 322 238 470 == 0
+
