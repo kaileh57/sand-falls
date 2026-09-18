@@ -87,10 +87,10 @@ fill 146 244 150 248 torch
 fill 118 296 142 300 stone
 fill 122 280 138 296 crystal
 // Casemates: bedrock boxes with a gunner-sized pocket inside.
-fill 145 286 155 302 bedrock
-fill 147 288 153 300 air
-fill 80 286 90 302 bedrock
-fill 82 288 88 300 air
+fill 145 282 155 302 bedrock
+fill 147 284 153 300 air
+fill 80 282 90 302 bedrock
+fill 82 284 88 300 air
 
 // Right fort.
 // Keep: tall brick with battlements, glass slits and a beacon on top.
@@ -111,10 +111,10 @@ fill 812 230 816 234 torch
 fill 818 296 842 300 stone
 fill 822 280 838 296 crystal
 // Casemates.
-fill 691 286 701 302 bedrock
-fill 693 288 699 300 air
-fill 875 286 885 302 bedrock
-fill 877 288 883 300 air
+fill 691 282 701 302 bedrock
+fill 693 284 699 300 air
+fill 875 282 885 302 bedrock
+fill 877 284 883 300 air
 
 // A raft on the river: hull buoyancy, carried by the current when a dike breaks.
 body 468 255 508 262 wood
@@ -135,8 +135,8 @@ at 0: 480 150 1.1
 after 700: count tnt in 0 -100 960 300 == 996
 after 3599: count crystal in 106 264 154 300 == 256
 after 3599: count crystal in 806 264 854 300 == 256
-after 3599: count water in 240 -60 288 -20 >= 1250
-after 3599: count water in 712 -60 760 -20 >= 1250
+after 3599: count water in 214 -60 262 -20 >= 1250
+after 3599: count water in 736 -60 784 -20 >= 1250
 after 3599: count tnt in 0 -100 960 300 == 996
 after 3599: count oil in 0 -100 960 300 == 480
 after 3599: count water in 370 255 609 300 >= 8900

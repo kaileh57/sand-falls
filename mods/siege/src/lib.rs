@@ -32,8 +32,8 @@ use core::sync::atomic::{AtomicI32, Ordering::Relaxed};
 unsafe extern "C" {
     safe fn material_id(ptr: *const u8, len: i32) -> i32;
     safe fn count(x0: i32, y0: i32, x1: i32, y1: i32, mat: i32) -> i32;
+    safe fn get_material(x: i32, y: i32) -> i32;
     safe fn fill(x0: i32, y0: i32, x1: i32, y1: i32, mat: i32);
-    safe fn paint(x: i32, y: i32, r: i32, mat: i32);
     safe fn explode(x: i32, y: i32, r: i32, power: i32);
     safe fn player_count() -> i32;
     safe fn player_id(i: i32) -> i32;
@@ -71,8 +71,10 @@ const RECOUNT: i32 = 10;
 const KEEP_DELAY: i32 = 30;
 
 /// Materials the script uses. The first five count as fort for the tiebreak.
-const MATERIALS: [&[u8]; 10] =
-    [b"brick", b"stone", b"metal", b"glass", b"wood", b"tnt", b"water", b"oil", b"torch", b"crystal"];
+const MATERIALS: [&[u8]; 11] = [
+    b"brick", b"stone", b"metal", b"glass", b"wood", b"tnt", b"water", b"oil", b"torch", b"crystal",
+    b"bedrock",
+];
 const BRICK: u8 = 0;
 const METAL: u8 = 2;
 const GLASS: u8 = 3;
@@ -82,6 +84,7 @@ const WATER: u8 = 6;
 const OIL: u8 = 7;
 const TORCH: u8 = 8;
 const CRYSTAL: usize = 9;
+const BEDROCK: usize = 10;
 const FORT_MATERIALS: usize = 5;
 
 const TOOL_PAINT: i32 = 1 << 2;
@@ -115,9 +118,9 @@ const LEFT_PLAN: [Piece; 17] = [
     Piece(GLASS, 259, 80, 269, 94),
     Piece(GLASS, 259, 140, 269, 154),
     Piece(TNT, 254, 208, 274, 226),
-    Piece(METAL, 240, -60, 288, -20),
-    Piece(WATER, 244, -56, 284, -24),
-    Piece(TORCH, 262, -66, 266, -60),
+    Piece(METAL, 214, -60, 262, -20),
+    Piece(WATER, 218, -56, 258, -24),
+    Piece(TORCH, 236, -66, 240, -60),
     Piece(BRICK, 298, 262, 302, 300),
     Piece(BRICK, 332, 262, 336, 300),
     Piece(BRICK, 298, 242, 336, 262),
@@ -139,9 +142,9 @@ const RIGHT_PLAN: [Piece; 19] = [
     Piece(GLASS, 731, 80, 741, 94),
     Piece(GLASS, 731, 140, 741, 154),
     Piece(TNT, 728, 270, 744, 296),
-    Piece(METAL, 712, -60, 760, -20),
-    Piece(WATER, 716, -56, 756, -24),
-    Piece(TORCH, 734, -66, 738, -60),
+    Piece(METAL, 736, -60, 784, -20),
+    Piece(WATER, 740, -56, 780, -24),
+    Piece(TORCH, 758, -66, 762, -60),
     Piece(WOOD, 754, 276, 782, 300),
     Piece(OIL, 756, 278, 780, 298),
     Piece(BRICK, 786, 170, 796, 300),
@@ -163,7 +166,7 @@ static TIME: AtomicI32 = AtomicI32::new(0);
 static WINNER: AtomicI32 = AtomicI32::new(-1);
 static COURSES: AtomicI32 = AtomicI32::new(0);
 static MEND_ROW: AtomicI32 = AtomicI32::new(0);
-static IDS: [AtomicI32; 10] = [const { AtomicI32::new(-1) }; 10];
+static IDS: [AtomicI32; 11] = [const { AtomicI32::new(-1) }; 11];
 static BASE: [AtomicI32; 2] = [AtomicI32::new(0), AtomicI32::new(0)];
 static SPENT: [AtomicI32; 2] = [AtomicI32::new(0), AtomicI32::new(0)];
 static CORE: [AtomicI32; 2] = [AtomicI32::new(0), AtomicI32::new(0)];
@@ -236,7 +239,14 @@ fn masons(t: i32) {
     COURSES.store(done, Relaxed);
 }
 
-/// Regrows one row of each warded core that has lost crystal.
+/// True for the solid building materials a falling body can be made of; a
+/// ward never overwrites them, so it cannot cut into a body.
+fn is_masonry(m: i32) -> bool {
+    m == id(TNT as usize) || m == id(BEDROCK) || (0..FORT_MATERIALS).any(|k| m == id(k))
+}
+
+/// Regrows one row of each warded core that has lost crystal, over whatever
+/// loose debris, gas or water has taken its place.
 fn mend() {
     let row = MEND_ROW.load(Relaxed);
     MEND_ROW.store((row + 1) % 16, Relaxed);
@@ -247,7 +257,10 @@ fn mend() {
         let c = CRYSTALS[team];
         let y = c.1 + row % (c.3 - c.1);
         for x in c.0..c.2 {
-            paint(x, y, 0, id(CRYSTAL));
+            let m = get_material(x, y);
+            if m != id(CRYSTAL) && !is_masonry(m) {
+                fill(x, y, x + 1, y + 1, id(CRYSTAL));
+            }
         }
     }
 }
