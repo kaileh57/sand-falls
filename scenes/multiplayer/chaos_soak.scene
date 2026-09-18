@@ -1,130 +1,160 @@
-// Chaos soak: bots dig, paint, heat, drop crates and blow things up under a
-// lossy, laggy network, a fourth player joins a third of the way in, and the
-// desync counter has to stay at zero.
+// Chaos soak: four bots wreck a night-time arena over a lossy, laggy network
+// (150 ms, 2% loss), a fourth player joins a third of the way in, mid-blast,
+// and the desync counter has to stay at zero. The HUD shows the world hash,
+// per-player bandwidth and the total download graph, which stays flat however
+// much the world is doing, because only inputs cross the network.
 //
 // fe-server uses this file as its default soak arena (DEFAULT_ARENA), so it
-// must keep working with any number of bots and ticks. Bots spawn at x
-// 120-162 and wander; the set pieces sit around them so that what they do
-// reads as more than noise:
-//   - a wooden hut over a gunpowder cellar, with a seam running from the
-//     cellar to an oil puddle next to the spawn;
-//   - a tall brick tower on an arch with two thin legs, right of the spawn,
-//     so a single blast or dig between the legs frees it as one rigid body;
-//   - two trees in the open middle ground, for stray fire to catch;
-//   - a soil mesa with a stone cap, where a stack of crates is dropped next
-//     to a bank packed with gunpowder;
-//   - a water tank at the foot of a raised lava pit, the two split by a
-//     3-cell stone wall, the lava's floor above the water.
-// Scheduled events make sure every system is used even when the bots wander
-// off. They come early, before the bots have wrecked the set pieces:
-//   200   a blast cuts the tower legs: the tower tips over as one body (the
-//         bots near the spawn often fell it first);
-//   220   the oil puddle is heated until it burns; the fire runs down the
-//         gunpowder seam, which chain-detonates into the cellar, throws the
-//         hut and leaves its timber burning into smoke;
-//   420   the top of the tank wall is blown off: lava cascades down onto the
-//         water, crusts to obsidian and boils it to steam;
-//   480   three wooden crates drop onto the mesa;
-//   598   the gunpowder bank beside them goes off just as the late player
-//         joins (tick 600 in the 1800-tick demo): the crates tumble through
-//         the air into the tank, float, and catch fire where they drift onto
-//         the lava;
-//   1200  a second blast opens the rest of the wall and a second lava fall
-//         pours into what is left of the water.
+// must keep working with any number of bots and ticks. The world is 640x360
+// at scale 3 (1920x1080), and the demo runs 2400 ticks: 40 s of real time at
+// 60 ticks a second. Left to right:
+//   - a wooden hut over a powder cellar with a TNT charge in it, and a
+//     gunpowder seam running from the cellar to an oil puddle;
+//   - open ground where three bots spawn, behind a bedrock sea wall too high
+//     to jump, so they cannot reach the tower's plinth or fall into the pond
+//     (a character that swims up out of water leaves it at swimming speed and
+//     flies far higher than a jump; see the engine notes);
+//   - a brick tower on two thin legs at the pond's edge;
+//   - a deep pond with a wooden hull floating on it and an oil slick around
+//     the hull;
+//   - a tall rock cliff with a closed cistern of water near its top; the
+//     fourth bot spawns on the cliff behind a bedrock parapet.
+// Scheduled events make sure every system is shown even if the bots wander:
+//   40    the oil puddle is heated until it burns; the fire runs down the seam
+//         into the cellar and the TNT goes up at about tick 170 as one merged
+//         blast with a white flash, throwing the hut's roof as a burning body
+//         and cooling sparks across the night sky; the crater walls glow;
+//   480   a hole is blown in the cistern wall: a pressurised jet arcs into the
+//         pond and falls off as the head drops, while the hull rides the waves;
+//   800   the tower's legs are cut as the late player joins (bots digging
+//         at its foot often fell it first): the tower tips over under real
+//         gravity and falls into the pond in a surge that
+//         slops over the bank against the sea wall and rocks the hull;
+//   1150  three wooden crates drop into the pond and float;
+//   1300  two burning crates land on the slick: the oil catches and the fire
+//         runs across the water, boiling it into a steam plume;
+//   1700  a second, lower hole drains the rest of the cistern.
 // In between and after, the bots dig, paint sand, water, oil, wood, lava and
-// gunpowder, heat things, drop crates of their own and set off charges, so
-// the trees and the ruins keep burning and collapsing.
+// gunpowder, heat things, drop crates and set off charges.
 [scene]
 name = chaos soak
-description = Four bots wreck a night-time arena over a lossy, laggy network: a brick tower falls as a rigid body, a burning oil puddle sets off a gunpowder seam that blows up a wooden hut, lava cascades into a water tank in steam and obsidian, a gunpowder blast throws crates tumbling into the water as a fourth player joins, and the desync counter stays at zero.
-size = 512 288
+description = Four bots wreck a night-time arena over a 150 ms, 2% loss network: a TNT cellar throws a burning hut into the sky, a pressurised jet from a holed cistern arcs into a pond, a brick tower is felled into the water as a fourth player joins, and burning crates set the oil slick around a floating hull alight, while the hash, bandwidth and desync counter stay steady.
+size = 640 360
 seed = 0xc4a05
-spawn = 120 150
-ticks = 1800
+spawn = 128 190
+spawn = 160 190
+spawn = 616 70
+spawn = 144 190
+ticks = 2400
 
 [build]
-fill 0 270 512 288 bedrock
-terrain 0 512 222 3 64 soil 270
-terrain 0 512 244 8 40 stone 270
+fill 0 340 640 360 bedrock
+terrain 0 640 214 3 64 soil 340
+terrain 0 640 236 8 40 stone 340
 
-// Wooden hut over a gunpowder cellar. A seam runs from the cellar to the
-// right, under a small oil puddle next to the spawn.
-fill 46 223 84 232 gunpowder
-fill 84 224 108 227 gunpowder
-fill 36 219 94 223 wood
-fill 38 190 42 219 wood
-fill 88 190 92 219 wood
-fill 34 186 96 190 wood
-fill 40 182 90 186 wood
-fill 48 178 82 182 wood
-fill 56 174 74 178 wood
-fill 42 196 88 219 air
-// Oil puddle in a shallow dip over the seam.
-fill 97 217 115 224 air
-fill 98 218 114 224 oil
+// Wooden hut over a powder cellar with a TNT charge in it. A gunpowder seam
+// runs right, under an oil puddle next to the spawn.
+fill 46 215 84 224 gunpowder
+fill 58 217 70 221 tnt
+fill 84 216 112 219 gunpowder
+fill 36 211 94 215 wood
+fill 38 182 42 211 wood
+fill 88 182 92 211 wood
+fill 34 178 96 182 wood
+fill 40 174 90 178 wood
+fill 48 170 82 174 wood
+fill 56 166 74 170 wood
+fill 42 188 88 211 air
+fill 101 209 121 216 air
+fill 102 210 120 216 oil
 
-// Tall brick tower on an arch with two thin legs, so one blast between them
-// cuts both and the tower comes free as one body.
-fill 182 192 185 222 brick
-fill 193 192 196 222 brick
-fill 176 186 202 192 brick
-fill 178 112 200 186 brick
-fill 183 124 195 134 glass
-fill 183 146 195 156 glass
-fill 183 168 195 178 glass
-fill 174 106 204 112 brick
+// A bedrock sea wall, too high to jump, keeps the players off the tower's
+// plinth and out of the pond.
+fill 180 188 184 240 bedrock
 
-// Two trees in the middle ground.
-fill 249 186 253 222 wood
-circle 251 178 13 leaves
-fill 300 196 303 222 wood
-circle 301 188 10 leaves
+// Brick tower on the pond's left bank, on an arch with two thin legs set to
+// the landward side, so that once it is cut free it can only fall pondward.
+fill 227 184 229 215 brick
+fill 233 184 235 215 brick
+fill 226 178 254 184 brick
+fill 230 112 252 178 brick
+fill 235 120 247 130 glass
+fill 235 140 247 150 glass
+fill 235 160 247 170 glass
+fill 226 106 256 112 brick
 
-// A soil mesa with a stone cap. Crates are dropped on the cap, next to a
-// soil bank packed with gunpowder that blows them off towards the tank.
-fill 318 200 370 224 soil
-fill 322 188 366 200 soil
-fill 324 180 362 188 soil
-fill 324 175 361 180 stone
-fill 324 163 334 175 soil
-fill 328 167 331 171 gunpowder
+// Right bank: a tall rock cliff with a closed cistern of water near its top.
+fill 500 90 636 340 stone
+fill 500 66 505 90 bedrock
+fill 508 108 570 170 air
+fill 508 112 570 170 water
 
-// Water tank at the foot of a raised lava pit. A 3-cell stone wall separates
-// them; the lava's floor is above the water, so a breach pours lava down
-// onto it.
-fill 368 196 449 242 stone
-fill 372 196 449 238 air
-fill 372 208 449 238 water
-terrain 449 508 146 2 16 soil 242
-fill 449 152 452 238 stone
-fill 449 188 508 192 stone
-fill 505 146 508 188 stone
-fill 449 136 505 152 air
-fill 452 146 505 188 air
-fill 452 156 505 188 lava
+// Pond with a wooden boat on it.
+fill 256 214 504 340 stone
+fill 262 150 500 320 air
+fill 262 244 500 320 water
+fill 360 222 405 246 air
+fill 360 240 405 246 wood
+fill 360 228 364 240 wood
+fill 401 228 405 240 wood
+fill 382 212 384 240 wood
+carve 360 212 405 246
+
+// An oil slick floating on the pond, around the boat.
+fill 266 239 358 244 oil
+fill 407 239 500 244 oil
 
 // Light.
-paint 65 212 1 torch
-paint 370 188 1 torch
+paint 65 204 1 torch
+paint 600 84 1 torch
 
 // Arena walls.
-fill 0 0 4 270 bedrock
-fill 508 0 512 270 bedrock
+fill 0 0 4 340 bedrock
+fill 636 0 640 340 bedrock
 
 [events]
-at 200: explode 189 210 12 220
-every 2 from 220 to 260: heat 106 220 4 12
-at 420: explode 450 164 12 200
-at 480: body 336 152 348 164 wood
-at 480: body 349 152 361 164 wood
-at 480: body 342 138 354 150 wood
-at 598: heat 329 169 5 250
-at 1200: explode 450 182 10 200
+// The hut's cellar: heat the oil puddle until it burns down the seam.
+every 2 from 40 to 80: heat 118 212 4 12
+// The cistern's first hole: a pressurised jet into the pond.
+at 480: explode 505 148 6 250
+at 481: dig 504 148 5
+at 484: dig 504 148 5
+// The tower's legs, as the late player joins.
+at 840: carve 222 100 260 211
+at 840: dig 231 205 6
+at 840: explode 252 208 12 250
+// Crates, then burning crates onto the oil slick.
+at 1150: body 420 170 432 182 wood
+at 1150: body 446 160 458 172 wood
+at 1150: body 470 175 482 187 wood
+at 1300: body 296 200 306 210 burning_wood
+at 1300: body 330 192 338 200 burning_wood
 
 [camera]
-view 512 288
-scale 2
+view 640 360
+scale 3
 sky night
 ambient 0.3 0.3 0.4
 exposure 1.3
-at 0: 256 144
+at 0: 320 180
+
+[expect]
+// The cellar's TNT is there at the start and gone once the chain reaches it.
+after 100: count tnt in 0 200 140 260 >= 40
+after 400: count tnt in 0 200 140 260 == 0
+after 400: count gunpowder in 0 200 140 260 == 0
+// The cistern is full until the first hole, and the jet is in the air.
+after 470: count water in 508 108 570 170 >= 3400
+after 600: drawn water in 400 140 500 240 >= 300
+// The tower stands until the join and lies in the pond after it.
+after 790: count brick in 220 100 260 200 >= 1400
+after 1000: count brick in 220 100 260 200 == 0
+after 1000: count brick in 262 214 500 320 >= 1000
+// The slick burns on the water.
+after 1600: count burning_oil in 262 150 500 320 >= 30
+// The second hole drains the rest of the cistern.
+after 1650: count water in 508 108 570 170 >= 1500
+after 1900: drawn water in 400 140 500 240 >= 800
+// Water stays out of the players' ground, and most of it is still water.
+after 2399: count water in 0 150 212 260 <= 50
+after 2399: count water in 0 0 640 340 >= 19000
