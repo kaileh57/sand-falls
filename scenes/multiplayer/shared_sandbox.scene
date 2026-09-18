@@ -1,139 +1,133 @@
-// Shared sandbox: eight players in one world of set pieces, each wired to a
-// different system. Left to right: a pond on a thin stone cap over a lava
-// pocket, sand dunes beside the spawn, a mill pond, a stone ridge over a
-// gunpowder vein, a brick bridge over a flooded ravine, and a forest.
-//
-// The bots dig, paint, drop crates and blast near the spawn, so the dunes and
-// the ponds are theirs to set off. The world also has its own timeline, which
-// is scene data that every peer runs, so it costs no bandwidth either:
-//   tick 720   the vein is lit; it chains under the ridge to two charges
-//              and the ridge comes apart
-//   tick 1200  the charges at the bridge piers go off; the deck drops into
-//              the pool
-//   tick 1500  a charge at the forest's edge goes off and the forest burns
-//   tick 1800  unless a player got there first, the lava cap is cracked and
-//              the pond drains onto the lava
+// Shared sandbox: eight players in one sandpit under a reservoir. Their
+// digging, painting, crates and blasts are the chaos; a timeline of scene
+// events that every peer runs, so it costs no bandwidth either, keeps the
+// water coming at them:
+//   0     the players spawn across the sandpit, two of them on a raft on the
+//         pond, which rocks and drifts as they dig, jump and blast on it
+//   540   the middle sluice of the dam opens: a jet arcs out of the concrete
+//         at the speed its head gives it and lands among the players
+//   1200  the bottom sluice opens under it, a second, flatter jet
+//   1450  five wooden crates drop into the flooded pit and float
+//   1850  a charge in the dam goes off; the dam above it topples as one
+//         body and the rest of the reservoir spills over the rubble
 // Only inputs cross the network, so the bandwidth graph stays flat while the
 // screen fills with chaos.
 //
-// There is no water tower: a body carrying liquid in its own hollow is lifted
-// by that liquid and floats up instead of falling, so a tank on stilts cannot
-// fall and splash until the engine fixes that.
+// The chaos bots dig for 20 ticks at a time and their dig removes liquid as
+// well as solid cells, so the pond is mostly dug away in the first ten
+// seconds; the sluices keep feeding the pit after that. Bedrock lies 36
+// cells under the sand so that the pit holds its water and the bots cannot
+// drill the world away.
 [scene]
 name = shared sandbox
-description = Eight players dig into sand dunes and ponds over lava while charges chain through a ridge, a brick bridge and a forest; bandwidth stays flat because only inputs cross the network.
-size = 768 432
-// The seed only shifts terrain noise and the undergrowth. With the review
-// settings (8 bots, 1% loss, network seed 1) about half of all seeds leave one
-// bot stuck joining, because a lost join packet is never resent; this one
-// lets all eight in. Recheck with fe-server soak after editing the build.
+description = Eight players dig, paint and blast in a sandpit under a reservoir: sluice jets arc into the pit, a raft and dropped crates float on the flood, and a charge topples the dam; bandwidth stays flat because only inputs cross the network.
+size = 640 300
+// With the review settings (8 bots, 1% loss, network seed 1) some seeds
+// leave one bot stuck joining, because a lost join packet is never resent.
+// Recheck with fe-server soak after editing the build.
 seed = 0x5a55
-spawn = 200 220
+spawn = 214 246
+spawn = 300 246
+spawn = 246 250
+spawn = 336 246
+spawn = 380 250
+spawn = 420 246
+spawn = 188 236
+spawn = 456 240
 
 [build]
-// Trees go in before the ground so the soil cuts each trunk at the surface.
-fill 606 226 610 272 wood
-circle 608 222 11 leaves
-circle 600 230 7 leaves
-circle 616 229 7 leaves
-fill 632 212 636 272 wood
-circle 634 208 14 leaves
-circle 623 216 9 leaves
-circle 645 215 9 leaves
-fill 657 228 660 272 wood
-circle 658 224 10 leaves
-circle 651 232 6 leaves
-circle 665 231 6 leaves
-fill 682 214 686 272 wood
-circle 684 210 14 leaves
-circle 673 218 9 leaves
-circle 695 217 9 leaves
-fill 708 226 712 272 wood
-circle 710 222 11 leaves
-circle 701 230 7 leaves
-circle 719 229 7 leaves
+// Bedrock under a skin of sand, soil and stone, so the players can wreck the
+// surface but cannot drill the world away.
+fill 0 292 640 300 bedrock
+terrain 0 640 256 3 40 sand 292
 
-// Ground: soil over stone over bedrock.
-fill 0 380 768 432 bedrock
-terrain 0 768 262 3 64 soil 380
-terrain 0 768 288 6 48 stone 380
-fill 0 0 4 380 bedrock
-fill 764 0 768 380 bedrock
+// Left mountain with the reservoir and its dam on top.
+circle 110 297 110 soil
+circle 110 302 110 stone
+fill 0 192 110 292 stone
+terrain 0 124 186 1 30 sand 192
+fill 0 100 124 188 water
+fill 124 90 140 204 concrete
+fill 140 122 146 204 concrete
+fill 146 154 152 204 concrete
+// Bedrock courses anchor the dam above its sluices, so cutting a sluice
+// does not drop the top of the dam into the hole as a rigid body.
+fill 124 90 140 92 bedrock
+fill 124 166 152 168 bedrock
+// A charge in the dam, for the finale.
+fill 124 169 132 177 tnt
 
-// 1. A pond on a thin stone cap over a lava pocket. There is more water than
-// lava, so when the cap breaks the water boils on the lava and crusts it over
-// as obsidian instead of the lava flooding the surface.
-fill 26 258 114 300 stone
-fill 32 258 108 284 water
-fill 48 289 92 296 lava
-circle 60 300 9 lava
-circle 80 300 9 lava
-circle 70 304 9 lava
+// Right hill.
+circle 540 302 90 soil
+circle 540 307 90 stone
+terrain 540 640 212 4 50 soil 292
+terrain 540 640 222 6 40 stone 292
 
-// 2. Sand dunes right of the pond, beside the spawn, at their angle of rest.
-fill 118 254 182 264 sand
-fill 124 244 176 254 sand
-fill 130 234 168 244 sand
-fill 137 225 160 234 sand
-fill 143 217 154 225 sand
+// A pond in the middle of the sandpit.
+fill 262 246 392 290 air
+fill 262 250 392 290 water
+circle 262 286 18 sand
+circle 392 286 18 sand
 
-// 3. A mill pond beside the spawn, for crates and players to fall into and
-// for painted lava to quench in.
-fill 264 256 336 280 stone
-fill 268 256 332 276 water
+// Trees and brush.
+fill 580 164 584 214 wood
+circle 582 160 11 leaves
+circle 573 168 7 leaves
+circle 591 167 7 leaves
+fill 616 172 619 214 wood
+circle 617 168 9 leaves
+circle 610 175 6 leaves
+decorate 480 180 636 218 leaves 25 floor
+decorate 150 190 200 250 leaves 20 floor
 
-// 4. Stone ridge over a buried gunpowder vein with two TNT charges in it.
-// The vein stays under the ridge, so stray blasts near the spawn rarely
-// reach it before its tick.
-fill 356 252 424 262 stone
-fill 362 242 418 252 stone
-fill 368 232 412 242 stone
-fill 375 224 405 232 stone
-fill 382 218 398 224 stone
-fill 358 266 418 270 gunpowder
-fill 374 258 382 270 tnt
-fill 398 258 406 270 tnt
-
-// 5. Brick bridge over a ravine with a pool. The deck clears both banks and
-// stands on two piers founded on the ravine floor, so cutting the piers drops
-// it into the pool.
-fill 459 240 580 262 air
-fill 459 262 466 266 soil
-fill 569 262 580 266 soil
-fill 466 262 569 380 air
-fill 466 320 569 380 stone
-fill 466 296 569 320 water
-fill 469 262 566 272 brick
-fill 490 272 497 320 brick
-fill 538 272 545 320 brick
-
-// 6. A forest across the ravine, with a TNT charge at the edge of it.
-fill 596 258 604 268 tnt
-decorate 590 200 740 266 leaves 30 floor
+[build]
+// A raft on the pond, and three logs on the sand.
+body 292 244 360 249 wood
+body 420 246 454 249 wood
+body 424 242 446 245 wood
+body 416 238 436 241 wood
 
 [events]
-// The vein is lit at its left end.
-every 2 from 720 to 740: heat 360 268 4 20
-// Charges cut the left pier, then the right one a quarter second later. The
-// explosions do not break brick under water, so the submerged foot of each
-// pier is cut away in the same tick.
-at 1200: explode 493 280 8 220
-at 1200: explode 493 292 7 200
-at 1200: dig 493 304 6
-at 1200: dig 493 315 6
-at 1215: explode 541 280 8 220
-at 1215: explode 541 292 7 200
-at 1215: dig 541 304 6
-at 1215: dig 541 315 6
-// The charge at the forest's edge goes off and the trees catch.
-every 1 from 1500 to 1506: heat 600 263 6 60
-// Backstop for the lava moment if no player has broken the cap yet.
-at 1800: explode 70 286 7 160
-at 1800: dig 70 288 9
+// The middle sluice opens.
+at 540: fill 120 154 154 162 air
+// The bottom sluice opens.
+at 1200: fill 120 178 156 186 air
+// Crates tumble into the flooded pit.
+at 1450: body 236 60 248 72 wood
+at 1480: body 300 50 312 62 wood
+at 1510: body 268 40 280 52 wood
+at 1540: body 340 60 352 72 wood
+at 1570: body 210 50 222 62 wood
+// The charge in the dam goes off. Its bedrock courses turn to concrete first,
+// so the dam above the charge is no longer anchored and topples as a body.
+at 1850: fill 124 90 140 92 concrete
+at 1850: fill 124 166 152 168 concrete
+at 1850: heat 128 173 6 200
 
 [camera]
+// Wide on the pit, in on the first jet, wide for the crates, in on the dam
+// for the finale.
 view 960 540
 scale 2
 sky day
 ambient 0.25 0.25 0.28
-at 0: 384 216 zoom=1.25
+at 0: 266 150 zoom=1.8
+at 440: 266 150 zoom=1.8
+at 600: 236 178 zoom=2.3
+at 920: 246 178 zoom=2.3
+at 1100: 266 150 zoom=1.8
+at 1780: 266 150 zoom=1.8
+at 1900: 240 170 zoom=2.1
+at 2150: 250 170 zoom=2.1
+at 2350: 266 150 zoom=1.8
+
+[expect]
+// Run without players: the reservoir is full until the first sluice, the
+// jets fill the pit, the crates make bodies, the charge goes off and the
+// reservoir has drained by more than half at the end.
+after 500: count water in 0 90 124 188 > 10000
+after 800: count water in 150 120 640 292 > 5500
+after 1300: count water in 150 120 640 292 > 8000
+after 1600: bodies >= 9
+after 2000: count tnt in 120 160 160 190 == 0
+after 2400: count water in 0 90 124 188 < 6000
