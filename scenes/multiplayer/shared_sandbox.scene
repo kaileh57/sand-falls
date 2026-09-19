@@ -1,133 +1,133 @@
-// Shared sandbox: eight players in one sandpit under a reservoir. Their
-// digging, painting, crates and blasts are the chaos; a timeline of scene
-// events that every peer runs, so it costs no bandwidth either, keeps the
-// water coming at them:
-//   0     the players spawn across the sandpit, two of them on a raft on the
-//         pond, which rocks and drifts as they dig, jump and blast on it
-//   540   the middle sluice of the dam opens: a jet arcs out of the concrete
-//         at the speed its head gives it and lands among the players
-//   1200  the bottom sluice opens under it, a second, flatter jet
-//   1450  five wooden crates drop into the flooded pit and float
-//   1850  a charge in the dam goes off; the dam above it topples as one
-//         body and the rest of the reservoir spills over the rubble
+// Shared sandbox: eight players on a bridge over a quarry. Their digging,
+// painting, crates and blasts are the chaos; a timeline of scene events that
+// every peer runs, so it costs no bandwidth either, brings the water:
+//   0     the players spawn on a grated bridge between a reservoir pool and a
+//         lake with a boat on it; whatever they paint or drop through the
+//         grating lands in the pit under it, where lava, oil and gunpowder
+//         burn and blow up
+//   360   a sluice opens low in the reservoir gate and a jet arcs into the
+//         pool; the culvert under the pit carries the water on to the lake,
+//         which rises under the boat
+//   900   crates tumble into the lake and float beside the boat
+//   1500  charges blow the gate away; the 118-row column of water collapses,
+//         a wave runs into the bridge, through the culvert and rocks the boat
 // Only inputs cross the network, so the bandwidth graph stays flat while the
 // screen fills with chaos.
 //
-// The chaos bots dig for 20 ticks at a time and their dig removes liquid as
-// well as solid cells, so the pond is mostly dug away in the first ten
-// seconds; the sluices keep feeding the pit after that. Bedrock lies 36
-// cells under the sand so that the pit holds its water and the bots cannot
-// drill the world away.
+// The chaos bots dig away any liquid they can reach, and their blasts throw
+// it into the sky as spray, so every pool here stays more than 24 cells below
+// the deck, out of their reach, and the pit keeps what they drop (gunpowder
+// and lava above all) out of the water. The walls at the ends of the bridge
+// are taller than a jump, so the bots stay on the bridge and in frame. The grating lets the sky light under the
+// deck; a solid deck would cast a dark slab over the pit.
 [scene]
 name = shared sandbox
-description = Eight players dig, paint and blast in a sandpit under a reservoir: sluice jets arc into the pit, a raft and dropped crates float on the flood, and a charge topples the dam; bandwidth stays flat because only inputs cross the network.
-size = 640 300
-// With the review settings (8 bots, 1% loss, network seed 1) some seeds
-// leave one bot stuck joining, because a lost join packet is never resent.
-// Recheck with fe-server soak after editing the build.
+description = Eight players on a grated bridge over a quarry dig, paint, drop crates and blast while a sluice jet fills the pool, crates float by a boat on the lake, and the reservoir gate is blown away so the flood surges under them; bandwidth stays flat because only inputs cross the network.
+size = 512 288
 seed = 0x5a55
-spawn = 214 246
-spawn = 300 246
-spawn = 246 250
-spawn = 336 246
-spawn = 380 250
-spawn = 420 246
-spawn = 188 236
-spawn = 456 240
+spawn = 196 164
+spawn = 356 164
+spawn = 220 164
+spawn = 332 164
+spawn = 244 164
+spawn = 308 164
+spawn = 262 164
+spawn = 288 164
 
 [build]
-// Bedrock under a skin of sand, soil and stone, so the players can wreck the
-// surface but cannot drill the world away.
-fill 0 292 640 300 bedrock
-terrain 0 640 256 3 40 sand 292
+fill 0 268 512 288 bedrock
 
-// Left mountain with the reservoir and its dam on top.
-circle 110 297 110 soil
-circle 110 302 110 stone
-fill 0 192 110 292 stone
-terrain 0 124 186 1 30 sand 192
-fill 0 100 124 188 water
-fill 124 90 140 204 concrete
-fill 140 122 146 204 concrete
-fill 146 154 152 204 concrete
-// Bedrock courses anchor the dam above its sluices, so cutting a sluice
-// does not drop the top of the dam into the hole as a rigid body.
-fill 124 90 140 92 bedrock
-fill 124 166 152 168 bedrock
-// A charge in the dam, for the finale.
-fill 124 169 132 177 tnt
+// The reservoir, held by a concrete gate that stands on the quarry floor. A
+// bedrock course carries the gate above its sluice.
+fill 0 150 110 268 water
+fill 110 120 124 268 concrete
+fill 110 216 124 228 bedrock
 
-// Right hill.
-circle 540 302 90 soil
-circle 540 307 90 stone
-terrain 540 640 212 4 50 soil 292
-terrain 540 640 222 6 40 stone 292
+// A pool at the foot of the gate and a lake with a stone bank on the right,
+// joined by a culvert under the bridge.
+fill 490 150 512 268 stone
+terrain 486 512 150 3 20 soil 170
+fill 124 244 490 268 water
+terrain 124 490 264 2 20 sand 268
 
-// A pond in the middle of the sandpit.
-fill 262 246 392 290 air
-fill 262 250 392 290 water
-circle 262 286 18 sand
-circle 392 286 18 sand
-
-// Trees and brush.
-fill 580 164 584 214 wood
-circle 582 160 11 leaves
-circle 573 168 7 leaves
-circle 591 167 7 leaves
-fill 616 172 619 214 wood
-circle 617 168 9 leaves
-circle 610 175 6 leaves
-decorate 480 180 636 218 leaves 25 floor
-decorate 150 190 200 250 leaves 20 floor
+// The bridge: a bedrock grating over a pit that catches whatever the players
+// drop through it, walled at both ends. The culvert runs under the pit floor.
+fill 180 170 370 174 bedrock
+fill 180 130 186 244 bedrock
+fill 364 130 370 244 bedrock
+fill 186 238 364 244 bedrock
+fill 190 170 192 174 air
+fill 196 170 198 174 air
+fill 202 170 204 174 air
+fill 208 170 210 174 air
+fill 214 170 216 174 air
+fill 220 170 222 174 air
+fill 226 170 228 174 air
+fill 232 170 234 174 air
+fill 238 170 240 174 air
+fill 244 170 246 174 air
+fill 250 170 252 174 air
+fill 256 170 258 174 air
+fill 262 170 264 174 air
+fill 268 170 270 174 air
+fill 274 170 276 174 air
+fill 280 170 282 174 air
+fill 286 170 288 174 air
+fill 292 170 294 174 air
+fill 298 170 300 174 air
+fill 304 170 306 174 air
+fill 310 170 312 174 air
+fill 316 170 318 174 air
+fill 322 170 324 174 air
+fill 328 170 330 174 air
+fill 334 170 336 174 air
+fill 340 170 342 174 air
+fill 346 170 348 174 air
+fill 352 170 354 174 air
+fill 358 170 360 174 air
 
 [build]
-// A raft on the pond, and three logs on the sand.
-body 292 244 360 249 wood
-body 420 246 454 249 wood
-body 424 242 446 245 wood
-body 416 238 436 241 wood
+// The boat and the logs.
+fill 402 236 470 240 wood
+fill 402 224 406 236 wood
+fill 466 224 470 236 wood
+carve 402 224 470 240
+body 206 166 236 170 wood
+body 300 166 324 170 wood
 
 [events]
-// The middle sluice opens.
-at 540: fill 120 154 154 162 air
-// The bottom sluice opens.
-at 1200: fill 120 178 156 186 air
-// Crates tumble into the flooded pit.
-at 1450: body 236 60 248 72 wood
-at 1480: body 300 50 312 62 wood
-at 1510: body 268 40 280 52 wood
-at 1540: body 340 60 352 72 wood
-at 1570: body 210 50 222 62 wood
-// The charge in the dam goes off. Its bedrock courses turn to concrete first,
-// so the dam above the charge is no longer anchored and topples as a body.
-at 1850: fill 124 90 140 92 concrete
-at 1850: fill 124 166 152 168 concrete
-at 1850: heat 128 173 6 200
+// The sluice opens.
+at 360: fill 110 220 124 224 air
+// Crates tumble into the lake beside the boat.
+at 900: body 384 120 396 132 wood
+at 960: body 440 110 452 122 wood
+at 1020: body 476 120 488 132 wood
+// Charges along the gate's dry face go off and blow it away.
+at 1500: explode 127 130 7 160
+at 1500: explode 127 160 7 160
+at 1500: explode 127 190 7 160
+at 1500: explode 127 220 7 160
+at 1501: fill 110 120 124 268 air
 
 [camera]
-// Wide on the pit, in on the first jet, wide for the crates, in on the dam
-// for the finale.
+// On the bridge, the pool and the lake, then wider for the flood.
 view 960 540
 scale 2
 sky day
 ambient 0.25 0.25 0.28
-at 0: 266 150 zoom=1.8
-at 440: 266 150 zoom=1.8
-at 600: 236 178 zoom=2.3
-at 920: 246 178 zoom=2.3
-at 1100: 266 150 zoom=1.8
-at 1780: 266 150 zoom=1.8
-at 1900: 240 170 zoom=2.1
-at 2150: 250 170 zoom=2.1
-at 2350: 266 150 zoom=1.8
+at 0: 290 170 zoom=2.2
+at 180: 300 172 zoom=2.4
+at 1440: 300 172 zoom=2.4
+at 1495: 268 168 zoom=2.2
+at 2400: 268 168 zoom=2.2
 
 [expect]
-// Run without players: the reservoir is full until the first sluice, the
-// jets fill the pit, the crates make bodies, the charge goes off and the
-// reservoir has drained by more than half at the end.
-after 500: count water in 0 90 124 188 > 10000
-after 800: count water in 150 120 640 292 > 5500
-after 1300: count water in 150 120 640 292 > 8000
-after 1600: bodies >= 9
-after 2000: count tnt in 120 160 160 190 == 0
-after 2400: count water in 0 90 124 188 < 6000
+// Run without players: the reservoir is full until the gate goes, the jet
+// fills the pool and, through the culvert, raises the lake, the boat, logs
+// and crates are bodies, and the flood drains the reservoir into the lake.
+after 300: count water in 0 120 110 268 > 12000
+after 1400: count water in 124 120 180 268 > 2000
+after 1400: count water in 370 120 490 268 > 3500
+after 1600: bodies >= 5
+after 2400: count water in 0 120 110 268 < 8000
+after 2400: count water in 370 120 490 268 > 5000
