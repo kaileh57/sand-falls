@@ -11,8 +11,8 @@
 //! - BATTLE (up to 48 s): the explode and crate tools work and paint is off.
 //!   Each fort has a core of crystal cells, warded for the first 20 s: the
 //!   script regrows a warded core row by row. Once the wards are down, a core
-//!   that loses half its crystal shatters: the script blows it apart and then
-//!   blows out the base of that team's keep, and the team loses. If both cores
+//!   that loses half its crystal shatters: the script blows it apart, then
+//!   razes that team's fort charge by charge, keep first, and the team loses. If both cores
 //!   last the time limit, the larger share of core left wins, and if the
 //!   shares are equal, the larger share of fort left standing: the script
 //!   counts each team's brick, stone, metal, glass and wood cells in its build
@@ -67,8 +67,6 @@ const MASON_TOP: i32 = -66;
 const MAX_PLAYERS: i32 = 16;
 /// Ticks between budget recounts; the two teams are counted on different ticks.
 const RECOUNT: i32 = 10;
-/// A shattered core takes its keep with it this many ticks later.
-const KEEP_DELAY: i32 = 30;
 
 /// Materials the script uses. The first five count as fort for the tiebreak.
 const MATERIALS: [&[u8]; 11] = [
@@ -128,20 +126,20 @@ const LEFT_PLAN: [Piece; 17] = [
 ];
 
 /// The right team's blueprint: a timber palisade frame by the river, a front
-/// tower with a TNT store in its foot and a cistern on top, an oil store and a
-/// curtain wall in front of the core.
+/// tower with a TNT store in its shaft and a cistern on top, an oil store and
+/// a curtain wall in front of the core.
 const RIGHT_PLAN: [Piece; 19] = [
-    Piece(WOOD, 645, 258, 689, 262),
-    Piece(WOOD, 645, 272, 689, 276),
-    Piece(WOOD, 645, 286, 689, 290),
-    Piece(WOOD, 645, 258, 649, 300),
-    Piece(WOOD, 665, 258, 669, 300),
-    Piece(WOOD, 685, 258, 689, 300),
+    Piece(WOOD, 637, 258, 681, 262),
+    Piece(WOOD, 637, 272, 681, 276),
+    Piece(WOOD, 637, 286, 681, 290),
+    Piece(WOOD, 637, 258, 641, 300),
+    Piece(WOOD, 657, 258, 661, 300),
+    Piece(WOOD, 677, 258, 681, 300),
     Piece(BRICK, 722, -20, 750, 300),
     Piece(GLASS, 731, 20, 741, 34),
     Piece(GLASS, 731, 80, 741, 94),
     Piece(GLASS, 731, 140, 741, 154),
-    Piece(TNT, 728, 270, 744, 296),
+    Piece(TNT, 728, 208, 744, 226),
     Piece(METAL, 736, -60, 784, -20),
     Piece(WATER, 740, -56, 780, -24),
     Piece(TORCH, 758, -66, 762, -60),
@@ -157,9 +155,15 @@ const ZONES: [Rect; 2] = [Rect(16, 40, 440, 300), Rect(520, 40, 944, 300)];
 /// Where each team's crystal core is counted.
 const CORES: [Rect; 2] = [Rect(106, 264, 154, 300), Rect(806, 264, 854, 300)];
 /// The crystal of each core, which a ward regrows.
-const CRYSTALS: [Rect; 2] = [Rect(122, 280, 138, 296), Rect(822, 280, 838, 296)];
-/// Where the script blows out each team's keep when its core shatters.
-const KEEPS: [(i32, i32); 2] = [(80, 226), (876, 226)];
+const CRYSTALS: [Rect; 2] = [Rect(114, 280, 144, 296), Rect(816, 280, 846, 296)];
+/// The charges the script sets off in a beaten fort, one every
+/// `RAZE_EVERY` ticks after its core shatters: first the keep, then the rest
+/// of the fort from the back to the river. (x, y, radius).
+const RAZE: [[(i32, i32, i32); 6]; 2] = [
+    [(80, 226, 40), (80, 110, 36), (206, 236, 30), (172, 272, 26), (264, 250, 30), (318, 252, 30)],
+    [(876, 226, 40), (876, 110, 36), (791, 236, 30), (764, 272, 26), (736, 250, 30), (660, 268, 30)],
+];
+const RAZE_EVERY: i32 = 45;
 
 static PHASE: AtomicI32 = AtomicI32::new(PHASE_BUILD);
 static TIME: AtomicI32 = AtomicI32::new(0);
@@ -306,7 +310,7 @@ pub extern "C" fn on_init() {
 }
 
 /// Shatters a core that has lost half its crystal once the wards are down,
-/// and blows out its keep a moment later.
+/// then razes that team's fort, keep first.
 fn shatter(t: i32) {
     for team in 0..2 {
         let at = SHATTERED[team].load(Relaxed);
@@ -321,9 +325,11 @@ fn shatter(t: i32) {
                 explode((c.0 + c.2) / 2, (c.1 + c.3) / 2, 30, 255);
                 say(b"siege: a core shattered");
             }
-        } else if t == at + KEEP_DELAY {
-            let (x, y) = KEEPS[team];
-            explode(x, y, 40, 255);
+        } else if t > at && (t - at) % RAZE_EVERY == 0 {
+            let k = ((t - at) / RAZE_EVERY - 1) as usize;
+            if let Some(&(x, y, r)) = RAZE[team].get(k) {
+                explode(x, y, r, 255);
+            }
         }
     }
 }
@@ -498,9 +504,10 @@ fn show() {
         if SHATTERED[team].load(Relaxed) != 0 {
             l.text(b"SHATTERED");
         } else {
-            l.num(CORE[team].load(Relaxed));
+            let start = CORE_START[team].load(Relaxed);
+            l.num(CORE[team].load(Relaxed).min(start));
             l.text(b"/");
-            l.num(CORE_START[team].load(Relaxed));
+            l.num(start);
         }
         if phase == PHASE_BUILD {
             l.text(b" BUDGET ");

@@ -47,7 +47,7 @@ script = siege.wasm
 // players 0 and 2 man the left fort and players 1 and 3 the right one. Each
 // spawn is the floor of a sealed bedrock casemate that fits one gunner.
 spawn = 150 300
-spawn = 696 300
+spawn = 688 304
 spawn = 85 300
 spawn = 880 300
 
@@ -84,8 +84,8 @@ fill 104 270 118 300 brick
 fill 104 238 150 244 wood
 fill 146 244 150 248 torch
 // Crystal core on a stone plinth (the script counts and wards the crystal).
-fill 118 296 142 300 stone
-fill 122 280 138 296 crystal
+fill 112 296 145 300 stone
+fill 114 280 144 296 crystal
 // Casemates: bedrock boxes with a gunner-sized pocket inside.
 fill 145 282 155 302 bedrock
 fill 147 284 153 300 air
@@ -108,11 +108,11 @@ fill 872 160 880 176 glass
 fill 812 226 846 230 wood
 fill 812 230 816 234 torch
 // Crystal core on a stone plinth.
-fill 818 296 842 300 stone
-fill 822 280 838 296 crystal
+fill 814 296 846 300 stone
+fill 816 280 846 296 crystal
 // Casemates.
-fill 691 282 701 302 bedrock
-fill 693 284 699 300 air
+fill 683 286 693 306 bedrock
+fill 685 288 691 304 air
 fill 875 282 885 302 bedrock
 fill 877 284 883 300 air
 
@@ -126,18 +126,19 @@ scale 2
 sky dusk
 ambient 0.3 0.27 0.3
 exposure 1.4
-at 0: 480 150 1.1
+at 720: 480 150 1.1
+at 3600: 480 158 1.16
 
 // fe run has no players, so nothing is fired: the masons must finish both
 // forts, the wards hold, the cisterns, dikes and river must hold, the raft
 // must float, and the game ends in a draw at the time limit.
 [expect]
-after 700: count tnt in 0 -100 960 300 == 996
-after 3599: count crystal in 106 264 154 300 == 256
-after 3599: count crystal in 806 264 854 300 == 256
+after 700: count tnt in 0 -100 960 300 == 868
+after 3599: count crystal in 106 264 154 300 == 480
+after 3599: count crystal in 806 264 854 300 == 480
 after 3599: count water in 214 -60 262 -20 >= 1250
 after 3599: count water in 736 -60 784 -20 >= 1250
-after 3599: count tnt in 0 -100 960 300 == 996
+after 3599: count tnt in 0 -100 960 300 == 868
 after 3599: count oil in 0 -100 960 300 == 480
 after 3599: count water in 370 255 609 300 >= 8900
 after 3599: count wood in 460 230 520 270 >= 300
