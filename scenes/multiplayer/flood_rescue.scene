@@ -474,7 +474,8 @@ fill 300 188 302 191 torch
 decorate 30 44 236 172 glowshroom 5 floor
 decorate 30 44 236 172 crystal 2 walls
 decorate 252 112 340 172 glowshroom 3 floor
-decorate 230 186 440 300 glowshroom 5 floor
+decorate 230 186 290 300 glowshroom 5 floor
+decorate 336 186 440 300 glowshroom 5 floor
 decorate 230 186 440 300 crystal 2 walls
 decorate 252 40 400 172 moss 2 ceiling
 decorate 230 186 440 300 moss 2 ceiling
