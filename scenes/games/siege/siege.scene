@@ -6,28 +6,29 @@
 // cores, and shatters a beaten core.
 //
 // BUILD (12 s): each team's masons raise its blueprint course by course from
-// a budget of 12500 cells; players paint inside their own half from what is
+// a budget of 13500 cells; players paint inside their own half from what is
 // left. The status line shows the masons' progress and both budgets.
-// BATTLE (up to 48 s): explode and crate only. The cores are warded for the
-// first 20 s: the script regrows any crystal a shell knocks out. After that a
-// core that loses half its crystal shatters, its keep is blown out and its
-// team loses. At the time limit the larger share of core left wins, then the
-// larger share of fort left standing (WALLS on the status line).
+// BATTLE (up to 48 s): explode and crate only. The cores are fully warded for
+// the first 20 s: the script regrows any crystal a shell knocks out. Then the
+// wards fade by 4% a second (WARDS on the status line) and each core crumbles,
+// faster the less of its fort still stands (WALLS on the status line). A core
+// whose lost share of crystal exceeds the ward left shatters, the script
+// razes that fort charge by charge, keep first, and its team loses. At the
+// time limit the larger share of core left wins, then the larger WALLS.
 //
 // Every gunner fires from a sealed casemate. The left fort is a tall keep, a
-// warded core under a timber hoarding, a bastion and front wall, a front
-// tower with a powder room in its shaft and a cistern on top, and a powder
-// store on stilts by the river. The right fort is a palisade frame on the
-// riverbank, a front tower with a TNT store in its foot and a cistern on top,
-// an oil store, a curtain wall, the core and a tall keep. The river is held
-// above the fields by two earth dikes; a shell that breaks one lets the river
-// run into the fort behind it. A raft floats on the river.
+// core, a bastion, a front wall against a front tower with a powder room in
+// its shaft and a cistern on top, and a powder store on stilts by the river.
+// The right fort is a palisade frame on the riverbank, a front tower with a
+// TNT store in its shaft, a cistern on top and a curtain wall against it, an
+// oil store, the core and a tall keep. The river is held above the fields by
+// two earth dikes, and a raft floats on it.
 //
-// In the demo, the first shells of the battle bring down the right tower and
-// burst its cistern, the right dike breaks and the river floods the right
-// fort and floats its burning oil, the late joiner's shells bring down the
-// left tower, the wards fall at 0:32, the left dike and keep go, both cores
-// take hits and the right core shatters near the end.
+// In the demo the masons raise both forts during the build; the first shells
+// of the battle blow the right tower's powder and it falls onto its own fort;
+// the left tower goes later and topples into the river; the wards fade from
+// 0:32, the cores crumble and take hits, the left core shatters near the end
+// and the left fort is razed.
 //
 // Host it with: fe-server host scenes/games/siege/siege.scene
 // Join with:    fe-client connect HOST:7777 --scene scenes/games/siege/siege.scene
@@ -40,7 +41,7 @@ description = Masons raise two forts on a budget for 12 s, then the teams bombar
 size = 960 400
 // Room above the keeps so a 16:9 view frames the forts from keep tops to bedrock.
 bounds = 0 -100 960 400
-seed = 0x5e9e
+seed = 0x5ea0
 ticks = 3600
 script = siege.wasm
 // Players are dealt to spawn points in turn: player N gets spawn N mod 4, so
@@ -80,9 +81,8 @@ fill 76 100 84 116 glass
 fill 76 160 84 176 glass
 // Buttress at the keep's foot.
 fill 104 270 118 300 brick
-// Timber hoarding over the core, with a lamp at its end.
-fill 104 238 150 244 wood
-fill 146 244 150 248 torch
+// A lamp on the keep's face.
+fill 104 252 108 256 torch
 // Crystal core on a stone plinth (the script counts and wards the crystal).
 fill 112 296 145 300 stone
 fill 114 280 144 296 crystal
@@ -104,9 +104,8 @@ fill 872 -20 880 -4 glass
 fill 872 40 880 56 glass
 fill 872 100 880 116 glass
 fill 872 160 880 176 glass
-// Timber hoarding over the core, with a lamp at its end.
-fill 812 226 846 230 wood
-fill 812 230 816 234 torch
+// A lamp on the keep's face.
+fill 842 252 846 256 torch
 // Crystal core on a stone plinth.
 fill 814 296 846 300 stone
 fill 816 280 846 296 crystal
@@ -130,15 +129,16 @@ at 720: 480 150 1.1
 at 3600: 480 158 1.16
 
 // fe run has no players, so nothing is fired: the masons must finish both
-// forts, the wards hold, the cisterns, dikes and river must hold, the raft
-// must float, and the game ends in a draw at the time limit.
+// forts, the cores crumble a little but never shatter, the cisterns, dikes
+// and river must hold, the raft must float, and the game ends in a draw at
+// the time limit.
 [expect]
-after 700: count tnt in 0 -100 960 300 == 868
-after 3599: count crystal in 106 264 154 300 == 480
-after 3599: count crystal in 806 264 854 300 == 480
-after 3599: count water in 214 -60 262 -20 >= 1250
-after 3599: count water in 736 -60 784 -20 >= 1250
-after 3599: count tnt in 0 -100 960 300 == 868
+after 700: count tnt in 0 -100 960 300 == 2460
+after 3599: count crystal in 106 264 154 300 >= 460
+after 3599: count crystal in 806 264 854 300 >= 460
+after 3599: count water in 230 -60 278 -20 >= 1250
+after 3599: count water in 722 -60 770 -20 >= 1250
+after 3599: count tnt in 0 -100 960 300 == 2460
 after 3599: count oil in 0 -100 960 300 == 480
 after 3599: count water in 370 255 609 300 >= 8900
 after 3599: count wood in 460 230 520 270 >= 300

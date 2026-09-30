@@ -9,14 +9,16 @@
 //!   script counts the cells in each build zone and turns a team's paint tool
 //!   off, and stops its masons, once the budget is spent.
 //! - BATTLE (up to 48 s): the explode and crate tools work and paint is off.
-//!   Each fort has a core of crystal cells, warded for the first 20 s: the
-//!   script regrows a warded core row by row. Once the wards are down, a core
-//!   that loses half its crystal shatters: the script blows it apart, then
-//!   razes that team's fort charge by charge, keep first, and the team loses. If both cores
-//!   last the time limit, the larger share of core left wins, and if the
-//!   shares are equal, the larger share of fort left standing: the script
-//!   counts each team's brick, stone, metal, glass and wood cells in its build
-//!   zone and shows the share on the status line as WALLS.
+//!   Each fort has a core of crystal cells, fully warded for the first 20 s:
+//!   the script regrows a warded core row by row. Then the wards weaken by 4%
+//!   a second (WARDS on the status line), and each core crumbles faster the
+//!   less of its fort is left standing: the script counts each team's brick,
+//!   stone, metal, glass and wood cells in its build zone and shows the share
+//!   as WALLS. A core whose lost share of crystal exceeds the ward left
+//!   (and is at least a tenth) shatters: the script blows it apart, then
+//!   razes that team's fort charge by charge, keep first, and the team loses.
+//!   If both cores last the time limit, the larger share of core left wins,
+//!   then the larger WALLS.
 //! - OVER: every tool is off and the status line shows the winner.
 //!
 //! The geometry below must match `scenes/games/siege/siege.scene`.
@@ -53,10 +55,14 @@ const TICKS_PER_SECOND: i32 = 60;
 const BUILD_TICKS: i32 = 12 * TICKS_PER_SECOND;
 /// Battle time limit: the game ends at tick 3580 if no core shatters first.
 const BATTLE_TICKS: i32 = 2861;
-/// How long the cores are warded once the battle starts (to tick 1919).
+/// How long the cores are fully warded once the battle starts (to tick 1919).
 const WARD_TICKS: i32 = 20 * TICKS_PER_SECOND;
+/// After that the wards fade from 100% to nothing over this many ticks.
+const WARD_FADE: i32 = 1500;
+/// A core never shatters before it has lost this share of its crystal, in percent.
+const MIN_LOSS: i32 = 10;
 /// Cells each team may add during the build phase, masons included.
-const BUDGET: i32 = 12_500;
+const BUDGET: i32 = 13_500;
 /// The masons lay one course of the blueprint at a time, from the bottom row
 /// up to the top row, between these two ticks of the build phase.
 const MASON_START: i32 = 20;
@@ -70,8 +76,8 @@ const RECOUNT: i32 = 10;
 
 /// Materials the script uses. The first five count as fort for the tiebreak.
 const MATERIALS: [&[u8]; 11] = [
-    b"brick", b"stone", b"metal", b"glass", b"wood", b"tnt", b"water", b"oil", b"torch", b"crystal",
-    b"bedrock",
+    b"brick", b"stone", b"metal", b"glass", b"wood", b"tnt", b"water", b"oil", b"torch",
+    b"crystal", b"bedrock",
 ];
 const BRICK: u8 = 0;
 const METAL: u8 = 2;
@@ -102,23 +108,23 @@ struct Rect(i32, i32, i32, i32);
 #[derive(Clone, Copy)]
 struct Piece(u8, i32, i32, i32, i32);
 
-/// The left team's blueprint: an inner bastion, a raised front wall, a front
-/// tower with a powder room in its shaft and a metal cistern of water on top,
+/// The left team's blueprint: an inner bastion, a raised front wall against a
+/// front tower with a powder room in its shaft and a metal cistern of water on top,
 /// and a powder store on brick stilts out in front.
 const LEFT_PLAN: [Piece; 17] = [
     Piece(BRICK, 158, 266, 198, 300),
-    Piece(BRICK, 200, 170, 214, 300),
-    Piece(BRICK, 200, 162, 203, 170),
-    Piece(BRICK, 205, 162, 209, 170),
-    Piece(BRICK, 211, 162, 214, 170),
+    Piece(BRICK, 230, 170, 250, 300),
+    Piece(BRICK, 230, 162, 234, 170),
+    Piece(BRICK, 238, 162, 242, 170),
+    Piece(BRICK, 246, 162, 250, 170),
     Piece(BRICK, 250, -20, 278, 300),
     Piece(GLASS, 259, 20, 269, 34),
     Piece(GLASS, 259, 80, 269, 94),
     Piece(GLASS, 259, 140, 269, 154),
-    Piece(TNT, 254, 208, 274, 226),
-    Piece(METAL, 214, -60, 262, -20),
-    Piece(WATER, 218, -56, 258, -24),
-    Piece(TORCH, 236, -66, 240, -60),
+    Piece(TNT, 250, 200, 278, 240),
+    Piece(METAL, 230, -60, 278, -20),
+    Piece(WATER, 234, -56, 274, -24),
+    Piece(TORCH, 252, -66, 256, -60),
     Piece(BRICK, 298, 262, 302, 300),
     Piece(BRICK, 332, 262, 336, 300),
     Piece(BRICK, 298, 242, 336, 262),
@@ -126,9 +132,9 @@ const LEFT_PLAN: [Piece; 17] = [
 ];
 
 /// The right team's blueprint: a timber palisade frame by the river, a front
-/// tower with a TNT store in its shaft and a cistern on top, an oil store and
-/// a curtain wall in front of the core.
-const RIGHT_PLAN: [Piece; 19] = [
+/// tower with a TNT store in its shaft, a cistern on top and a curtain wall
+/// against it, and an oil store in front of the core.
+const RIGHT_PLAN: [Piece; 20] = [
     Piece(WOOD, 637, 258, 681, 262),
     Piece(WOOD, 637, 272, 681, 276),
     Piece(WOOD, 637, 286, 681, 290),
@@ -139,15 +145,16 @@ const RIGHT_PLAN: [Piece; 19] = [
     Piece(GLASS, 731, 20, 741, 34),
     Piece(GLASS, 731, 80, 741, 94),
     Piece(GLASS, 731, 140, 741, 154),
-    Piece(TNT, 728, 208, 744, 226),
-    Piece(METAL, 736, -60, 784, -20),
-    Piece(WATER, 740, -56, 780, -24),
-    Piece(TORCH, 758, -66, 762, -60),
-    Piece(WOOD, 754, 276, 782, 300),
-    Piece(OIL, 756, 278, 780, 298),
-    Piece(BRICK, 786, 170, 796, 300),
-    Piece(BRICK, 786, 162, 789, 170),
-    Piece(BRICK, 792, 162, 796, 170),
+    Piece(TNT, 722, 200, 750, 240),
+    Piece(METAL, 722, -60, 770, -20),
+    Piece(WATER, 726, -56, 766, -24),
+    Piece(TORCH, 744, -66, 748, -60),
+    Piece(BRICK, 750, 170, 770, 300),
+    Piece(BRICK, 750, 162, 754, 170),
+    Piece(BRICK, 758, 162, 762, 170),
+    Piece(BRICK, 766, 162, 770, 170),
+    Piece(WOOD, 774, 276, 802, 300),
+    Piece(OIL, 776, 278, 800, 298),
 ];
 
 /// Where each team may paint during the build phase: its half, away from the middle.
@@ -159,11 +166,29 @@ const CRYSTALS: [Rect; 2] = [Rect(114, 280, 144, 296), Rect(816, 280, 846, 296)]
 /// The charges the script sets off in a beaten fort, one every
 /// `RAZE_EVERY` ticks after its core shatters: first the keep, then the rest
 /// of the fort from the back to the river. (x, y, radius).
-const RAZE: [[(i32, i32, i32); 6]; 2] = [
-    [(80, 226, 40), (80, 110, 36), (206, 236, 30), (172, 272, 26), (264, 250, 30), (318, 252, 30)],
-    [(876, 226, 40), (876, 110, 36), (791, 236, 30), (764, 272, 26), (736, 250, 30), (660, 268, 30)],
+const RAZE: [[(i32, i32, i32); 8]; 2] = [
+    [
+        (80, 226, 40),
+        (80, 110, 36),
+        (80, 20, 32),
+        (240, 236, 30),
+        (172, 272, 26),
+        (264, 250, 30),
+        (318, 252, 30),
+        (356, 284, 22),
+    ],
+    [
+        (876, 226, 40),
+        (876, 110, 36),
+        (876, 20, 32),
+        (760, 236, 30),
+        (764, 272, 26),
+        (736, 250, 30),
+        (660, 268, 30),
+        (622, 284, 22),
+    ],
 ];
-const RAZE_EVERY: i32 = 45;
+const RAZE_EVERY: i32 = 50;
 
 static PHASE: AtomicI32 = AtomicI32::new(PHASE_BUILD);
 static TIME: AtomicI32 = AtomicI32::new(0);
@@ -233,8 +258,8 @@ fn lay_course(y: i32) {
 /// Runs the masons: courses go up at a steady rate from the bottom row.
 fn masons(t: i32) {
     let total = MASON_BOTTOM - MASON_TOP + 1;
-    let due = ((t - MASON_START).clamp(0, MASON_END - MASON_START) * total)
-        / (MASON_END - MASON_START);
+    let due =
+        ((t - MASON_START).clamp(0, MASON_END - MASON_START) * total) / (MASON_END - MASON_START);
     let mut done = COURSES.load(Relaxed);
     while done < due {
         lay_course(MASON_BOTTOM - done);
@@ -309,16 +334,50 @@ pub extern "C" fn on_init() {
     say(b"siege: build phase started");
 }
 
-/// Shatters a core that has lost half its crystal once the wards are down,
-/// then razes that team's fort, keep first.
+/// Ward strength left, in percent: full while the wards are up, then fading.
+fn ward_pct(t: i32) -> i32 {
+    (100 - (t - WARD_TICKS).max(0) * 100 / WARD_FADE).max(0)
+}
+
+/// Once the wards are down, a core crumbles: a small charge on its top every
+/// so often, sooner the less of its fort is left standing.
+fn crumble(t: i32) {
+    for team in 0..2 {
+        let lost = (100 - walls_pct(team)).clamp(1, 60);
+        if (t - WARD_TICKS) % (900 / lost).max(15) != 0 {
+            continue;
+        }
+        let c = CRYSTALS[team];
+        let width = c.2 - c.0;
+        for y in c.1..c.3 {
+            if count(c.0, y, c.2, y + 1, id(CRYSTAL)) == 0 {
+                continue;
+            }
+            // Walk the top row from a point that moves along it each time.
+            let from = (t / 7 * 13).rem_euclid(width);
+            for k in 0..width {
+                let x = c.0 + (from + k) % width;
+                if get_material(x, y) == id(CRYSTAL) {
+                    explode(x, y, 2, 60);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
+/// Shatters a core whose lost share of crystal exceeds the ward left, then
+/// razes that team's fort, keep first.
 fn shatter(t: i32) {
     for team in 0..2 {
         let at = SHATTERED[team].load(Relaxed);
         if at == 0 {
             let start = CORE_START[team].load(Relaxed);
+            let lost = start - CORE[team].load(Relaxed).min(start);
             if PHASE.load(Relaxed) == PHASE_BATTLE
                 && t >= WARD_TICKS
-                && CORE[team].load(Relaxed) * 2 < start
+                && lost * 100 > start * ward_pct(t).max(MIN_LOSS)
             {
                 SHATTERED[team].store(t, Relaxed);
                 let c = CRYSTALS[team];
@@ -361,8 +420,11 @@ pub extern "C" fn on_tick() {
         PHASE_BATTLE => {
             if t < WARD_TICKS {
                 mend();
-            } else if t == WARD_TICKS {
-                say(b"siege: the wards are down");
+            } else {
+                if t == WARD_TICKS {
+                    say(b"siege: the wards are fading");
+                }
+                crumble(t);
             }
             for team in 0..2 {
                 CORE[team].store(core_cells(team), Relaxed);
@@ -483,10 +545,12 @@ fn show() {
             l.text(b"BATTLE ");
             l.clock(BATTLE_TICKS - t);
             if t < WARD_TICKS {
-                l.text(b" | WARDS UP ");
+                l.text(b" | WARDS FULL ");
                 l.clock(WARD_TICKS - t);
             } else {
-                l.text(b" | WARDS DOWN");
+                l.text(b" | WARDS ");
+                l.num(ward_pct(t));
+                l.text(b"%");
             }
         }
         _ => match WINNER.load(Relaxed) {
