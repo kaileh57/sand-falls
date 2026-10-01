@@ -1,0 +1,21 @@
+// A stone block sinks through water onto a sandy bed. The sand it pushes aside
+// rises up its own column to the top of the sand and takes the place of the
+// water there, so the block raises a low mound beside it. In the rejected
+// build the sand was pushed up its column through the water to the air over
+// the pool and fell back as a tower of sand through the water.
+[scene]
+name = body on sand
+size = 256 200
+seed = 22
+
+[build]
+fill 0 190 256 200 bedrock
+fill 0 60 8 190 bedrock
+fill 248 60 256 190 bedrock
+fill 8 160 248 190 sand
+fill 8 80 248 160 water
+body 100 40 140 60 stone
+
+[expect]
+after 400: count sand in 0 0 256 140 == 0
+after 400: count sand in 0 0 256 200 >= 7000

@@ -471,12 +471,14 @@ pub(crate) fn unsupported(ctx: &RuleCtx<'_>, density: i16, b: Cell) -> bool {
     }
 }
 
-/// True if `t` is something solid that a hole's edge can be: a static cell,
-/// resting powder or a body.
+/// True if `t` is something solid that a hole's edge can be: a static cell
+/// of the terrain or resting powder. A body is no floor with a hole in it: it
+/// moves, and liquid held between a mast and a deck edge, or on a spar,
+/// would pile up there and never level with the sea around it.
 #[inline]
 fn solid(ctx: &RuleCtx<'_>, t: Cell) -> bool {
     if t.has(Cell::FLAG_IN_BODY) {
-        return true;
+        return false;
     }
     match ctx.f(t).state {
         State::Static => true,
