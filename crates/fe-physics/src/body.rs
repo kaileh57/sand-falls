@@ -79,6 +79,11 @@ pub struct PixelBody {
     /// Cells the last stamp left out because the liquid or powder there had
     /// nowhere to go.
     wet: Vec<CellPos>,
+    /// World cells the last unstamp cleared. Fluid the next stamp pushes out
+    /// of the body's way goes into those of them that lie in the liquid first,
+    /// so a body moving through water leaves no slit or pit behind it.
+    #[serde(skip)]
+    vacated: Vec<CellPos>,
     /// The last fluid step found the body afloat or submerged in a liquid or powder.
     pub floating: bool,
     /// The net vertical force (N) and torque (N m) the fluid put on the body in
@@ -188,6 +193,7 @@ impl PixelBody {
             rest_ticks: 0,
             fracture: 0,
             wet: Vec::new(),
+            vacated: Vec::new(),
             floating: false,
             fluid_push: (0.0, 0.0),
         }
@@ -619,12 +625,14 @@ impl PixelBody {
 
     /// Clears the body's stamped cells from the world.
     pub(crate) fn unstamp(&mut self, world: &mut World) {
+        self.vacated.clear();
         for &(p, _) in &self.stamped {
             let c = world.get(p);
             if c.has(Cell::FLAG_IN_BODY) {
                 let mut air = Cell::AIR;
                 air.temp = c.temp;
                 world.grid.set(p, air);
+                self.vacated.push(p);
             }
         }
         self.stamped.clear();
@@ -667,7 +675,22 @@ impl PixelBody {
                 targets.push((p, idx));
             }
         }
-        let mut shore = Shore { frame, prev, body: self, others, y0, rows, cursor: [None, None] };
+        // The lowest cells left behind are filled first.
+        let mut vacated = std::mem::take(&mut self.vacated);
+        vacated.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
+        vacated.dedup();
+        let mut shore = Shore {
+            frame,
+            prev,
+            body: self,
+            others,
+            y0,
+            rows,
+            cursor: [None, None],
+            vacated,
+            next_vacated: 0,
+            sea: None,
+        };
         let mut placed = Vec::with_capacity(targets.len());
         let mut wet = Vec::new();
         for (p, idx) in targets {
@@ -744,6 +767,10 @@ impl PixelBody {
         if l.level.is_some() && r.level.is_some() && self.flood(world, &frame, level) > 0 {
             rb.wake_up(true);
         }
+        if let (Some(a), Some(b)) = (l.level, r.level) {
+            self.balance(world, (x0, x1), (a, b));
+            self.fill_pits(world, &frame, (x0, x1), (a, b));
+        }
         let world: &World = world;
         // The envelope is taken along the local axis nearest to the world's
         // horizontal, so an open hull holds air only while its opening faces up.
@@ -808,6 +835,141 @@ impl PixelBody {
             rb.set_angular_damping(frac * avg_visc / 6.0);
         } else {
             in_air(rb);
+        }
+    }
+
+    /// Carries the pressure of the sea under a floating body from one side to
+    /// the other. The cell world carries none, and a body lying across the
+    /// surface is a wall to the flow phase, so water pushed onto one side of a
+    /// sinking hull, or piled against a mast, would stand there for good while
+    /// the sea on the other side stood lower. While the liquid runs on under
+    /// the body, each tick moves up to [`FLOOD_MAX`] cells, about two for each
+    /// row the levels `lv` beside its columns `xs` differ, from the top of the
+    /// liquid on the high side, highest first, to the air over the liquid on
+    /// the low side, lowest first. A body lying on the bed, or a gate, is a
+    /// dam, and nothing moves past it.
+    fn balance(&self, world: &mut World, xs: (i32, i32), lv: (f32, f32)) {
+        let ((x0, x1), (a, b)) = (xs, lv);
+        let diff = (a - b).abs();
+        if diff < 2.0 {
+            return;
+        }
+        let liquid = |c: Cell| sea_liquid(world, c);
+        // The liquid runs on under most of the body's columns.
+        let mut lowest: BTreeMap<i32, i32> = BTreeMap::new();
+        for &(p, _) in &self.stamped {
+            let e = lowest.entry(p.x).or_insert(p.y);
+            *e = (*e).max(p.y);
+        }
+        let under =
+            lowest.iter().filter(|&(&x, &y)| liquid(world.get(CellPos::new(x, y + 1)))).count();
+        if lowest.is_empty() || under * 2 < lowest.len() {
+            return;
+        }
+        // `a` is the left level: the larger y is the lower surface.
+        let (hx, hy, lx, ly) = if a < b {
+            (x0 - 1, a as i32, x1 + 1, b as i32)
+        } else {
+            (x1 + 1, b as i32, x0 - 1, a as i32)
+        };
+        let n = ((diff * 2.0) as usize).min(FLOOD_MAX);
+        let start = |x: i32, y: i32| -> Vec<CellPos> {
+            let dir = if x < x0 { -1 } else { 1 };
+            sea_start(world, x, y, dir).into_iter().collect()
+        };
+        let (hs, ls) = (start(hx, hy), start(lx, ly));
+        let (Some(&h0), Some(&l0)) = (hs.first(), ls.first()) else { return };
+        let fluid = world.get(h0).material();
+        let sea = |p: CellPos| {
+            let c = world.get(p);
+            liquid(c) && c.material() == fluid
+        };
+        if world.get(l0).material() != fluid {
+            return;
+        }
+        let mut high = surface_of(world, &hs, &sea, n * 2 + 8);
+        high.sort_unstable_by_key(|p| (p.y, p.x));
+        let mut low = surface_of(world, &ls, &sea, n * 2 + 8);
+        low.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
+        for (&from, &to) in high.iter().zip(&low).take(n) {
+            let to = CellPos::new(to.x, to.y - 1);
+            // Never raise the low side above the high side.
+            if to.y <= from.y || !world.get(to).is_air() {
+                break;
+            }
+            let c = settle(world, world.get(from));
+            let mut air = Cell::AIR;
+            air.temp = world.get(to).temp;
+            world.grid.set(to, c);
+            world.grid.set(from, air);
+        }
+    }
+
+    /// Fills the open pits of air the body leaves below the surface of the sea
+    /// around it: air in its outline that it does not hold, below the levels
+    /// `lv` beside its columns `xs`, with none of the body over it up to the
+    /// surface, such as the space between two masts over a sunken deck. The
+    /// masts are thin poles that the sea runs past, but to the flow phase they
+    /// are walls, so the sea would stand round such a pit in vertical walls for
+    /// good. Each tick up to [`FLOOD_MAX`] cells move from the top of the
+    /// liquid beside the body, highest first, into the pit, lowest first. An
+    /// open boat's hold or a hull's covered hold is the body's own (its
+    /// envelope), and only [`PixelBody::flood`] lets the sea in there.
+    fn fill_pits(&self, world: &mut World, frame: &Frame, xs: (i32, i32), lv: (f32, f32)) {
+        let ((x0, x1), (a, b)) = (xs, lv);
+        let level = a.max(b).ceil() as i32 + 1;
+        let (bx0, by0, bx1, by1) = frame.world_bounds();
+        if level > by1 {
+            return;
+        }
+        let liquid = |c: Cell| sea_liquid(world, c);
+        let mut pits = Vec::new();
+        for x in bx0..=bx1 {
+            for y in (level - 1).max(by0)..=by1 {
+                let p = CellPos::new(x, y);
+                let c = world.get(p);
+                if c.has(Cell::FLAG_IN_BODY) {
+                    break;
+                }
+                if y < level || !c.is_air() {
+                    continue;
+                }
+                if frame
+                    .local_of(p)
+                    .is_some_and(|i| self.cells[i].is_air() && self.envelope[i] == 0)
+                {
+                    pits.push(p);
+                }
+            }
+        }
+        if pits.is_empty() {
+            return;
+        }
+        pits.sort_unstable_by_key(|p| (std::cmp::Reverse(p.y), p.x));
+        let starts: Vec<CellPos> = [(x0 - 1, a as i32, -1), (x1 + 1, b as i32, 1)]
+            .into_iter()
+            .filter_map(|(x, y, dir)| sea_start(world, x, y, dir))
+            .collect();
+        let Some(&s0) = starts.first() else { return };
+        let fluid = world.get(s0).material();
+        let sea = |p: CellPos| {
+            let c = world.get(p);
+            liquid(c)
+                && c.material() == fluid
+                && frame.local_of(p).is_none_or(|i| self.envelope[i] == 0)
+        };
+        let n = pits.len().min(FLOOD_MAX);
+        let mut high = surface_of(world, &starts, &sea, n * 2 + 8);
+        high.sort_unstable_by_key(|p| (p.y, p.x));
+        for (&from, &to) in high.iter().zip(&pits).take(n) {
+            if from.y >= to.y || !world.get(to).is_air() {
+                break;
+            }
+            let c = settle(world, world.get(from));
+            let mut air = Cell::AIR;
+            air.temp = world.get(to).temp;
+            world.grid.set(to, c);
+            world.grid.set(from, air);
         }
     }
 
@@ -1400,6 +1562,23 @@ fn settle(world: &World, c: Cell) -> Cell {
     if m.state == State::Liquid && !m.has_lifetime() { fe_sim::liquid::at_rest(c) } else { c }
 }
 
+/// A liquid that pressure moves past a body: not part of one, and not one
+/// with a lifetime such as burning oil, which floats on top and would be
+/// quenched if it were carried under the sea.
+fn sea_liquid(world: &World, c: Cell) -> bool {
+    let m = world.materials().get(c.material());
+    !c.has(Cell::FLAG_IN_BODY) && m.state == State::Liquid && !m.has_lifetime()
+}
+
+/// The first cell of [`sea_liquid`] in the column `x` beside a body and the
+/// two past it on the side `dir` points to, at row `y` or a few rows under it,
+/// past the oil floating on the sea.
+fn sea_start(world: &World, x: i32, y: i32, dir: i32) -> Option<CellPos> {
+    (0..6).find_map(|dy| {
+        (0..3).map(|k| CellPos::new(x + dir * k, y + dy)).find(|&p| sea_liquid(world, world.get(p)))
+    })
+}
+
 /// A liquid or powder a body can float in: its density and viscosity.
 fn medium(world: &World, c: Cell) -> Option<(i16, u8)> {
     if c.is_air() || c.has(Cell::FLAG_IN_BODY) {
@@ -1539,6 +1718,10 @@ const LEVEL_GAP: u32 = 2;
 /// How far along the surface fluid displaced by a body is spread in one tick.
 const SHORE_REACH: i32 = 256;
 
+/// Air over the surface of a pool, keyed lowest first, then by distance
+/// from where the search began, then by x.
+type SeaTops = BTreeSet<(std::cmp::Reverse<i32>, i32, i32)>;
+
 /// Where fluid pushed out of a body's way goes while the body is stamped.
 struct Shore<'a> {
     frame: Frame,
@@ -1554,6 +1737,14 @@ struct Shore<'a> {
     /// the next one goes beside it, so displaced water spreads over the surface
     /// instead of piling up against the hull.
     cursor: [Option<CellPos>; 2],
+    /// The cells the body left at its last unstamp, lowest first, and the
+    /// first of them not yet looked at.
+    vacated: Vec<CellPos>,
+    next_vacated: usize,
+    /// Air over the surface of the liquid around the body, found the first
+    /// time displaced liquid needs it, keyed lowest first and then nearest to
+    /// where the search began.
+    sea: Option<(MaterialId, SeaTops)>,
 }
 
 impl Shore<'_> {
@@ -1673,23 +1864,128 @@ impl Shore<'_> {
         None
     }
 
+    /// A cell the body left behind that lies in the liquid: air with a liquid
+    /// beside it or over it. Displaced liquid fills these first, so a body
+    /// moving through water takes the water in front of it to the space behind
+    /// it, as a real one does, and leaves no slit or pit.
+    fn vacated_spot(&mut self, world: &World) -> Option<CellPos> {
+        while self.next_vacated < self.vacated.len() {
+            let q = self.vacated[self.next_vacated];
+            self.next_vacated += 1;
+            if !self.free(world, q) {
+                continue;
+            }
+            let wet = [(-1, 0), (1, 0), (0, -1)].into_iter().any(|(dx, dy)| {
+                let c = world.get(CellPos::new(q.x + dx, q.y + dy));
+                !c.has(Cell::FLAG_IN_BODY)
+                    && world.materials().get(c.material()).state == State::Liquid
+            });
+            if wet {
+                return Some(q);
+            }
+        }
+        None
+    }
+
+    /// Air over the lowest surface of the liquid that `from` lies in, near
+    /// it. The liquid is searched best-first by height, as in [`surface_of`],
+    /// so a cell from deep under a hull reaches the surface beside it, and the
+    /// cells of the surface found are filled lowest first: displaced liquid
+    /// goes where the surface stands lowest, never on top of a pile, so the
+    /// flow phase can level what it adds. The search never enters the air or
+    /// the liquid this body or another holds.
+    fn sea_spot(&mut self, world: &World, from: CellPos, mat: MaterialId) -> Option<CellPos> {
+        if self.sea.as_ref().is_none_or(|s| s.0 != mat) {
+            // A slick of oil is searched through itself, so oil pushed aside
+            // stays one slick on the water.
+            let around = [(0, -1), (-1, 0), (1, 0), (0, 1)]
+                .map(|(dx, dy)| world.get(CellPos::new(from.x + dx, from.y + dy)));
+            let own = around.iter().any(|c| c.material() == mat && !c.has(Cell::FLAG_IN_BODY));
+            let liquid = |q: CellPos| {
+                let c = world.get(q);
+                !c.has(Cell::FLAG_IN_BODY)
+                    && world.materials().get(c.material()).state == State::Liquid
+                    && (!own || c.material() == mat)
+                    && !self.hold(q)
+                    && !self.others.holds(q)
+            };
+            let starts: Vec<CellPos> = [(0, -1), (-1, 0), (1, 0), (0, 1)]
+                .into_iter()
+                .map(|(dx, dy)| CellPos::new(from.x + dx, from.y + dy))
+                .filter(|&q| liquid(q))
+                .collect();
+            let mut seen: BTreeSet<(i32, i32)> = BTreeSet::new();
+            let mut queue: BTreeSet<(i32, i32)> = BTreeSet::new();
+            for s in &starts {
+                if seen.insert((s.y, s.x)) {
+                    queue.insert((s.y, s.x));
+                }
+            }
+            let mut tops = BTreeSet::new();
+            let mut visited = 0;
+            while let Some((y, x)) = queue.pop_first() {
+                visited += 1;
+                if visited > SURFACE_SEARCH {
+                    break;
+                }
+                let above = CellPos::new(x, y - 1);
+                if self.free(world, above) {
+                    tops.insert((std::cmp::Reverse(above.y), (above.x - from.x).abs(), above.x));
+                }
+                for (dx, dy) in [(0, -1), (-1, 0), (1, 0), (0, 1)] {
+                    let q = (y + dy, x + dx);
+                    if seen.insert(q) && liquid(CellPos::new(q.1, q.0)) {
+                        queue.insert(q);
+                    }
+                }
+            }
+            if starts.is_empty() {
+                return None;
+            }
+            self.sea = Some((mat, tops));
+        }
+        let (_, mut tops) = self.sea.take()?;
+        let mut found = None;
+        while let Some((std::cmp::Reverse(y), _, x)) = tops.pop_first() {
+            let q = CellPos::new(x, y);
+            if !self.free(world, q) {
+                continue;
+            }
+            // The cell over it is the next air on this column.
+            let up = CellPos::new(x, y - 1);
+            if world.get(up).is_air() {
+                tops.insert((std::cmp::Reverse(up.y), (x - from.x).abs(), x));
+            }
+            found = Some(q);
+            break;
+        }
+        self.sea = Some((mat, tops));
+        found
+    }
+
     /// True if displaced fluid may go to `q`: air that neither this body nor
     /// another holds.
     fn free(&self, world: &World, q: CellPos) -> bool {
         world.get(q).is_air() && !self.inside(q) && !self.others.holds(q)
     }
 
-    /// Moves a displaced liquid or powder cell to air outside the body: close by
-    /// if there is any, else to the surface beside the body, else up its column
-    /// through the body to the first air above it. It never goes into the air
-    /// the body holds, so moving does not pump water into a sealed hold, nor
-    /// into the air another body holds, so a stone on a deck does not push the
-    /// sea through the deck into the hold under it. A cell that was in the
-    /// body's hold, such as the water in a flooded hold or the oil in a tank,
-    /// is its cargo: it moves to air in the hold it can reach without passing
-    /// through a wall, so the hold neither leaks nor drains as the body moves;
-    /// only a full hold spills over. Returns false if none of that works; the
-    /// body cell then stays out of the world so nothing is destroyed.
+    /// Moves a displaced liquid or powder cell to air outside the body. A cell
+    /// that was in the body's hold, such as the water in a flooded hold or the
+    /// oil in a tank, is its cargo: it moves to air in the hold it can reach
+    /// without passing through a wall, so the hold neither leaks nor drains as
+    /// the body moves; only a full hold spills over. Anything else goes close
+    /// by if there is room. Liquid then goes into the room the body left
+    /// behind in the liquid, else onto the lowest part of the surface of the
+    /// liquid it lies in (see [`Shore::sea_spot`]), so it never piles up over
+    /// a sinking hull or against a mast. Powder goes up its own column to the
+    /// top of the powder, and the liquid it finds there moves as displaced
+    /// liquid, so a hull settling into a sandy bed raises a mound beside it
+    /// instead of a tower through the water. It never goes into the air the
+    /// body holds, so moving does not pump water into a sealed hold, nor into
+    /// the air another body holds, so a stone on a deck does not push the sea
+    /// through the deck into the hold under it. Returns false if none of that
+    /// works; the body cell then stays out of the world so nothing is
+    /// destroyed.
     fn push_aside(&mut self, world: &mut World, from: CellPos, cell: Cell) -> bool {
         // A displaced liquid cell lands at rest: whatever speed it had is the body's now.
         let cell = settle(world, cell);
@@ -1708,25 +2004,57 @@ impl Shore<'_> {
                 }
             }
         }
+        if world.materials().get(cell.material()).state == State::Powder {
+            return self.push_powder(world, from, cell);
+        }
+        self.push_liquid(world, from, cell)
+    }
+
+    /// Moves a displaced liquid cell from `from` (see [`Shore::push_aside`]).
+    fn push_liquid(&mut self, world: &mut World, from: CellPos, cell: Cell) -> bool {
+        if let Some(q) =
+            self.vacated_spot(world).or_else(|| self.sea_spot(world, from, cell.material()))
+        {
+            world.grid.set(q, cell);
+            return true;
+        }
+        // Liquid with no liquid around it: a puddle the body lands in.
         if let Some(q) = self.surface(world, from) {
             world.grid.set(q, cell);
             return true;
         }
-        for k in 1..=256 {
+        false
+    }
+
+    /// Moves a displaced powder cell from `from` up through the powder over it
+    /// (and the body's own cells) to the top of the powder: into air there,
+    /// or into the place of the liquid there, which is moved as displaced
+    /// liquid.
+    fn push_powder(&mut self, world: &mut World, from: CellPos, cell: Cell) -> bool {
+        for k in 1..=64 {
             let q = CellPos::new(from.x, from.y - k);
             let c = world.get(q);
             if self.free(world, q) {
                 world.grid.set(q, cell);
                 return true;
             }
-            let through = c.is_air()
-                || c.has(Cell::FLAG_IN_BODY)
-                || matches!(
-                    world.materials().get(c.material()).state,
-                    State::Liquid | State::Powder
-                );
-            if !through || c.material() == MaterialId::BOUNDARY {
+            if c.material() == MaterialId::BOUNDARY {
                 return false;
+            }
+            if c.has(Cell::FLAG_IN_BODY) || self.inside(q) || self.others.holds(q) {
+                continue;
+            }
+            match world.materials().get(c.material()).state {
+                State::Powder => {}
+                State::Liquid => {
+                    world.grid.set(q, cell);
+                    if self.push_liquid(world, q, settle(world, c)) {
+                        return true;
+                    }
+                    world.grid.set(q, c);
+                    return false;
+                }
+                _ => return false,
             }
         }
         false
