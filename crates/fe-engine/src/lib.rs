@@ -26,7 +26,8 @@ pub use command::Command;
 pub use fe_physics::JointKind;
 pub use fe_sim::{Avatar, PlayerInput};
 pub use sim::{
-    ChunkState, HashParts, PhaseTimes, SimConfig, Simulation, StreamConfig, TickReport, tools,
+    ChunkState, HashParts, PhaseTimes, STREAM_FADE_TICKS, SimConfig, Simulation, StreamConfig,
+    TickReport, tools,
 };
 pub use snapshot::SnapshotError;
 pub use worldgen::WorldGen;

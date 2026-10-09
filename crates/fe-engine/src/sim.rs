@@ -161,6 +161,9 @@ pub struct ChunkState {
     pub solid_changed: bool,
 }
 
+/// How long a streamed-in chunk is remembered as new, for the renderer's fade.
+pub const STREAM_FADE_TICKS: u64 = 48;
+
 /// The whole deterministic simulation.
 pub struct Simulation {
     /// Cells and chunks.
@@ -176,6 +179,10 @@ pub struct Simulation {
     pub(crate) worldgen: WorldGen,
     pub(crate) stream: Option<StreamConfig>,
     pub(crate) stored: BTreeMap<ChunkPos, Vec<u32>>,
+    /// Tick each chunk was streamed in on, kept for a short while so the
+    /// renderer can fade new terrain in. Presentation only: it is not part of
+    /// the hash or of snapshots.
+    streamed_at: BTreeMap<ChunkPos, u64>,
     pub(crate) tool_masks: BTreeMap<u8, u16>,
     pub(crate) tool_zones: BTreeMap<u8, IRect>,
     /// Text a game shows in its HUD, such as the phase and score. Set by game scripts.
@@ -262,6 +269,7 @@ impl Simulation {
             worldgen: cfg.worldgen,
             stream: cfg.stream,
             stored: BTreeMap::new(),
+            streamed_at: BTreeMap::new(),
             tool_masks: BTreeMap::new(),
             tool_zones: BTreeMap::new(),
             status: String::new(),
@@ -366,7 +374,20 @@ impl Simulation {
         }
     }
 
+    /// The tick a loaded chunk was streamed in on, if that was within the
+    /// last [`STREAM_FADE_TICKS`] ticks. Chunks loaded at the start, from a
+    /// snapshot, or longer ago return `None`.
+    pub fn streamed_at(&self, pos: ChunkPos) -> Option<u64> {
+        self.streamed_at.get(&pos).copied()
+    }
+
+    /// Whether chunks stream in and out around the characters.
+    pub fn is_streamed(&self) -> bool {
+        self.stream.is_some()
+    }
+
     fn unload_chunk(&mut self, pos: ChunkPos) {
+        self.streamed_at.remove(&pos);
         if let Some(c) = self.world.grid.remove(pos) {
             self.stored.insert(pos, c.to_vec().into_iter().map(Cell::to_bits).collect());
         }
@@ -742,11 +763,21 @@ impl Simulation {
         if self.avatars.is_empty() || !self.world.tick().is_multiple_of(4) {
             return;
         }
+        let now = self.world.tick();
+        self.streamed_at.retain(|_, t| now.saturating_sub(*t) < STREAM_FADE_TICKS);
         let centers: Vec<ChunkPos> = self.avatars.iter().map(|a| a.center().chunk()).collect();
         for c in &centers {
             for dy in -cfg.radius..=cfg.radius {
                 for dx in -cfg.radius..=cfg.radius {
-                    self.load_chunk(ChunkPos::new(c.x + dx, c.y + dy));
+                    let pos = ChunkPos::new(c.x + dx, c.y + dy);
+                    if !self.world.grid.contains(pos) {
+                        self.load_chunk(pos);
+                        // The first streaming pass loads the start area all at
+                        // once; only chunks that arrive later fade in.
+                        if now > 0 {
+                            self.streamed_at.insert(pos, now);
+                        }
+                    }
                 }
             }
         }

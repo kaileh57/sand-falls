@@ -448,7 +448,7 @@ impl Session {
             .ok_or_else(|| RpcError::state("no scene loaded; call load_scene first"))?;
         let renderer = self.renderer.as_ref().ok_or_else(|| RpcError::state("no renderer"))?;
         let cam = &r.scene.camera;
-        let key = camera_at(cam, r.sim.tick(), r.scene.bounds);
+        let key = camera_at(cam, r.sim.tick(), camera_bounds(&r.scene, &r.sim));
         let f = |k: &str| params.get(k).and_then(Value::as_f64).map(|v| v as f32);
         let u = |k: &str| params.get(k).and_then(Value::as_u64).map(|v| v as u32);
         let view = View {
@@ -485,9 +485,30 @@ pub fn render_settings(cam: &fe_scene::Camera) -> RenderSettings {
     .clamped()
 }
 
+/// The rectangle a scene's camera is kept inside.
+///
+/// A fixed world is its scene bounds. A streamed world grows as chunks are
+/// generated around the characters, so the camera is kept inside the box of
+/// the chunks loaded now instead: it follows a character as far as streaming
+/// takes it, and never past the edge of the loaded world.
+pub fn camera_bounds(scene: &fe_scene::Scene, sim: &fe_engine::Simulation) -> IRect {
+    if scene.stream.is_none() {
+        return scene.bounds;
+    }
+    let mut it = sim.world.grid.positions();
+    let Some(first) = it.next() else { return scene.bounds };
+    let (mut a, mut b) = (first, first);
+    for p in it {
+        a = fe_core::ChunkPos::new(a.x.min(p.x), a.y.min(p.y));
+        b = fe_core::ChunkPos::new(b.x.max(p.x), b.y.max(p.y));
+    }
+    let n = fe_core::CHUNK_SIZE;
+    IRect::new(a.x * n, a.y * n, (b.x + 1) * n, (b.y + 1) * n)
+}
+
 /// Camera center and zoom at a tick, interpolated between keyframes.
 ///
-/// The view is kept inside `bounds`, so a key near the edge of the world never
+/// The view is kept inside `bounds` (see [`camera_bounds`]), so a key near the edge of the world never
 /// shows the void beyond it; a world smaller than the view is centered.
 pub fn camera_at(cam: &fe_scene::Camera, tick: u64, bounds: IRect) -> (f32, f32, f32) {
     let (x, y, zoom) = camera_key_at(cam, tick, bounds);
