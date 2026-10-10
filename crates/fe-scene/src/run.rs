@@ -440,7 +440,14 @@ fn drawn_count(sim: &Simulation, mats: &MaterialSet, r: fe_core::IRect, id: Mate
         }
     }
     let liquid = |c: fe_core::Cell| mats.get(c.material()).state == fe_materials::State::Liquid;
-    let out = fe_sim::liquid::drawn(&cells, w, h, liquid);
+    let firm = |c: fe_core::Cell| {
+        c.has(fe_core::Cell::FLAG_IN_BODY)
+            || matches!(
+                mats.get(c.material()).state,
+                fe_materials::State::Static | fe_materials::State::Powder
+            )
+    };
+    let out = fe_sim::liquid::drawn(&cells, w, h, liquid, firm);
     let mut n = 0;
     for y in r.min.y..r.max.y {
         for x in r.min.x..r.max.x {

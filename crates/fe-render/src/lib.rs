@@ -163,6 +163,8 @@ struct MatLook {
     /// material's own temperature in degrees C, to dim the glow as it cools.
     cooling_glow: Option<(i32, i32)>,
     /// Water: tinted pale as it nears boiling.
+    /// Stone: tinted by the world generator's depth bands.
+    banded: bool,
     water: bool,
     /// Gas with a lifetime (smoke, dust): thins out as its lifetime runs down.
     fades: bool,
@@ -173,6 +175,11 @@ struct MatLook {
     life: Option<u8>,
     /// A blast's flash: its light is spread far, like a spark's.
     flash: bool,
+    /// Fuel (wood, leaves, charcoal, and the same burning): the light of
+    /// nearby flames falling on it is capped, so a trunk burning at its top
+    /// shows a lit tip over a dark trunk instead of glowing orange along its
+    /// whole length.
+    fuel: bool,
 }
 
 /// Cached per-material render data.
@@ -260,10 +267,13 @@ impl Renderer {
                     _ => None,
                 },
                 water: m.name == "water",
+                banded: m.name == "stone",
                 fades: m.state == State::Gas && m.lifetime.is_some(),
                 flicker: m.state == State::Static && m.lifetime.is_some() && m.light != [0; 3],
                 life: m.lifetime.map(|(_, max)| max),
                 flash: m.name == "flash",
+                fuel: m.state == State::Static
+                    && (m.ignite.is_some() || (m.lifetime.is_some() && m.light != [0; 3])),
             })
             .collect();
         Self { looks }
@@ -339,9 +349,16 @@ impl Renderer {
 
         // Liquid in the air is drawn with the path it swept: see
         // `fe_sim::liquid::drawn`.
-        let cells = fe_sim::liquid::drawn(&sample_cells(sim, bx, by, bw, bh), bw, bh, |c| {
-            self.look(c.material()).state == State::Liquid
-        });
+        let cells = fe_sim::liquid::drawn(
+            &sample_cells(sim, bx, by, bw, bh),
+            bw,
+            bh,
+            |c| self.look(c.material()).state == State::Liquid,
+            |c| {
+                c.has(Cell::FLAG_IN_BODY)
+                    || matches!(self.look(c.material()).state, State::Static | State::Powder)
+            },
+        );
         let mut buf = Buffers::new(bw, bh);
         self.fill_buffers(sim, avatars, &cells, &mut buf, bx, by, frame, s);
         if s.lighting {
@@ -359,6 +376,9 @@ impl Renderer {
             .map(|v| v[0])
             .collect();
         let mut hdr = self.compose(&cells, &buf, bw, bh, bx, by, s);
+        if sim.is_streamed() {
+            stream_fade(sim, &mut hdr, bw, bh, bx, by, s.exposure);
+        }
         if s.bloom {
             light::bloom(&mut hdr, bw, bh);
         }
@@ -494,6 +514,14 @@ impl Renderer {
                     let (wx, wy) = (bx + x as i32, by + y as i32);
                     let h = hash2(wx, wy);
                     let mut a = look.colors[h as usize % look.colors.len()];
+                    if look.banded
+                        && let Some(b) = sim.worldgen().rock_band(sim.world.seed(), wx, wy)
+                    {
+                        // Generated stone is tinted by depth band: warm grey
+                        // near the surface, cooler and darker further down.
+                        let t = ROCK_BANDS[usize::from(b).min(ROCK_BANDS.len() - 1)];
+                        a = [a[0] * t[0], a[1] * t[1], a[2] * t[2]];
+                    }
                     if look.state == State::Liquid {
                         let shimmer =
                             (((wx as f32) * 0.3 + (wy as f32) * 0.17 + frame as f32 * 0.07).sin()
@@ -501,10 +529,15 @@ impl Renderer {
                                 + 1.0;
                         a = [a[0] * shimmer, a[1] * shimmer, a[2] * shimmer];
                         if look.water {
-                            // Hot water turns pale, up to 30% at boiling.
-                            let k = ((temp_to_celsius(c.temp) - 60) as f32 / 40.0).clamp(0.0, 1.0)
-                                * 0.3;
-                            a = lerp3(a, [0.5, 0.58, 0.66], k);
+                            // Hot water stays blue: near boiling it only
+                            // shimmers harder and a touch lighter, cell by
+                            // cell, instead of turning a flat pale mint.
+                            let k = ((temp_to_celsius(c.temp) - 70) as f32 / 30.0).clamp(0.0, 1.0);
+                            if k > 0.0 {
+                                let n = hash2(wx ^ (frame / 3) as i32, wy) % 100;
+                                let f = 1.0 + k * (n as f32 / 100.0 - 0.3) * 0.25;
+                                a = [a[0] * f, a[1] * f, (a[2] * f).max(a[2])];
+                            }
                         }
                     }
                     let mut e = self.emission(c);
@@ -796,6 +829,21 @@ impl Renderer {
                 } else {
                     match look.state {
                         State::Fire => [e[0] * 0.9, e[1] * 0.9, e[2] * 0.9],
+                        State::Liquid if look.water => {
+                            // Water tints the light it receives: warm light from
+                            // fire and smoke is taken mostly as its brightness
+                            // and capped, so the top rows of a river stay blue
+                            // instead of washing out to grey.
+                            let lum = (l[0] + l[1] + l[2]) / 3.0;
+                            let cap = sky_light[2].max(0.15) * 1.5 + 0.4;
+                            let w = |k: usize| (l[k] * 0.3 + lum * 0.7).min(cap);
+                            let lw = [w(0), w(1), w(2)];
+                            [
+                                a[0] * (amb[0] + lw[0] * 0.9) + e[0],
+                                a[1] * (amb[1] + lw[1] * 0.9) + e[1],
+                                a[2] * (amb[2] + lw[2] * 0.9) + e[2],
+                            ]
+                        }
                         State::Liquid => {
                             let v = lit(0.9);
                             [
@@ -809,13 +857,31 @@ impl Renderer {
                             // Rigid bodies are thin and never sink as far.
                             let floor = if c.has(Cell::FLAG_IN_BODY) { 0.6 } else { 0.22 };
                             let ao = (floor + buf.open[i] * 2.2).min(1.0);
-                            let v = lit(1.0);
+                            let v = if look.fuel {
+                                // Flame light on fuel is capped near the sky's
+                                // own light: only the burning cells glow.
+                                let cap = |k: usize| sky_light[k] + 0.12;
+                                [
+                                    a[0] * (amb[0] + l[0].min(cap(0))),
+                                    a[1] * (amb[1] + l[1].min(cap(1))),
+                                    a[2] * (amb[2] + l[2].min(cap(2))),
+                                ]
+                            } else {
+                                lit(1.0)
+                            };
                             // Deep rock still shows relief: broad light and dark
                             // patches and strata, lit by the ambient light and by
                             // light bouncing in from the spaces around it.
                             let (wx, wy) = (bx + x as i32, by + y as i32);
                             let rl = relief(wx, wy);
-                            let b = buf.bounce[i];
+                            let mut b = buf.bounce[i];
+                            if look.fuel {
+                                b = [
+                                    b[0].min(sky_light[0] + 0.12),
+                                    b[1].min(sky_light[1] + 0.12),
+                                    b[2].min(sky_light[2] + 0.12),
+                                ];
+                            }
                             let deep = [
                                 a[0] * (amb[0] * 0.35 + b[0] * 0.4) * rl,
                                 a[1] * (amb[1] * 0.35 + b[1] * 0.4) * rl,
@@ -1023,6 +1089,10 @@ fn body_insides(
 const DEEP_LIQUID: i32 = 8;
 
 /// Reads a rectangle of cells, chunk by chunk.
+/// Tints of generated stone by depth band (see `WorldGen::rock_band`).
+const ROCK_BANDS: [[f32; 3]; 4] =
+    [[1.3, 1.06, 0.78], [1.0, 1.0, 1.0], [0.72, 0.84, 1.2], [0.72, 0.56, 0.8]];
+
 fn sample_cells(sim: &Simulation, bx: i32, by: i32, bw: usize, bh: usize) -> Vec<Cell> {
     let mut out = vec![Cell::BOUNDARY; bw * bh];
     let (a, b) = fe_core::IRect::from_size(bx, by, bw as i32, bh as i32).chunk_range();
@@ -1048,13 +1118,88 @@ fn sample_cells(sim: &Simulation, bx: i32, by: i32, bw: usize, bh: usize) -> Vec
     out
 }
 
+/// How unloaded space looks in a streamed world, in linear display light: a
+/// dim slate with faint diagonal hatching, so the edge of the loaded world
+/// reads as "not generated yet" instead of as black rock or a black void.
+fn unloaded_color(wx: i32, wy: i32) -> [f32; 3] {
+    if (wx + wy).rem_euclid(14) < 2 { [0.020, 0.022, 0.032] } else { [0.010, 0.011, 0.016] }
+}
+
+/// Draws unloaded space in a streamed world (see [`unloaded_color`]) and fades
+/// newly streamed chunks in from it over [`fe_engine::STREAM_FADE_TICKS`]
+/// ticks, so terrain arriving at the edge of the world reads as streaming in.
+fn stream_fade(
+    sim: &Simulation,
+    hdr: &mut [[f32; 3]],
+    bw: usize,
+    bh: usize,
+    bx: i32,
+    by: i32,
+    exposure: f32,
+) {
+    let tick = sim.tick();
+    let fade = fe_engine::STREAM_FADE_TICKS as f32;
+    // Linear display light back to the HDR value that tone maps to it.
+    let inv = |l: f32| -(1.0 - l).ln() / exposure.max(0.01);
+    let (a, b) = fe_core::IRect::from_size(bx, by, bw as i32, bh as i32).chunk_range();
+    for cy in a.y..b.y {
+        for cx in a.x..b.x {
+            let pos = ChunkPos::new(cx, cy);
+            // 0 shows only unloaded space, 1 only the chunk.
+            let k = if sim.world.grid.contains(pos) {
+                match sim.streamed_at(pos) {
+                    Some(t) => {
+                        let t = (tick.saturating_sub(t) as f32 / fade).clamp(0.0, 1.0);
+                        t * t * (3.0 - 2.0 * t)
+                    }
+                    None => continue,
+                }
+            } else {
+                0.0
+            };
+            if k >= 1.0 {
+                continue;
+            }
+            let o = pos.origin();
+            for ly in 0..CHUNK_SIZE {
+                let y = o.y + ly - by;
+                if y < 0 || y as usize >= bh {
+                    continue;
+                }
+                for lx in 0..CHUNK_SIZE {
+                    let x = o.x + lx - bx;
+                    if x < 0 || x as usize >= bw {
+                        continue;
+                    }
+                    let u = unloaded_color(o.x + lx, o.y + ly);
+                    let u = [inv(u[0]), inv(u[1]), inv(u[2])];
+                    let c = &mut hdr[y as usize * bw + x as usize];
+                    *c = [
+                        u[0] + (c[0] - u[0]) * k,
+                        u[1] + (c[1] - u[1]) * k,
+                        u[2] + (c[2] - u[2]) * k,
+                    ];
+                }
+            }
+        }
+    }
+}
+
 fn draw_overlay(sim: &Simulation, img: &mut Image, fx0: f32, fy0: f32, ppc: f32) {
     let to_px = |x: i32, y: i32| (((x as f32 - fx0) * ppc) as i32, ((y as f32 - fy0) * ppc) as i32);
     for c in sim.world.grid.chunks() {
         let o = c.pos().origin();
         let (x0, y0) = to_px(o.x, o.y);
         let (x1, y1) = to_px(o.x + CHUNK_SIZE, o.y + CHUNK_SIZE);
-        img.rect_outline(x0, y0, x1, y1, [60, 60, 70, 255]);
+        // Chunks streamed in during the last moments are outlined in green.
+        let fresh = sim.streamed_at(c.pos()).is_some();
+        img.rect_outline(
+            x0,
+            y0,
+            x1,
+            y1,
+            if fresh { [80, 230, 120, 255] } else { [60, 60, 70, 255] },
+        );
         let d = c.pending();
         if !d.is_empty() {
             let (a0, b0) = to_px(o.x + i32::from(d.x0), o.y + i32::from(d.y0));
