@@ -269,7 +269,11 @@ pub fn render(a: &Args) -> Result<bool, String> {
     let mut r = runner(path, a.threads())?;
     run_to(&mut r, a.num::<u64>("tick")?.unwrap_or(0));
     let ren = renderer_for(&r);
-    let (cx, cy, zoom) = fe_control::camera_at(&r.scene.camera, r.sim.tick(), r.scene.bounds);
+    let (cx, cy, zoom) = fe_control::camera_at(
+        &r.scene.camera,
+        r.sim.tick(),
+        fe_control::camera_bounds(&r.scene, &r.sim),
+    );
     let mut s = fe_control::render_settings(&r.scene.camera);
     s.overlay = a.flag("overlay");
     let img = ren.render(&r.sim, View { cx, cy, zoom }, &s, r.sim.tick());
@@ -331,8 +335,11 @@ pub fn video(a: &Args) -> Result<bool, String> {
     let mut n = 0u64;
     while r.sim.tick() < end {
         if (r.sim.tick() - from).is_multiple_of(every) {
-            let (cx, cy, zoom) =
-                fe_control::camera_at(&r.scene.camera, r.sim.tick(), r.scene.bounds);
+            let (cx, cy, zoom) = fe_control::camera_at(
+                &r.scene.camera,
+                r.sim.tick(),
+                fe_control::camera_bounds(&r.scene, &r.sim),
+            );
             let img = ren.render(&r.sim, View { cx, cy, zoom }, &s, r.sim.tick());
             if let Some(ff) = ffmpeg.as_mut() {
                 ff.stdin
