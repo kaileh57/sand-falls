@@ -163,15 +163,31 @@ impl Avatar {
         let steps = (self.vy.abs().0 as u32).div_ceil(Fx::ONE.0 as u32).max(1) as i32;
         let dy = Fx(self.vy.0 / steps);
         self.on_ground = false;
+        if Self::blocked(world, self.x, self.y) {
+            // Something solid is already inside the box (sand poured on the
+            // character, a cell placed over it). Push out once by at most a
+            // step's height, otherwise stay put: never creep up through rock.
+            if let Some(up) =
+                (1..=STEP_UP).find(|&up| !Self::blocked(world, self.x, self.y - Fx::from_int(up)))
+            {
+                self.y -= Fx::from_int(up);
+            }
+            self.on_ground = true;
+            self.vy = Fx::ZERO;
+            return;
+        }
         for _ in 0..steps {
             let ny = self.y + dy;
             if Self::blocked(world, self.x, ny) {
                 if dy.0 > 0 {
                     self.on_ground = true;
-                    // Snap the feet to the top of the cell below.
-                    self.y = Fx::from_int(ny.floor());
-                    if Self::blocked(world, self.x, self.y) {
-                        self.y -= Fx::ONE;
+                    // Snap the feet to the top of the cell below, but only to
+                    // a free spot; otherwise keep the last free position.
+                    let snapped = Fx::from_int(ny.floor());
+                    if !Self::blocked(world, self.x, snapped) {
+                        self.y = snapped;
+                    } else if !Self::blocked(world, self.x, snapped - Fx::ONE) {
+                        self.y = snapped - Fx::ONE;
                     }
                 }
                 self.vy = Fx::ZERO;
@@ -287,6 +303,32 @@ mod tests {
             peak = peak.min(a.y.floor());
         }
         assert!(peak < 90, "peak {peak}");
+        assert!(a.on_ground);
+    }
+
+    #[test]
+    fn solid_inside_box_does_not_lift_through_rock() {
+        let mut w = world();
+        let stone = w.materials().id("stone").unwrap_or_default();
+        let mut a = Avatar::new(0, CellPos::new(50, 100));
+        a.step(&w, &PlayerInput::default());
+        assert!(a.on_ground);
+        // A stone block fills the character's upper body.
+        w.fill_rect(IRect::new(45, 80, 56, 95), stone);
+        let start = a.y.floor();
+        for _ in 0..200 {
+            a.step(&w, &PlayerInput::default());
+        }
+        assert_eq!(a.y.floor(), start, "rose through stone");
+        // A single cell at the feet pushes the character up once, then it rests on it.
+        let mut w = world();
+        let mut a = Avatar::new(0, CellPos::new(50, 100));
+        a.step(&w, &PlayerInput::default());
+        w.fill_rect(IRect::new(50, 99, 51, 100), stone);
+        for _ in 0..200 {
+            a.step(&w, &PlayerInput::default());
+        }
+        assert_eq!(a.y.floor(), 99);
         assert!(a.on_ground);
     }
 }

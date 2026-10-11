@@ -126,7 +126,11 @@ pub(crate) fn demo(args: &[String]) -> Result<bool, String> {
             return;
         }
         let sim = &f.server.runner.sim;
-        let (cx, cy, zoom) = fe_control::camera_at(&scene.camera, sim.tick(), scene.bounds);
+        let (cx, cy, zoom) = fe_control::camera_at(
+            &scene.camera,
+            sim.tick(),
+            fe_control::camera_bounds(&scene, sim),
+        );
         let mut img = renderer.render(sim, View { cx, cy, zoom }, &settings, sim.tick());
         hud(&mut img, f, &history, &rates);
         if let Err(e) = stdin.write_all(&img.rgba) {

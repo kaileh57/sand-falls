@@ -1365,6 +1365,24 @@ impl Liq<'_, '_, '_, '_> {
 pub const STREAK_TICKS: i32 = 16;
 /// Longest gap, in cells, that a stream is drawn across.
 pub const STREAK_MAX: i32 = 48;
+/// Gaps up to this many cells are joined behind any cell in the air; longer
+/// ones only along a stream that leads back to its source.
+const SHORT_JOIN: i32 = 6;
+
+// Whether a cell's chain of joins leads back to a source, in `drawn`.
+const UNKNOWN: u8 = 0;
+const BUSY: u8 = 1;
+const YES: u8 = 2;
+const NO: u8 = 3;
+
+/// What a cell of a stream in the air is joined to behind it.
+#[derive(Clone, Copy)]
+enum Link {
+    /// Liquid that is not in the air, or the edge of the window.
+    Source,
+    /// Another cell in the air, by index.
+    Cell(usize),
+}
 
 /// The cells as they are drawn: liquid in the air with the path it swept,
 /// and small tears in streams and sheets closed. `cells` is a `w` by `h`
@@ -1388,7 +1406,13 @@ pub const STREAK_MAX: i32 = 48;
 /// the air, so a stream the grid tore open reads whole. Closed along every
 /// row, column and diagonal, a scatter of drops at the foot of a jet was
 /// drawn as a lattice.
-pub fn drawn(cells: &[Cell], w: usize, h: usize, liquid: impl Fn(Cell) -> bool) -> Vec<Cell> {
+pub fn drawn(
+    cells: &[Cell],
+    w: usize,
+    h: usize,
+    liquid: impl Fn(Cell) -> bool,
+    firm: impl Fn(Cell) -> bool,
+) -> Vec<Cell> {
     let mut out = cells.to_vec();
     let at = |x: i32, y: i32| {
         (x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h)
@@ -1396,16 +1420,32 @@ pub fn drawn(cells: &[Cell], w: usize, h: usize, liquid: impl Fn(Cell) -> bool) 
     };
     // Rounds a / b to the nearest whole number, for b > 0.
     let round = |a: i64, b: i64| (2 * a + b).div_euclid(2 * b) as i32;
+    // Each cell's join: the cells of travel to fill behind it and what it
+    // joins to, so a join is drawn only when its chain leads back to a source.
+    let mut links: Vec<(usize, i32, Link)> = Vec::new();
     for (i, &c) in cells.iter().enumerate() {
         if !is_airborne(c) || c.has(Cell::FLAG_IN_BODY) {
             continue;
         }
         let (vx, vy) = air_velocity(c);
         let m = vx.abs().max(vy);
+        let (x0, y0) = ((i % w) as i32, (i / w) as i32);
+        // A cell close to a ledge or a pool has just left it: it heads a
+        // stream. A drop out in the open (rain condensed from steam, spray
+        // from a blast) heads nothing.
+        let near = || {
+            (-3..=3).any(|dy| {
+                (-3..=3).any(|dx| {
+                    at(x0 + dx, y0 + dy).is_some_and(|t| firm(t) || (liquid(t) && !is_airborne(t)))
+                })
+            })
+        };
         if m < 4 {
+            if near() {
+                links.push((i, 0, Link::Source));
+            }
             continue;
         }
-        let (x0, y0) = ((i % w) as i32, (i / w) as i32);
         let reach = ((m * STREAK_TICKS + 15) / 16).clamp(2, STREAK_MAX);
         // Where the cell was `k` cells of travel along its faster axis ago:
         // 16 k / m ticks back, when it fell slower by gravity's gain.
@@ -1423,28 +1463,100 @@ pub fn drawn(cells: &[Cell], w: usize, h: usize, liquid: impl Fn(Cell) -> bool) 
         let joins = |t: Cell| t.material() == c.material() && !t.has(Cell::FLAG_IN_BODY);
         let side = |t: Cell| joins(t) && is_airborne(t);
         let mut found = 0;
+        let mut link = Link::Source;
+        let mut edge = false;
         let mut last = (x0, y0);
+        let idx = |x: i32, y: i32| y as usize * w + x as usize;
         for k in 1..=reach {
             let (x, y) = back(k);
             if (x, y) == last {
                 continue;
             }
             last = (x, y);
-            let Some(t) = at(x, y) else { break };
+            let Some(t) = at(x, y) else {
+                // The path leaves the window: what lies beyond is unknown, so
+                // take it for the stream it looks like, though nothing is
+                // drawn behind the cell.
+                edge = true;
+                break;
+            };
             if joins(t) {
                 found = k;
+                if is_airborne(t) {
+                    link = Link::Cell(idx(x, y));
+                }
                 break;
             }
             if !t.is_air() {
+                // A cell that has just left a ledge or a wall heads a stream.
+                edge = k <= SHORT_JOIN;
                 break;
             }
-            if at(x + sx, y + sy).is_some_and(side) || at(x - sx, y - sy).is_some_and(side) {
-                found = k + 1;
+            for (px, py) in [(x + sx, y + sy), (x - sx, y - sy)] {
+                if at(px, py).is_some_and(side) {
+                    found = k + 1;
+                    link = Link::Cell(idx(px, py));
+                    break;
+                }
+            }
+            if found > 0 {
                 break;
             }
         }
+        if found > 0 || edge {
+            links.push((i, found, link));
+        } else if near() {
+            links.push((i, 0, Link::Source));
+        }
+    }
+    // A join is drawn when it is short, or when its chain of joins leads back
+    // to liquid that is not in the air (the pool, hole or jet mouth the
+    // stream leaves) or out of the window. Lone drops in the air, such as
+    // rain condensed from steam or spray from a blast, are drawn as drops:
+    // joined to one another they drew as long thin lines and branches.
+    let mut link_of = vec![None; cells.len()];
+    for &(i, _, l) in &links {
+        link_of[i] = Some(l);
+    }
+    let mut anchored = vec![UNKNOWN; cells.len()];
+    let mut stack = Vec::new();
+    for &(i, _, _) in &links {
+        let mut j = i;
+        // Walk up the chain to a known answer, then mark the cells on the way.
+        let answer = loop {
+            match anchored[j] {
+                YES => break true,
+                NO | BUSY => break false,
+                _ => {}
+            }
+            match link_of[j] {
+                None => break false,
+                Some(Link::Source) => break true,
+                Some(Link::Cell(t)) => {
+                    anchored[j] = BUSY;
+                    stack.push(j);
+                    j = t;
+                }
+            }
+        };
+        for j in stack.drain(..) {
+            anchored[j] = if answer { YES } else { NO };
+        }
+    }
+    for &(i, found, _) in &links {
+        let ok = found <= SHORT_JOIN || anchored[i] == YES;
+        if !ok {
+            continue;
+        }
+        let c = cells[i];
+        let (x0, y0) = ((i % w) as i32, (i / w) as i32);
+        let (vx, vy) = air_velocity(c);
+        let m = vx.abs().max(vy);
+        let (mx, vx64, vy64) = (i64::from(m), i64::from(vx), i64::from(vy));
         for k in 1..found {
-            let (x, y) = back(k);
+            let k64 = i64::from(k);
+            let x = x0 - round(vx64 * k64, mx);
+            let y = y0 - round(2 * vy64 * k64 * mx - 7 * k64 * k64, 2 * mx * mx).max(0);
             if at(x, y).is_some_and(Cell::is_air) {
                 out[y as usize * w + x as usize] = c;
             }
@@ -1647,13 +1759,37 @@ mod tests {
                 cells[y * width + x] = fall;
             }
         }
-        let out = drawn(&cells, width, height, |c| c.material() == w);
+        let out = drawn(&cells, width, height, |c| c.material() == w, |_| false);
         let wet = |x: usize, y: usize| out[y * width + x].material() == w;
         assert!((4..=16).all(|y| wet(2, y)), "the stream is one line");
         assert!((0..4).all(|y| !wet(2, y)), "nothing above its last cell");
         assert!((0..14).all(|y| !wet(7, y)), "a lone drop has no tail");
         assert!((0..18).all(|y| (11..14).all(|x| !wet(x, y))), "the block keeps its shape");
         assert_eq!(out.iter().filter(|c| c.material() == w).count(), 13 + 1 + 9);
+    }
+
+    #[test]
+    fn lone_fast_drops_are_not_joined_into_lines() {
+        let (_, w) = water();
+        let (width, height) = (16usize, 200usize);
+        let fast = airborne(Cell::new(w, 30, 0), 0, 255, 0);
+        let mut cells = vec![Cell::AIR; width * height];
+        // Rain condensed from steam: fast drops 20 rows apart in open sky.
+        for y in [100, 120, 140, 160, 180] {
+            cells[y * width + 5] = fast;
+        }
+        let count = |cells: &[Cell]| {
+            drawn(cells, width, height, |c| c.material() == w, |_| false)
+                .iter()
+                .filter(|c| c.material() == w)
+                .count()
+        };
+        assert_eq!(count(&cells), 5, "drops in the open stay drops");
+        // The same cells falling from a pool above them are one stream.
+        for x in 0..width {
+            cells[80 * width + x] = Cell::new(w, 30, 0);
+        }
+        assert!(count(&cells) > 16 + 5 + 60, "a stream from a pool is drawn whole");
     }
 
     #[test]
