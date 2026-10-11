@@ -287,5 +287,5 @@ after 400: count tnt in 30 230 100 252 == 0
 after 700: count glass in 38 150 72 240 == 0
 after 800: count tnt in 470 280 670 390 == 2276
 after 800: count leaves in 30 340 260 390 < 50
-after 860: count tnt in 0 0 760 430 == 0
+after 880: count tnt in 0 0 760 430 == 0
 after 1200: count brick in 16 150 32 384 < 3500

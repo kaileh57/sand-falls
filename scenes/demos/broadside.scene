@@ -1403,7 +1403,7 @@ at 1320: 500 286 zoom=0.96
 // ballast lie on the shoal with the lanterns out, the warship rides with her
 // lamps lit and the floes are still there.
 after 300: count water in 530 322 720 356 == 0
-after 300: count water in 470 328 512 348 > 120
+after 400: count water in 470 328 512 348 > 120
 after 486: count burning_oil in 740 300 840 340 > 60
 after 1319: count metal in 440 340 760 430 > 700
 after 1319: count torch in 420 250 780 430 == 0

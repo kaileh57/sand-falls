@@ -1365,8 +1365,8 @@ impl Liq<'_, '_, '_, '_> {
 pub const STREAK_TICKS: i32 = 16;
 /// Longest gap, in cells, that a stream is drawn across.
 pub const STREAK_MAX: i32 = 48;
-/// Gaps up to this many cells are joined behind any cell in the air; longer
-/// ones only along a stream that leads back to its source.
+/// A cell in the air this many cells of travel or fewer past a ledge, a wall
+/// or a pool has just left it, and heads a stream.
 const SHORT_JOIN: i32 = 6;
 
 // Whether a cell's chain of joins leads back to a source, in `drawn`.
@@ -1399,7 +1399,12 @@ enum Link {
 /// stream follow one path, so the liquid behind a cell is where its own arc
 /// back says; traced back along a straight line, a long gap missed it.
 /// Nothing is drawn behind the last cell of a stream, so a falling mass
-/// keeps its shape and a lone drop stays a drop. Then air between two cells
+/// keeps its shape and a lone drop stays a drop. A join is drawn only along
+/// a chain of joins that leads back to a source: a solid or powder, liquid
+/// that is not in the air, or the edge of the window. Gas behind a cell
+/// (steam, smoke, mist) is seen through and is never a source, so rain
+/// condensing in a cloud of steam stays drops, however close they fall.
+/// Then air between two cells
 /// of one liquid, one of them in the air, is drawn as that liquid where the
 /// two lie along the way the liquid in the air moves (a row, a column or a
 /// diagonal, whichever is nearest): one cell of it, or two where both are in
@@ -1487,11 +1492,14 @@ pub fn drawn(
                 }
                 break;
             }
-            if !t.is_air() {
-                // A cell that has just left a ledge or a wall heads a stream.
+            if firm(t) || (liquid(t) && !is_airborne(t)) {
+                // A cell that has just left a ledge, a wall or a pool heads a
+                // stream.
                 edge = k <= SHORT_JOIN;
                 break;
             }
+            // Gas (steam, smoke, mist) and other liquid in the air are seen
+            // through: rain falling through steam has left nothing.
             for (px, py) in [(x + sx, y + sy), (x - sx, y - sy)] {
                 if at(px, py).is_some_and(side) {
                     found = k + 1;
@@ -1543,11 +1551,17 @@ pub fn drawn(
             anchored[j] = if answer { YES } else { NO };
         }
     }
+    // Cells of a stream that leads back to a source, and the cells drawn
+    // behind them: only these are closed up in the second pass below.
+    let mut stream = vec![false; cells.len()];
     for &(i, found, _) in &links {
-        let ok = found <= SHORT_JOIN || anchored[i] == YES;
-        if !ok {
+        // Only a chain that leads back to a source is joined, however short
+        // its gaps: drops a few cells apart in open air, such as rain
+        // through steam, joined into dashed lines and branches.
+        if anchored[i] != YES {
             continue;
         }
+        stream[i] = true;
         let c = cells[i];
         let (x0, y0) = ((i % w) as i32, (i / w) as i32);
         let (vx, vy) = air_velocity(c);
@@ -1559,13 +1573,14 @@ pub fn drawn(
             let y = y0 - round(2 * vy64 * k64 * mx - 7 * k64 * k64, 2 * mx * mx).max(0);
             if at(x, y).is_some_and(Cell::is_air) {
                 out[y as usize * w + x as usize] = c;
+                stream[y as usize * w + x as usize] = true;
             }
         }
     }
     let joined = out.clone();
     let near = |x: i32, y: i32| {
         (x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h)
-            .then(|| joined[y as usize * w + x as usize])
+            .then(|| (joined[y as usize * w + x as usize], y as usize * w + x as usize))
     };
     let wet = |t: Cell| !t.is_air() && !t.has(Cell::FLAG_IN_BODY) && liquid(t);
     // True if liquid in the air `t` moves along the axis `(ax, ay)`: within 45
@@ -1581,12 +1596,17 @@ pub fn drawn(
         let (x, y) = ((i % w) as i32, (i / w) as i32);
         'axes: for (ax, ay) in [(1, 0), (0, 1), (1, 1), (1, -1)] {
             for (b, f) in [(1, 1), (1, 2), (2, 1)] {
-                let (Some(p), Some(q)) =
+                let (Some((p, pi)), Some((q, qi))) =
                     (near(x - ax * b, y - ay * b), near(x + ax * f, y + ay * f))
                 else {
                     continue;
                 };
                 let both = is_airborne(p) && is_airborne(q);
+                // Two drops in the air are closed up only along a stream
+                // that leads back to its source.
+                if both && !stream[pi] && !stream[qi] {
+                    continue;
+                }
                 let moving =
                     (is_airborne(p) && along(p, ax, ay)) || (is_airborne(q) && along(q, ax, ay));
                 if wet(p)
@@ -1790,6 +1810,53 @@ mod tests {
             cells[80 * width + x] = Cell::new(w, 30, 0);
         }
         assert!(count(&cells) > 16 + 5 + 60, "a stream from a pool is drawn whole");
+    }
+
+    #[test]
+    fn drops_among_steam_stay_drops() {
+        let mats = fe_materials::base_set();
+        let w = mats.id("water").unwrap_or_default();
+        let steam = mats.id("steam").unwrap_or_default();
+        let stone = mats.id("stone").unwrap_or_default();
+        let (width, height) = (24usize, 160usize);
+        let fast = airborne(Cell::new(w, 30, 0), 0, 128, 0);
+        let mut cells = vec![Cell::AIR; width * height];
+        // A cloud of steam with rain condensing in it: drops two to six rows
+        // apart, some with steam right behind them.
+        for y in 20..150 {
+            for x in 0..width {
+                if (x * 7 + y * 3) % 5 != 0 {
+                    cells[y * width + x] = Cell::new(steam, 120, 0);
+                }
+            }
+        }
+        let mut drops = 0;
+        for (x, ys) in [
+            (4usize, [80usize, 82, 85, 89, 94]),
+            (12, [90, 93, 97, 99, 101]),
+            (19, [100, 106, 110, 112, 115]),
+        ] {
+            for y in ys {
+                cells[y * width + x] = fast;
+                drops += 1;
+            }
+        }
+        let liquid = |c: Cell| c.material() == w;
+        let firm = |c: Cell| c.material() == stone;
+        let count = |cells: &[Cell]| {
+            drawn(cells, width, height, liquid, firm).iter().filter(|c| c.material() == w).count()
+        };
+        assert_eq!(count(&cells), drops, "rain among steam stays drops");
+        // The same drops just off a stone ledge, with the steam cleared from
+        // their path, are a stream off the ledge, drawn whole.
+        for y in 79..94 {
+            if cells[y * width + 4].material() == steam {
+                cells[y * width + 4] = Cell::AIR;
+            }
+        }
+        assert_eq!(count(&cells), drops, "steam gone, still no source");
+        cells[78 * width + 4] = Cell::new(stone, 20, 0);
+        assert!(count(&cells) >= drops + 10, "a stream off a ledge is drawn whole");
     }
 
     #[test]
