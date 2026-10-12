@@ -15,8 +15,11 @@
 mod font;
 mod image;
 mod light;
+mod sheet;
 
 pub use image::Image;
+
+use sheet::Sheet;
 
 use fe_core::{CHUNK_SIZE, Cell, CellPos, ChunkPos, MaterialId, temp_to_celsius};
 use fe_engine::Simulation;
@@ -347,20 +350,71 @@ impl Renderer {
         let bw = (cw + 2 * MARGIN) as usize;
         let bh = (ch + 2 * MARGIN) as usize;
 
-        // Liquid in the air is drawn with the path it swept: see
-        // `fe_sim::liquid::drawn`.
-        let cells = fe_sim::liquid::drawn(
-            &sample_cells(sim, bx, by, bw, bh),
+        // Liquid in the air is drawn as soft sheets and drops over what lies
+        // behind it (see `sheet`); everything else sees air there.
+        let raw = sample_cells(sim, bx, by, bw, bh);
+        let liquid = |c: Cell| self.look(c.material()).state == State::Liquid;
+        let in_air =
+            |c: Cell| fe_sim::liquid::is_airborne(c) && !c.has(Cell::FLAG_IN_BODY) && liquid(c);
+        let links = fe_sim::liquid::air_links(&raw, bw, bh, liquid, |c| {
+            c.has(Cell::FLAG_IN_BODY)
+                || matches!(self.look(c.material()).state, State::Static | State::Powder)
+        });
+        let open = |c: Cell| {
+            c.is_air()
+                || (!c.has(Cell::FLAG_IN_BODY)
+                    && matches!(self.look(c.material()).state, State::Gas | State::Fire))
+        };
+        // Liquid in the air that has open air beside or below it: liquid falling
+        // inside a pool or a slab draws as the pool.
+        let flying: Vec<bool> = (0..bw * bh)
+            .into_par_iter()
+            .map(|i| {
+                let (x, y) = ((i % bw) as i32, (i / bw) as i32);
+                // Pool cells draining into a hole see air only above them.
+                in_air(raw[i])
+                    && (0..=1).any(|dy| {
+                        (-1..=1).any(|dx| {
+                            let (nx, ny) = (x + dx, y + dy);
+                            nx >= 0
+                                && ny >= 0
+                                && (nx as usize) < bw
+                                && (ny as usize) < bh
+                                && open(raw[ny as usize * bw + nx as usize])
+                        })
+                    })
+            })
+            .collect();
+        let sheet = Sheet::build(
+            &raw,
             bw,
             bh,
-            |c| self.look(c.material()).state == State::Liquid,
-            |c| {
-                c.has(Cell::FLAG_IN_BODY)
-                    || matches!(self.look(c.material()).state, State::Static | State::Powder)
+            |i| flying[i],
+            open,
+            &links,
+            |i, c| {
+                let look = self.look(c.material());
+                let h = hash2(bx + (i % bw) as i32, by + (i / bw) as i32);
+                (look.colors[h as usize % look.colors.len()], self.emission(c), look.water)
             },
         );
+        let cells: Vec<Cell> = if sheet.any {
+            raw.iter().zip(&flying).map(|(&c, &f)| if f { Cell::AIR } else { c }).collect()
+        } else {
+            raw.clone()
+        };
         let mut buf = Buffers::new(bw, bh);
         self.fill_buffers(sim, avatars, &cells, &mut buf, bx, by, frame, s);
+        if sheet.any {
+            // A sheet of lava lights the cave like the pool it falls from.
+            for i in 0..bw * bh {
+                if let Some((a, _, e, _)) = sheet.at(i) {
+                    let l = &mut buf.light[i];
+                    *l = [l[0] + e[0] * a, l[1] + e[1] * a, l[2] + e[2] * a];
+                    buf.trans[i] = buf.trans[i].min(0.982 - 0.06 * a);
+                }
+            }
+        }
         if s.lighting {
             light::propagate(&mut buf.light, &buf.trans, bw, bh);
             buf.light = light::soften(&buf.light, bw, bh);
@@ -375,14 +429,28 @@ impl Renderer {
             .into_iter()
             .map(|v| v[0])
             .collect();
-        let mut hdr = self.compose(&cells, &buf, bw, bh, bx, by, s);
+        let (mut hdr, layer) = self.compose(&cells, &buf, &sheet, bw, bh, bx, by, s, frame);
+        // The cells as composed, before the bloom and fades added below; the
+        // difference is added back over the smooth sheet edges.
+        let flat = if layer.is_empty() { Vec::new() } else { hdr.clone() };
         if sim.is_streamed() {
             stream_fade(sim, &mut hdr, bw, bh, bx, by, s.exposure);
         }
         if s.bloom {
             light::bloom(&mut hdr, bw, bh);
         }
-        let haze = if s.haze { light::haze_field(&cells, bw, bh) } else { Vec::new() };
+        let haze = if s.haze {
+            light::haze_field(&raw, bw, bh, |c| {
+                let look = self.look(c.material());
+                matches!(look.state, State::Liquid | State::Fire)
+                    && (look.glow
+                        || look.light.iter().any(|&v| v > 0.0)
+                        || look.state == State::Fire)
+                    && temp_to_celsius(c.temp) > 350
+            })
+        } else {
+            Vec::new()
+        };
 
         let out_w = s.view_w * s.scale;
         let out_h = s.view_h * s.scale;
@@ -391,21 +459,47 @@ impl Renderer {
         let fx0 = view.cx - vis_w / 2.0;
         let fy0 = view.cy - vis_h / 2.0;
         let exposure = s.exposure;
+        let time = frame as f32;
         img.rgba.par_chunks_mut(out_w as usize * 4).enumerate().for_each(|(py, row)| {
             let wy = fy0 + (py as f32 + 0.5) / px_per_cell;
             let cy = (wy.floor() as i32 - by) as usize;
             for px in 0..out_w as usize {
-                let wx = fx0 + (px as f32 + 0.5) / px_per_cell;
-                let mut cx = wx.floor() as i32 - bx;
-                if !haze.is_empty() && cy < bh && (cx as usize) < bw {
-                    let hz = haze[cy * bw + cx as usize];
-                    if hz > 0.02 {
-                        let phase = py as f32 * 0.21 / zoom.max(0.5) + frame as f32 * 0.31;
-                        cx += (phase.sin() * hz * 1.6).round() as i32;
+                let mut wx = fx0 + (px as f32 + 0.5) / px_per_cell;
+                if !haze.is_empty() && cy < bh {
+                    let cx = (wx.floor() as i32 - bx) as usize;
+                    if cx < bw {
+                        let hz = haze[cy * bw + cx];
+                        if hz > 0.02 {
+                            // A gentle shimmer: a slow, smooth sway of under
+                            // a cell, only where both the air shown and the
+                            // air it is taken from are hot open air, so edges
+                            // and text are never sheared.
+                            let phase = wy * 0.42 + time * 0.11 + (wy * 0.13 - time * 0.04).sin();
+                            let d = phase.sin() * hz * 0.75;
+                            let tx = ((wx + d).floor() as i32 - bx) as usize;
+                            if tx < bw && haze[cy * bw + tx] > 0.0 {
+                                wx += d;
+                            }
+                        }
                     }
                 }
+                let cx = wx.floor() as i32 - bx;
                 let i = cy.min(bh - 1) * bw + (cx.max(0) as usize).min(bw - 1);
-                let c = hdr[i];
+                let c = if layer.is_empty() {
+                    hdr[i]
+                } else {
+                    sheet_pixel(
+                        &sheet,
+                        &layer,
+                        &hdr,
+                        &flat,
+                        wx - bx as f32,
+                        wy - by as f32,
+                        i,
+                        bw,
+                        bh,
+                    )
+                };
                 let o = px * 4;
                 row[o] = linear_to_srgb(1.0 - (-c[0] * exposure).exp());
                 row[o + 1] = linear_to_srgb(1.0 - (-c[1] * exposure).exp());
@@ -721,185 +815,282 @@ impl Renderer {
         }
     }
 
+    /// Composes the lit cells, with the sheet of liquid in the air blended
+    /// over them. Also returns, when there is a sheet, each cell's color
+    /// without the sheet and the sheet's own color, so the sheet's edges can
+    /// be drawn smooth between cells.
     #[expect(clippy::too_many_arguments, reason = "internal helper over shared buffers")]
     fn compose(
         &self,
         cells: &[Cell],
         buf: &Buffers,
+        sheet: &Sheet,
         bw: usize,
         bh: usize,
         bx: i32,
         by: i32,
         s: &RenderSettings,
-    ) -> Vec<[f32; 3]> {
+        frame: u64,
+    ) -> (Vec<[f32; 3]>, Vec<Layer>) {
         let amb = s.ambient;
         let mut out = vec![[0.0f32; 3]; bw * bh];
-        out.par_chunks_mut(bw).enumerate().for_each(|(y, row)| {
-            let t = ((y as i32 + by) as f32 / 400.0).clamp(0.0, 1.0);
-            let sky_bg = s.sky.background(t);
-            let cave_bg = [0.004, 0.0045, 0.006];
-            let sky_light = s.sky.light();
-            for x in 0..bw {
-                let i = y * bw + x;
-                let skyness = buf.sky[i];
-                let c = cells[i];
-                let l = buf.light[i];
-                let a = buf.albedo[i];
-                let e = buf.emit[i];
-                let look = self.look(c.material());
-                // A glowing cell's look is its own glow; its surface is lit only by
-                // light from elsewhere, or a white-hot pour and one about to freeze
-                // would both saturate to the same yellow.
-                let l = [(l[0] - e[0]).max(0.0), (l[1] - e[1]).max(0.0), (l[2] - e[2]).max(0.0)];
-                // The broad light of sparks and flashes falls on surfaces and
-                // smoke; the sky behind them stays dark.
-                let sky_l = l;
-                let wide = buf.broad[i];
-                let l = [l[0] + wide[0], l[1] + wide[1], l[2] + wide[2]];
-                let lit = |k: f32| {
-                    [
-                        a[0] * (amb[0] + l[0] * k),
-                        a[1] * (amb[1] + l[1] * k),
-                        a[2] * (amb[2] + l[2] * k),
-                    ]
-                };
-                let gas = buf.gas_density[i][0];
-                let is_gas = look.state == State::Gas && !c.is_air();
-                let open = c.is_air() || (look.state == State::Static && look.opacity < 0.02);
-                let glow = buf.glow[i];
-                row[x] = if buf.solid_override[i] {
-                    let v = lit(1.0);
-                    [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
-                } else if open || is_gas {
-                    let sh = buf.shaft[i];
-                    // Open sky, plus dust lit by light passing through.
-                    let open_back = [
-                        sky_bg[0] + sky_l[0] * 0.012 + sh[0] * 0.09,
-                        sky_bg[1] + sky_l[1] * 0.012 + sh[1] * 0.09,
-                        sky_bg[2] + sky_l[2] * 0.012 + sh[2] * 0.09,
-                    ];
-                    let back = if skyness >= 1.0 {
-                        open_back
-                    } else {
-                        // Underground: a dim rock back wall that catches nearby light,
-                        // plus dust lit by shafts of sky light. Near an opening to
-                        // the sky it fades into the sky.
-                        let h = hash2(bx + x as i32, by + y as i32);
-                        let n = 0.75 + (h % 64) as f32 / 160.0;
-                        let wall = [0.055 * n, 0.05 * n, 0.058 * n];
-                        let cave = [
-                            cave_bg[0]
-                                + wall[0] * (amb[0] + l[0] * 0.35)
-                                + l[0] * 0.01
-                                + sh[0] * 0.09,
-                            cave_bg[1]
-                                + wall[1] * (amb[1] + l[1] * 0.35)
-                                + l[1] * 0.01
-                                + sh[1] * 0.09,
-                            cave_bg[2]
-                                + wall[2] * (amb[2] + l[2] * 0.35)
-                                + l[2] * 0.01
-                                + sh[2] * 0.09,
-                        ];
-                        lerp3(cave, open_back, skyness)
-                    };
-                    if is_gas || gas > 0.02 {
-                        // Smoke, steam, mist and dust: the blurred gas color, lit by
-                        // the light around it, over what lies behind.
-                        let alpha = (1.0 - (-gas * 3.0).exp()).min(0.88);
-                        let gc = buf.gas_color[i];
-                        let g =
-                            if gas > 1e-4 { [gc[0] / gas, gc[1] / gas, gc[2] / gas] } else { a };
-                        // Gas under the open sky also scatters light from the whole
-                        // dome, so a dust cloud in the shadow of a slab is not black.
-                        let dome = skyness * 0.35;
-                        let v = [
-                            g[0] * (amb[0] + l[0] * 1.3 + sky_light[0] * dome),
-                            g[1] * (amb[1] + l[1] * 1.3 + sky_light[1] * dome),
-                            g[2] * (amb[2] + l[2] * 1.3 + sky_light[2] * dome),
-                        ];
+        let rows: Vec<Vec<Layer>> = out
+            .par_chunks_mut(bw)
+            .enumerate()
+            .map(|(y, row)| {
+                let mut layer = if sheet.any { vec![([0.0; 3], [0.0; 3]); bw] } else { Vec::new() };
+                let t = ((y as i32 + by) as f32 / 400.0).clamp(0.0, 1.0);
+                let sky_bg = s.sky.background(t);
+                let cave_bg = [0.004, 0.0045, 0.006];
+                let sky_light = s.sky.light();
+                for x in 0..bw {
+                    let i = y * bw + x;
+                    let skyness = buf.sky[i];
+                    let c = cells[i];
+                    let l = buf.light[i];
+                    let a = buf.albedo[i];
+                    let e = buf.emit[i];
+                    let look = self.look(c.material());
+                    // A glowing cell's look is its own glow; its surface is lit only by
+                    // light from elsewhere, or a white-hot pour and one about to freeze
+                    // would both saturate to the same yellow.
+                    let l =
+                        [(l[0] - e[0]).max(0.0), (l[1] - e[1]).max(0.0), (l[2] - e[2]).max(0.0)];
+                    // The broad light of sparks and flashes falls on surfaces and
+                    // smoke; the sky behind them stays dark.
+                    let sky_l = l;
+                    let wide = buf.broad[i];
+                    let l = [l[0] + wide[0], l[1] + wide[1], l[2] + wide[2]];
+                    let lit = |k: f32| {
                         [
-                            back[0] + (v[0] - back[0]) * alpha + e[0],
-                            back[1] + (v[1] - back[1]) * alpha + e[1],
-                            back[2] + (v[2] - back[2]) * alpha + e[2],
+                            a[0] * (amb[0] + l[0] * k),
+                            a[1] * (amb[1] + l[1] * k),
+                            a[2] * (amb[2] + l[2] * k),
                         ]
-                    } else {
-                        back
-                    }
-                } else {
-                    match look.state {
-                        State::Fire => [e[0] * 0.9, e[1] * 0.9, e[2] * 0.9],
-                        State::Liquid if look.water => {
-                            // Water tints the light it receives: warm light from
-                            // fire and smoke is taken mostly as its brightness
-                            // and capped, so the top rows of a river stay blue
-                            // instead of washing out to grey.
-                            let lum = (l[0] + l[1] + l[2]) / 3.0;
-                            let cap = sky_light[2].max(0.15) * 1.5 + 0.4;
-                            let w = |k: usize| (l[k] * 0.3 + lum * 0.7).min(cap);
-                            let lw = [w(0), w(1), w(2)];
-                            [
-                                a[0] * (amb[0] + lw[0] * 0.9) + e[0],
-                                a[1] * (amb[1] + lw[1] * 0.9) + e[1],
-                                a[2] * (amb[2] + lw[2] * 0.9) + e[2],
-                            ]
-                        }
-                        State::Liquid => {
-                            let v = lit(0.9);
-                            [
-                                v[0] + e[0] + l[0] * 0.04,
-                                v[1] + e[1] + l[1] * 0.04,
-                                v[2] + e[2] + l[2] * 0.04,
-                            ]
-                        }
-                        _ => {
-                            // Rock far from open space sinks into shadow; edges stay lit.
-                            // Rigid bodies are thin and never sink as far.
-                            let floor = if c.has(Cell::FLAG_IN_BODY) { 0.6 } else { 0.22 };
-                            let ao = (floor + buf.open[i] * 2.2).min(1.0);
-                            let v = if look.fuel {
-                                // Flame light on fuel is capped near the sky's
-                                // own light: only the burning cells glow.
-                                let cap = |k: usize| sky_light[k] + 0.12;
-                                [
-                                    a[0] * (amb[0] + l[0].min(cap(0))),
-                                    a[1] * (amb[1] + l[1].min(cap(1))),
-                                    a[2] * (amb[2] + l[2].min(cap(2))),
-                                ]
+                    };
+                    let gas = buf.gas_density[i][0];
+                    let is_gas = look.state == State::Gas && !c.is_air();
+                    let open = c.is_air() || (look.state == State::Static && look.opacity < 0.02);
+                    let glow = buf.glow[i];
+                    row[x] = if buf.solid_override[i] {
+                        let v = lit(1.0);
+                        [v[0] + e[0], v[1] + e[1], v[2] + e[2]]
+                    } else if open || is_gas {
+                        let sh = buf.shaft[i];
+                        // Open sky, plus dust lit by light passing through.
+                        let open_back = [
+                            sky_bg[0] + sky_l[0] * 0.012 + sh[0] * 0.09,
+                            sky_bg[1] + sky_l[1] * 0.012 + sh[1] * 0.09,
+                            sky_bg[2] + sky_l[2] * 0.012 + sh[2] * 0.09,
+                        ];
+                        let back = if skyness >= 1.0 {
+                            open_back
+                        } else {
+                            // Underground: a dim rock back wall that catches nearby light,
+                            // plus dust lit by shafts of sky light. Near an opening to
+                            // the sky it fades into the sky.
+                            let h = hash2(bx + x as i32, by + y as i32);
+                            let n = 0.75 + (h % 64) as f32 / 160.0;
+                            let wall = [0.055 * n, 0.05 * n, 0.058 * n];
+                            let cave = [
+                                cave_bg[0]
+                                    + wall[0] * (amb[0] + l[0] * 0.35)
+                                    + l[0] * 0.01
+                                    + sh[0] * 0.09,
+                                cave_bg[1]
+                                    + wall[1] * (amb[1] + l[1] * 0.35)
+                                    + l[1] * 0.01
+                                    + sh[1] * 0.09,
+                                cave_bg[2]
+                                    + wall[2] * (amb[2] + l[2] * 0.35)
+                                    + l[2] * 0.01
+                                    + sh[2] * 0.09,
+                            ];
+                            lerp3(cave, open_back, skyness)
+                        };
+                        if is_gas || gas > 0.02 {
+                            // Smoke, steam, mist and dust: the blurred gas color, lit by
+                            // the light around it, over what lies behind.
+                            let alpha = (1.0 - (-gas * 3.0).exp()).min(0.88);
+                            let gc = buf.gas_color[i];
+                            let g = if gas > 1e-4 {
+                                [gc[0] / gas, gc[1] / gas, gc[2] / gas]
                             } else {
-                                lit(1.0)
+                                a
                             };
-                            // Deep rock still shows relief: broad light and dark
-                            // patches and strata, lit by the ambient light and by
-                            // light bouncing in from the spaces around it.
-                            let (wx, wy) = (bx + x as i32, by + y as i32);
-                            let rl = relief(wx, wy);
-                            let mut b = buf.bounce[i];
-                            if look.fuel {
-                                b = [
-                                    b[0].min(sky_light[0] + 0.12),
-                                    b[1].min(sky_light[1] + 0.12),
-                                    b[2].min(sky_light[2] + 0.12),
-                                ];
-                            }
-                            let deep = [
-                                a[0] * (amb[0] * 0.35 + b[0] * 0.4) * rl,
-                                a[1] * (amb[1] * 0.35 + b[1] * 0.4) * rl,
-                                a[2] * (amb[2] * 0.35 + b[2] * 0.4) * rl,
+                            // Gas under the open sky also scatters light from the whole
+                            // dome, so a dust cloud in the shadow of a slab is not black.
+                            let dome = skyness * 0.35;
+                            let v = [
+                                g[0] * (amb[0] + l[0] * 1.3 + sky_light[0] * dome),
+                                g[1] * (amb[1] + l[1] * 1.3 + sky_light[1] * dome),
+                                g[2] * (amb[2] + l[2] * 1.3 + sky_light[2] * dome),
                             ];
                             [
-                                (v[0] * ao).max(deep[0]) + e[0],
-                                (v[1] * ao).max(deep[1]) + e[1],
-                                (v[2] * ao).max(deep[2]) + e[2],
+                                back[0] + (v[0] - back[0]) * alpha + e[0],
+                                back[1] + (v[1] - back[1]) * alpha + e[1],
+                                back[2] + (v[2] - back[2]) * alpha + e[2],
                             ]
+                        } else {
+                            back
                         }
+                    } else {
+                        match look.state {
+                            State::Fire => [e[0] * 0.9, e[1] * 0.9, e[2] * 0.9],
+                            State::Liquid if look.water => {
+                                // Water tints the light it receives: warm light from
+                                // fire and smoke is taken mostly as its brightness
+                                // and capped, so the top rows of a river stay blue
+                                // instead of washing out to grey.
+                                let lum = (l[0] + l[1] + l[2]) / 3.0;
+                                let cap = sky_light[2].max(0.15) * 1.5 + 0.4;
+                                let w = |k: usize| (l[k] * 0.3 + lum * 0.7).min(cap);
+                                let lw = [w(0), w(1), w(2)];
+                                [
+                                    a[0] * (amb[0] + lw[0] * 0.9) + e[0],
+                                    a[1] * (amb[1] + lw[1] * 0.9) + e[1],
+                                    a[2] * (amb[2] + lw[2] * 0.9) + e[2],
+                                ]
+                            }
+                            State::Liquid => {
+                                let v = lit(0.9);
+                                [
+                                    v[0] + e[0] + l[0] * 0.04,
+                                    v[1] + e[1] + l[1] * 0.04,
+                                    v[2] + e[2] + l[2] * 0.04,
+                                ]
+                            }
+                            _ => {
+                                // Rock far from open space sinks into shadow; edges stay lit.
+                                // Rigid bodies are thin and never sink as far.
+                                let floor = if c.has(Cell::FLAG_IN_BODY) { 0.6 } else { 0.22 };
+                                let ao = (floor + buf.open[i] * 2.2).min(1.0);
+                                let v = if look.fuel {
+                                    // Flame light on fuel is capped near the sky's
+                                    // own light: only the burning cells glow.
+                                    let cap = |k: usize| sky_light[k] + 0.12;
+                                    [
+                                        a[0] * (amb[0] + l[0].min(cap(0))),
+                                        a[1] * (amb[1] + l[1].min(cap(1))),
+                                        a[2] * (amb[2] + l[2].min(cap(2))),
+                                    ]
+                                } else {
+                                    lit(1.0)
+                                };
+                                // Deep rock still shows relief: broad light and dark
+                                // patches and strata, lit by the ambient light and by
+                                // light bouncing in from the spaces around it.
+                                let (wx, wy) = (bx + x as i32, by + y as i32);
+                                let rl = relief(wx, wy);
+                                let mut b = buf.bounce[i];
+                                if look.fuel {
+                                    b = [
+                                        b[0].min(sky_light[0] + 0.12),
+                                        b[1].min(sky_light[1] + 0.12),
+                                        b[2].min(sky_light[2] + 0.12),
+                                    ];
+                                }
+                                let deep = [
+                                    a[0] * (amb[0] * 0.35 + b[0] * 0.4) * rl,
+                                    a[1] * (amb[1] * 0.35 + b[1] * 0.4) * rl,
+                                    a[2] * (amb[2] * 0.35 + b[2] * 0.4) * rl,
+                                ];
+                                [
+                                    (v[0] * ao).max(deep[0]) + e[0],
+                                    (v[1] * ao).max(deep[1]) + e[1],
+                                    (v[2] * ao).max(deep[2]) + e[2],
+                                ]
+                            }
+                        }
+                    };
+                    row[x] = [row[x][0] + glow[0], row[x][1] + glow[1], row[x][2] + glow[2]];
+                    if !sheet.any {
+                        continue;
                     }
-                };
-                row[x] = [row[x][0] + glow[0], row[x][1] + glow[1], row[x][2] + glow[2]];
-            }
-        });
-        out
+                    layer[x].0 = row[x];
+                    let Some((alpha, sa, se, ws)) = sheet.at(i) else {
+                        continue;
+                    };
+                    // Falling liquid is streaked along its fall, the streaks
+                    // sliding down with it.
+                    let (wx, wy) = ((bx + x as i32) as f32, (by + y as i32) as f32);
+                    let ft = frame as f32;
+                    let f = 1.0
+                        + 0.2 * (sheet::noise(wx * 0.5, (wy - ft * 0.9) * 0.08, 7) - 0.5)
+                        + 0.12 * (sheet::noise(wx * 1.1, (wy - ft * 1.6) * 0.22, 13) - 0.5);
+                    let sa = [sa[0] * f, sa[1] * f, sa[2] * f];
+                    let se = [se[0] * f, se[1] * f, se[2] * f];
+                    // Its own glow is not light falling on it.
+                    let l = [
+                        (l[0] - se[0] * alpha).max(0.0),
+                        (l[1] - se[1] * alpha).max(0.0),
+                        (l[2] - se[2] * alpha).max(0.0),
+                    ];
+                    let lum = (l[0] + l[1] + l[2]) / 3.0;
+                    let cap = sky_light[2].max(0.15) * 1.5 + 0.4;
+                    let lw = |k: usize| (l[k] * 0.3 + lum * 0.7).min(cap);
+                    let sc: [f32; 3] = std::array::from_fn(|k| {
+                        let water = sa[k] * (amb[k] + lw(k) * 0.9) + se[k];
+                        let other = sa[k] * (amb[k] + l[k] * 0.9) + se[k] + l[k] * 0.04;
+                        other + (water - other) * ws
+                    });
+                    layer[x].1 = sc;
+                    row[x] = lerp3(row[x], sc, alpha);
+                }
+                layer
+            })
+            .collect();
+        (out, rows.into_iter().flatten().collect())
     }
+}
+
+/// A cell's color without the sheet of liquid in the air, and the sheet's.
+type Layer = ([f32; 3], [f32; 3]);
+
+/// The color at a point `(x, y)` in buffer cells, with the sheet of liquid in
+/// the air drawn smooth between cells: its coverage and color are blended
+/// between the four nearest cells, and the bloom and fades added to the cell
+/// (`hdr` less `flat`) are added on top.
+#[expect(clippy::too_many_arguments, reason = "internal helper over shared buffers")]
+fn sheet_pixel(
+    sheet: &Sheet,
+    layer: &[Layer],
+    hdr: &[[f32; 3]],
+    flat: &[[f32; 3]],
+    x: f32,
+    y: f32,
+    i: usize,
+    bw: usize,
+    bh: usize,
+) -> [f32; 3] {
+    let (u, v) = (x - 0.5, y - 0.5);
+    let (x0, y0) = (u.floor(), v.floor());
+    let (tx, ty) = (u - x0, v - y0);
+    let (x0, y0) = (x0 as i32, y0 as i32);
+    let mut cov = 0.0;
+    let mut col = [0.0f32; 3];
+    for (dx, dy, k) in [
+        (0, 0, (1.0 - tx) * (1.0 - ty)),
+        (1, 0, tx * (1.0 - ty)),
+        (0, 1, (1.0 - tx) * ty),
+        (1, 1, tx * ty),
+    ] {
+        let (cx, cy) = ((x0 + dx).clamp(0, bw as i32 - 1), (y0 + dy).clamp(0, bh as i32 - 1));
+        let j = cy as usize * bw + cx as usize;
+        let c = sheet.cov[j] * k;
+        cov += c;
+        let sc = layer[j].1;
+        col = [col[0] + sc[0] * c, col[1] + sc[1] * c, col[2] + sc[2] * c];
+    }
+    let base = layer[i].0;
+    let add = [hdr[i][0] - flat[i][0], hdr[i][1] - flat[i][1], hdr[i][2] - flat[i][2]];
+    if cov < 1e-3 {
+        return [base[0] + add[0], base[1] + add[1], base[2] + add[2]];
+    }
+    let a = Sheet::alpha(cov);
+    let sc = [col[0] / cov, col[1] / cov, col[2] / cov];
+    let c = lerp3(base, sc, a);
+    [c[0] + add[0], c[1] + add[1], c[2] + add[2]]
 }
 
 struct Buffers {
