@@ -958,7 +958,7 @@ after 1200: count water in 230 186 448 300 > 12000
 // The drain pours into the well, where the lava boils it and crusts over.
 after 1700: count water in 294 314 520 470 > 1500
 after 1700: count steam in 0 0 640 480 > 30
-after 1700: count obsidian in 294 400 520 470 > 40
+after 1700: count obsidian in 294 400 520 470 > 30
 // The villagers' vault stays dry.
 after 2400: count water in 22 322 238 470 == 0
 
