@@ -126,7 +126,7 @@ sky dusk
 ambient 0.3 0.27 0.3
 exposure 1.4
 at 720: 480 150 1.1
-at 3600: 480 158 1.16
+at 3600: 480 155 1.13
 
 // fe run has no players, so nothing is fired: the masons must finish both
 // forts, the cores crumble a little but never shatter, the cisterns, dikes
