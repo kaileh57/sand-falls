@@ -385,13 +385,32 @@ impl Renderer {
                     })
             })
             .collect();
+        let (freed, mut splash) = splashes(
+            &raw,
+            bw,
+            bh,
+            bx,
+            by,
+            |c| liquid(c) && !c.has(Cell::FLAG_IN_BODY) && !fe_sim::liquid::is_airborne(c),
+            |i| open(raw[i]) || in_air(raw[i]),
+            |i| open(raw[i]) || flying[i],
+        );
+        splash.extend(slab_gaps(
+            &raw,
+            bw,
+            bh,
+            |c| liquid(c) && fe_sim::liquid::is_airborne(c) && !c.has(Cell::FLAG_IN_BODY),
+            open,
+        ));
         let sheet = Sheet::build(
             &raw,
             bw,
             bh,
             |i| flying[i],
+            |i| freed[i],
             open,
             &links,
+            &splash,
             |i, c| {
                 let look = self.look(c.material());
                 let h = hash2(bx + (i % bw) as i32, by + (i / bw) as i32);
@@ -399,7 +418,10 @@ impl Renderer {
             },
         );
         let cells: Vec<Cell> = if sheet.any {
-            raw.iter().zip(&flying).map(|(&c, &f)| if f { Cell::AIR } else { c }).collect()
+            raw.iter()
+                .zip(flying.iter().zip(&freed))
+                .map(|(&c, (&f, &g))| if f || g { Cell::AIR } else { c })
+                .collect()
         } else {
             raw.clone()
         };
@@ -1042,6 +1064,174 @@ impl Renderer {
             .collect();
         (out, rows.into_iter().flatten().collect())
     }
+}
+
+/// Resting liquid standing up from a pool in a column one or two cells wide
+/// with open air on both sides: water a splash, a landing stream or an opening
+/// gate pushed up. Drawn cell by cell it stood as a hard needle or flashed up
+/// like a bolt; it is taken out of the pool (`freed`) and drawn in the sheet
+/// as a soft plume that thins out with height, its top as scattered droplets.
+/// `side` tells the cells a column may have beside it (open, or liquid in the
+/// air) and `open` the cells it must have above it (open, or liquid flying
+/// in the open), so the thin columns left between falling water inside a
+/// pool are not taken for splashes.
+#[expect(clippy::too_many_arguments, reason = "internal helper over shared buffers")]
+fn splashes(
+    raw: &[Cell],
+    w: usize,
+    h: usize,
+    bx: i32,
+    by: i32,
+    resting: impl Fn(Cell) -> bool + Sync,
+    side: impl Fn(usize) -> bool + Sync,
+    open: impl Fn(usize) -> bool + Sync,
+) -> (Vec<bool>, Vec<sheet::Splash>) {
+    // Cells in a run of liquid one or two cells long in their row, with open
+    // cells at both ends.
+    let thin: Vec<bool> = (0..h)
+        .into_par_iter()
+        .flat_map_iter(|y| {
+            let row = &raw[y * w..(y + 1) * w];
+            let mut out = vec![false; w];
+            let mut x = 0;
+            while x < w {
+                if !resting(row[x]) {
+                    x += 1;
+                    continue;
+                }
+                let start = x;
+                while x < w && resting(row[x]) {
+                    x += 1;
+                }
+                if x - start <= 2
+                    && start > 0
+                    && x < w
+                    && side(y * w + start - 1)
+                    && side(y * w + x)
+                {
+                    out[start..x].fill(true);
+                }
+            }
+            out
+        })
+        .collect();
+    let mut freed = vec![false; w * h];
+    let mut splash = Vec::new();
+    for x in 0..w {
+        let mut y = 0;
+        while y < h {
+            if !thin[y * w + x] {
+                y += 1;
+                continue;
+            }
+            let top = y;
+            while y < h && thin[y * w + x] {
+                y += 1;
+            }
+            // A column at least three cells tall, standing on liquid: lower
+            // bumps are the texture of the surface.
+            // It must stand up into the open: steam rising through a pool
+            // leaves thin columns of water between its channels, with the
+            // pool still above them or beside their tops.
+            let len = y - top;
+            if len < 3
+                || y >= h
+                || !resting(raw[y * w + x])
+                || (top.saturating_sub(8)..top).any(|yy| {
+                    !open(yy * w + x)
+                        || (x.saturating_sub(2)..(x + 3).min(w)).any(|xx| {
+                            let j = yy * w + xx;
+                            !open(j) && !thin[j]
+                        })
+                })
+            {
+                continue;
+            }
+            for yy in top..y {
+                let i = yy * w + x;
+                freed[i] = true;
+                // Height above the pool.
+                let up = (y - yy) as f32;
+                let (wx, wy) = (bx + x as i32, by + yy as i32);
+                let r = hash2(wx, wy);
+                let body = (-(up - 1.0) / 4.0).exp().min(1.0);
+                // Above the plume, a few cells become droplets jittered off
+                // the line, so the top reads as spray and not as a dotted line.
+                let drop = if up > 3.0 && r.is_multiple_of(5) { 0.75 } else { 0.0 };
+                let jitter = ((r >> 8) % 7) as f32 / 3.0 - 1.0;
+                let (weight, dx) = if drop > body { (drop, jitter) } else { (body, 0.0) };
+                if weight > 0.05 {
+                    splash.push(sheet::Splash {
+                        x: x as f32 + 0.5 + dx,
+                        y: yy as f32 + 0.5,
+                        weight,
+                        index: i,
+                    });
+                }
+            }
+        }
+    }
+    (freed, splash)
+}
+
+/// The pour between the slabs of a wide falling mass. Lava leaving the roof
+/// falls in bands of drops further apart than the stream joins look (see
+/// `fe_sim::liquid::air_links`), and drew as a ladder of rungs. Above the top
+/// of each band (liquid in the air with open space above it and the same
+/// liquid in the air in at least two of the four cells beside it in its row)
+/// the gap up to the same liquid above it is filled with blobs that thin out
+/// with distance, so the pour reads whole. Lone drops, rain and spray are
+/// never wide enough to be filled.
+fn slab_gaps(
+    raw: &[Cell],
+    w: usize,
+    h: usize,
+    flying: impl Fn(Cell) -> bool + Sync,
+    open: impl Fn(Cell) -> bool + Sync,
+) -> Vec<sheet::Splash> {
+    if w < 5 {
+        return Vec::new();
+    }
+    (1..h)
+        .into_par_iter()
+        .flat_map_iter(|y| {
+            let mut out = Vec::new();
+            for x in 2..w - 2 {
+                let i = y * w + x;
+                let c = raw[i];
+                let same = |t: Cell| flying(t) && t.material() == c.material();
+                if !same(c) || !open(raw[i - w]) {
+                    continue;
+                }
+                if [i - 2, i - 1, i + 1, i + 2].iter().filter(|&&j| same(raw[j])).count() < 2 {
+                    continue;
+                }
+                let gap = (2..=sheet::GAP_FILL.min(y)).find_map(|k| {
+                    let row = i - k * w;
+                    let cs = [raw[row - 1], raw[row], raw[row + 1]];
+                    if cs.iter().any(|t| t.material() == c.material()) {
+                        Some(Some(k))
+                    } else if open(cs[1]) {
+                        None
+                    } else {
+                        Some(None)
+                    }
+                });
+                let Some(gap) = gap.flatten() else {
+                    continue;
+                };
+                for k in 1..gap {
+                    out.push(sheet::Splash {
+                        x: x as f32 + 0.5,
+                        y: (y - k) as f32 + 0.5,
+                        weight: 0.6 * (-((k - 1) as f32) / sheet::TAPER_WIDE).exp(),
+                        index: i,
+                    });
+                }
+            }
+            out
+        })
+        .collect()
 }
 
 /// A cell's color without the sheet of liquid in the air, and the sheet's.

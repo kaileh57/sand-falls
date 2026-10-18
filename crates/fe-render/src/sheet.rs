@@ -27,6 +27,26 @@ const MAX_JOIN: f32 = 24.0;
 const TAPER: f32 = 6.0;
 /// Ticks of motion blur.
 const BLUR_TICKS: f32 = 2.5;
+/// Cells of travel over which a long join thins out behind a drop in a wide
+/// falling mass, and over which the gap above a slab of it is filled.
+pub(crate) const TAPER_WIDE: f32 = 18.0;
+/// Longest gap above a slab of a falling mass that is filled back to the
+/// liquid above it, in cells.
+pub(crate) const GAP_FILL: usize = 16;
+
+/// A soft blob of liquid added to the sheet: liquid thrown up from a pool,
+/// drawn as a plume and droplets instead of a hard needle, or the pour
+/// between two slabs of a falling mass.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Splash {
+    /// Centre, in buffer cells.
+    pub x: f32,
+    pub y: f32,
+    /// Peak weight of the blob.
+    pub weight: f32,
+    /// The cell it comes from, by index, for its look.
+    pub index: usize,
+}
 
 /// Liquid in the air over a window of cells.
 pub(crate) struct Sheet {
@@ -63,17 +83,21 @@ impl Sheet {
         smooth(EDGE.0, EDGE.1, cov)
     }
 
-    /// Builds the sheet from the cells in the air (`in_air`, by index), `look` giving
-    /// each one's albedo, emission and whether it is water. It covers only
-    /// open cells (`open`) and the cells in the air themselves: liquid in the
-    /// air is never in front of a wall or a pool.
+    /// Builds the sheet from the cells in the air (`in_air`, by index) and
+    /// the splashes thrown up from pools (`splash`), `look` giving each one's
+    /// albedo, emission and whether it is water. It covers only open cells
+    /// (`open`), the cells in the air and the cells the splashes were taken
+    /// from (`freed`): liquid in the air is never in front of a wall or a pool.
+    #[expect(clippy::too_many_arguments, reason = "internal builder over shared buffers")]
     pub fn build(
         cells: &[Cell],
         w: usize,
         h: usize,
         in_air: impl Fn(usize) -> bool,
+        freed: impl Fn(usize) -> bool,
         open: impl Fn(Cell) -> bool,
         links: &[AirLink],
+        splash: &[Splash],
         look: impl Fn(usize, Cell) -> ([f32; 3], [f32; 3], bool),
     ) -> Self {
         let n = w * h;
@@ -105,6 +129,14 @@ impl Sheet {
             // Motion blur: a short streak behind a fast drop, longer along a
             // stream than for a lone drop, so spray stays drops.
             let blur = (m / 16.0 * BLUR_TICKS).min(if stream { 10.0 } else { 5.0 });
+            // In a wide falling mass (liquid in the air on both sides in its
+            // row) the join behind a drop thins out slowly.
+            let row = |dx: i32| {
+                let xx = (i % w) as i32 + dx;
+                xx >= 0 && (xx as usize) < w && in_air(i - (i % w) + xx as usize)
+            };
+            let wide = (row(-2) || row(-1)) && (row(1) || row(2)) && (row(-1) || row(1));
+            let taper_len = if wide { TAPER_WIDE } else { TAPER };
             let reach = if stream { (join as f32).min(MAX_JOIN).max(blur) } else { blur };
             let len = reach * stretch;
             let steps = (len * 2.0).ceil().max(0.0) as usize;
@@ -117,16 +149,17 @@ impl Sheet {
                 let k = if steps == 0 { 0.0 } else { reach * p as f32 / steps as f32 };
                 // A long join thins out behind the drop, so a sparse stream
                 // reads as tapering streaks, not as bars.
-                let taper = if k > blur { (-(k - blur) / TAPER).exp() } else { 1.0 };
+                let taper = if k > blur { (-(k - blur) / taper_len).exp() } else { 1.0 };
                 let (dx, dy) = path_back(vx, vy, k);
                 let (px, py) = (x0 + dx, y0 + dy);
                 let (cx, cy) = (px.floor() as i32, py.floor() as i32);
-                // The trail stops where the path leaves open air, at the
-                // ledge, wall or pool the liquid came from.
+                // The trail stops where the path leaves open air (steam and
+                // smoke are open), at the ledge, wall or pool the liquid
+                // came from.
                 if p > 0
                     && (cx < 0 || cy < 0 || cx as usize >= w || cy as usize >= h || {
                         let j = cy as usize * w + cx as usize;
-                        !cells[j].is_air() && !in_air(j)
+                        !open(cells[j]) && !in_air(j)
                     })
                 {
                     break;
@@ -159,6 +192,33 @@ impl Sheet {
                 }
             }
         }
+        for b in splash {
+            s.any = true;
+            let (a, e, water) = look(b.index, cells[b.index]);
+            let (cx, cy) = (b.x.floor() as i32, b.y.floor() as i32);
+            for yy in cy - 2..=cy + 2 {
+                for xx in cx - 2..=cx + 2 {
+                    if xx < 0 || yy < 0 || xx as usize >= w || yy as usize >= h {
+                        continue;
+                    }
+                    let (fx, fy) = (xx as f32 + 0.5 - b.x, yy as f32 + 0.5 - b.y);
+                    let d2 = fx * fx + fy * fy;
+                    if d2 > 4.0 {
+                        continue;
+                    }
+                    let v = b.weight * (-d2 * inv).exp();
+                    let j = yy as usize * w + xx as usize;
+                    s.cov[j] += v;
+                    let al = &mut s.albedo[j];
+                    *al = [al[0] + a[0] * v, al[1] + a[1] * v, al[2] + a[2] * v];
+                    let em = &mut s.emit[j];
+                    *em = [em[0] + e[0] * v, em[1] + e[1] * v, em[2] + e[2] * v];
+                    if water {
+                        s.water[j] += v;
+                    }
+                }
+            }
+        }
         if s.any {
             // A thin wide share of each blob fills the spaces between the
             // drops of a curtain, which then reads as one sheet; a lone drop
@@ -170,7 +230,7 @@ impl Sheet {
             };
             let (pack, albedo, emit) = (wide(&pack), wide(&s.albedo), wide(&s.emit));
             for i in 0..n {
-                if !open(cells[i]) && !in_air(i) {
+                if !open(cells[i]) && !in_air(i) && !freed(i) {
                     s.cov[i] = 0.0;
                     continue;
                 }
