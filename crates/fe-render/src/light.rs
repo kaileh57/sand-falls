@@ -57,7 +57,7 @@ pub(crate) fn propagate(light: &mut [[f32; 3]], trans: &[f32], w: usize, h: usiz
     }
 }
 
-fn box_blur(src: &[[f32; 3]], w: usize, h: usize, r: usize) -> Vec<[f32; 3]> {
+pub(crate) fn box_blur(src: &[[f32; 3]], w: usize, h: usize, r: usize) -> Vec<[f32; 3]> {
     let mut tmp = vec![[0.0f32; 3]; w * h];
     tmp.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
         let s = &src[y * w..(y + 1) * w];
@@ -136,15 +136,37 @@ pub(crate) fn bloom(hdr: &mut [[f32; 3]], w: usize, h: usize) {
     });
 }
 
-/// How strongly each cell shimmers from hot air, 0 to 1.
-pub(crate) fn haze_field(cells: &[Cell], w: usize, h: usize) -> Vec<f32> {
-    let raw: Vec<[f32; 3]> = cells
-        .iter()
+/// How strongly each cell shimmers from hot air, 0 to 1: hot open air, fading
+/// out with distance from the source of its heat (`source`, such as lava,
+/// fire or molten metal) over about a dozen cells. Anything but open air is 0,
+/// so the shimmer never moves an edge.
+pub(crate) fn haze_field(
+    cells: &[Cell],
+    w: usize,
+    h: usize,
+    source: impl Fn(Cell) -> bool + Sync,
+) -> Vec<f32> {
+    let (hot, near): (Vec<[f32; 3]>, Vec<[f32; 3]>) = cells
+        .par_iter()
         .map(|c| {
             let t = temp_to_celsius(c.temp);
-            let v = if c.is_air() && t > 90 { ((t - 90) as f32 / 400.0).min(1.0) } else { 0.0 };
-            [v, 0.0, 0.0]
+            let v = if c.is_air() && t > 90 { ((t - 90) as f32 / 500.0).min(1.0) } else { 0.0 };
+            ([v, 0.0, 0.0], [if source(*c) { 1.0 } else { 0.0 }, 0.0, 0.0])
         })
-        .collect();
-    box_blur(&raw, w, h, 2).into_iter().map(|v| v[0].min(1.0)).collect()
+        .unzip();
+    let hot = box_blur(&hot, w, h, 3);
+    let near = box_blur(&box_blur(&near, w, h, 6), w, h, 6);
+    hot.par_iter()
+        .zip(near.par_iter())
+        .zip(cells.par_iter())
+        .map(|((v, n), c)| {
+            if !c.is_air() {
+                return 0.0;
+            }
+            // Within a few cells of a broad source `n` is near a half; a lone
+            // hot cell far off adds little.
+            let k = (n[0] * 3.0).min(1.0);
+            (v[0] * k * k).min(1.0)
+        })
+        .collect()
 }

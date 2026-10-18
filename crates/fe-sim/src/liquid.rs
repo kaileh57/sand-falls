@@ -1425,6 +1425,67 @@ pub fn drawn(
     };
     // Rounds a / b to the nearest whole number, for b > 0.
     let round = |a: i64, b: i64| (2 * a + b).div_euclid(2 * b) as i32;
+    let links = air_links(cells, w, h, &liquid, &firm);
+    // Cells of a stream that leads back to a source, and the cells drawn
+    // behind them: only these are closed up in the second pass below.
+    let mut stream = vec![false; cells.len()];
+    for &AirLink { index: i, back: found, stream: anchored } in &links {
+        // Only a chain that leads back to a source is joined, however short
+        // its gaps: drops a few cells apart in open air, such as rain
+        // through steam, joined into dashed lines and branches.
+        if !anchored {
+            continue;
+        }
+        stream[i] = true;
+        let c = cells[i];
+        let (x0, y0) = ((i % w) as i32, (i / w) as i32);
+        let (vx, vy) = air_velocity(c);
+        let m = vx.abs().max(vy);
+        let (mx, vx64, vy64) = (i64::from(m), i64::from(vx), i64::from(vy));
+        for k in 1..found {
+            let k64 = i64::from(k);
+            let x = x0 - round(vx64 * k64, mx);
+            let y = y0 - round(2 * vy64 * k64 * mx - 7 * k64 * k64, 2 * mx * mx).max(0);
+            if at(x, y).is_some_and(Cell::is_air) {
+                out[y as usize * w + x as usize] = c;
+                stream[y as usize * w + x as usize] = true;
+            }
+        }
+    }
+    close_tears(&mut out, &stream, w, h, liquid);
+    out
+}
+
+/// How a cell of liquid in the air is joined to the liquid behind it, as
+/// [`air_links`] finds it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AirLink {
+    /// The cell, by index into the window.
+    pub index: usize,
+    /// Cells of travel back along its path to the liquid behind it, 0 for
+    /// none.
+    pub back: i32,
+    /// True if its chain of joins leads back to a source: it is part of a
+    /// stream, not a lone drop.
+    pub stream: bool,
+}
+
+/// The joins [`drawn`] draws: each cell of liquid in the air that is joined
+/// to anything, with the cells of travel back to the liquid behind it and
+/// whether its chain of joins leads back to a source. See [`drawn`].
+pub fn air_links(
+    cells: &[Cell],
+    w: usize,
+    h: usize,
+    liquid: impl Fn(Cell) -> bool,
+    firm: impl Fn(Cell) -> bool,
+) -> Vec<AirLink> {
+    let at = |x: i32, y: i32| {
+        (x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h)
+            .then(|| cells[y as usize * w + x as usize])
+    };
+    // Rounds a / b to the nearest whole number, for b > 0.
+    let round = |a: i64, b: i64| (2 * a + b).div_euclid(2 * b) as i32;
     // Each cell's join: the cells of travel to fill behind it and what it
     // joins to, so a join is drawn only when its chain leads back to a source.
     let mut links: Vec<(usize, i32, Link)> = Vec::new();
@@ -1551,33 +1612,21 @@ pub fn drawn(
             anchored[j] = if answer { YES } else { NO };
         }
     }
-    // Cells of a stream that leads back to a source, and the cells drawn
-    // behind them: only these are closed up in the second pass below.
-    let mut stream = vec![false; cells.len()];
-    for &(i, found, _) in &links {
-        // Only a chain that leads back to a source is joined, however short
-        // its gaps: drops a few cells apart in open air, such as rain
-        // through steam, joined into dashed lines and branches.
-        if anchored[i] != YES {
-            continue;
-        }
-        stream[i] = true;
-        let c = cells[i];
-        let (x0, y0) = ((i % w) as i32, (i / w) as i32);
-        let (vx, vy) = air_velocity(c);
-        let m = vx.abs().max(vy);
-        let (mx, vx64, vy64) = (i64::from(m), i64::from(vx), i64::from(vy));
-        for k in 1..found {
-            let k64 = i64::from(k);
-            let x = x0 - round(vx64 * k64, mx);
-            let y = y0 - round(2 * vy64 * k64 * mx - 7 * k64 * k64, 2 * mx * mx).max(0);
-            if at(x, y).is_some_and(Cell::is_air) {
-                out[y as usize * w + x as usize] = c;
-                stream[y as usize * w + x as usize] = true;
-            }
-        }
-    }
-    let joined = out.clone();
+    links
+        .into_iter()
+        .map(|(index, back, _)| AirLink { index, back, stream: anchored[index] == YES })
+        .collect()
+}
+
+/// Closes small tears in streams and sheets, for [`drawn`].
+fn close_tears(
+    out: &mut [Cell],
+    stream: &[bool],
+    w: usize,
+    h: usize,
+    liquid: impl Fn(Cell) -> bool,
+) {
+    let joined = out.to_vec();
     let near = |x: i32, y: i32| {
         (x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h)
             .then(|| (joined[y as usize * w + x as usize], y as usize * w + x as usize))
@@ -1621,7 +1670,6 @@ pub fn drawn(
             }
         }
     }
-    out
 }
 
 #[cfg(test)]
