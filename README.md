@@ -10,6 +10,21 @@ Three things set it apart from other falling-sand engines:
 
 The design, its rules and the measured performance are in [docs/DESIGN.md](docs/DESIGN.md).
 
+## Demos
+
+Each clip is rendered headless from a scene file in `scenes/`, in real time at 60 ticks a second.
+
+| | |
+| --- | --- |
+| ![A brick and timber tower toppling after its columns are cut](docs/demos/demolition.gif) | ![Molten metal cooling in four molds as water floods over them](docs/demos/foundry.gif) |
+| Demolition: rigid bodies, structural support, fracture and dust | Foundry: heat capacity, latent heat and a water quench |
+| ![Lava falling from a sea cliff and building new rock](docs/demos/island_birth.gif) | ![A reservoir collapsing through an open gate and surging down a valley](docs/demos/dam_break.gif) |
+| Island birth: lava freezing into new land | Dam break: liquids with momentum |
+| ![A cave lit by lava, crystals and a lava fall](docs/demos/glowcave.gif) | ![Fireworks over a town at night](docs/demos/starburst.gif) |
+| Glowcave: propagated light, bloom and steam | Starburst: free particles that cool as they fall |
+| ![Two forts trading fire across a river in the Siege game](docs/demos/siege.gif) | |
+| Siege: a four-player game scripted in WebAssembly | |
+
 ## Requirements
 
 - Rust stable (1.90 or later).
